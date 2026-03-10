@@ -1,64 +1,268 @@
-# DevContainer
+# dotai — AI Developer Experience
 
-## VS Code Extensions
+This repo is a shared AI developer experience layer for your engineering team. It gives every
+developer a consistent, opinionated starting point for AI-assisted work — pre-packaged context
+documents, reusable slash commands, and setup scripts that wire everything into
+[Claude Code](https://code.claude.com) automatically.
 
-The following extensions are pre-installed in this devcontainer.
+Think of it as dotfiles for Claude Code: it packages up the things Claude needs to understand
+your engineering environment that it cannot infer from code alone.
 
-### GitHub Pull Requests (`github.vscode-pull-request-github`)
+> **Context documents and slash commands are complementary, not the same thing.** Context docs
+> (in `context/`) give Claude persistent knowledge about your platform. Slash commands (in
+> `commands/`) are reusable prompts invoked with `/command-name` inside a Claude Code session.
+> Both are wired in by the setup script.
 
-Manage GitHub pull requests and issues directly in VS Code.
+---
 
-* Open the **GitHub Pull Requests** panel in the Activity Bar to view open PRs
-* Create, review, and merge pull requests without leaving the editor
-* Checkout a PR branch directly from the PR list
-* Leave inline review comments on diffs
+## What's in here
 
-### GitHub Copilot (`github.copilot`)
+```
+dotai/
+├── context/                       ← Context documents imported by CLAUDE.md
+│   ├── architecture.md            ← System architecture, service communication, auth flows
+│   ├── engineering-standards.md   ← Coding conventions, patterns, hard rules
+│   ├── testing-philosophy.md      ← Testing approach, frameworks, what good tests look like
+│   ├── platform-context.md        ← Tools, environments, third-party integrations
+│   └── domain-language.md         ← Domain terminology — always consult this
+├── commands/                      ← Slash commands for Claude Code (/command-name)
+│   ├── pr-summary.md              ← Generate a PR description following project conventions
+│   ├── adr.md                     ← Scaffold an Architecture Decision Record
+│   ├── review.md                  ← Review code against project-specific standards
+│   └── test.md                    ← Generate tests following project testing conventions
+├── templates/
+│   ├── CLAUDE.md                  ← Base CLAUDE.md template — copy into individual repos and adapt
+│   └── AGENT.md                   ← Equivalent for other AI tools (Cursor, Windsurf, Codex)
+├── scripts/
+│   ├── setup.sh                   ← Wire context + commands into Claude Code (and Cursor/Windsurf)
+│   └── update.sh                  ← Pull latest and re-link
+├── setup.sh                       ← Install AI tools (Claude Code CLI, GitHub CLI)
+└── README.md                      ← This file
+```
 
-AI-powered code completions and chat assistance.
+---
 
-* Completions appear inline as you type — press `Tab` to accept
-* Open Copilot Chat via `Ctrl+Alt+I` to ask questions or generate code
-* Use `Ctrl+I` for inline edits on a selected block of code
-* Use `/explain`, `/fix`, `/tests` slash commands in the chat panel
+## Quick start
 
-### AWS Toolkit (`amazonwebservices.aws-toolkit-vscode`)
+### Prerequisites
 
-Browse and interact with AWS services from within VS Code.
+- [Anthropic account](https://claude.ai) — Claude Pro or Max subscription, or API key
+- Bash-compatible shell (macOS, Linux, WSL)
 
-* Sign in via the **AWS** panel in the Activity Bar
-* Browse S3 buckets, Lambda functions, CloudFormation stacks, and more
-* Open the **AWS Explorer** to navigate resources in `ap-southeast-2` (pre-configured)
-* Run and debug Lambda functions locally
+### For repos using devcontainers
 
-### Prettier (`esbenp.prettier-vscode`)
+Add this to your `.devcontainer/devcontainer.json`:
 
-Opinionated code formatter for JS/TS, JSON, Markdown, and more.
+```json
+"postCreateCommand": "bash /workspace/.ai/dotai/setup.sh && bash /workspace/.ai/dotai/scripts/setup.sh"
+```
 
-* Format the current file with `Shift+Alt+F`
-* Enable **Format on Save** in settings for automatic formatting
-* Add a `.prettierrc` file to the workspace root to customise rules
+Or, to always pull the latest from this repo first:
 
-### ESLint (`dbaeumer.vscode-eslint`)
+```json
+"postCreateCommand": "curl -fsSL https://raw.githubusercontent.com/YOUR_ORG/dotai/main/scripts/setup.sh | bash"
+```
 
-Lint JavaScript and TypeScript files using ESLint.
+### For repos without devcontainers
 
-* Lint errors and warnings appear inline with squiggles
-* Fix all auto-fixable issues in a file via `Ctrl+Shift+P` → **ESLint: Fix all auto-fixable Problems**
-* Requires an ESLint config (`eslint.config.js` or `.eslintrc`) in the workspace
+Run both setup scripts once after cloning:
 
-### Docker (`ms-azuretools.vscode-docker`)
+```bash
+# 1. Install Claude Code CLI and GitHub CLI
+bash .ai/dotai/setup.sh
 
-Build, manage, and deploy containerised applications.
+# 2. Wire context + commands into Claude Code
+bash .ai/dotai/scripts/setup.sh
 
-* Open the **Docker** panel in the Activity Bar to view images, containers, and registries
-* Right-click a `Dockerfile` to build an image directly
-* View running container logs and open a shell inside a container from the panel
+# 3. Authenticate
+claude auth login
+gh auth login
+```
 
-### Live Server (`ms-vscode.live-server`)
+To pull the latest context and re-link:
 
-Spin up a local development server with live reload for static files.
+```bash
+bash .ai/dotai/scripts/update.sh
+```
 
-* Right-click an HTML file and select **Open with Live Server**
-* Or click **Go Live** in the status bar
-* The browser auto-refreshes on every file save
+---
+
+## How it works
+
+Two setup scripts with distinct responsibilities:
+
+### `setup.sh` (repo root) — installs AI tools
+
+- **Claude Code CLI** via the official Anthropic installer (`curl -fsSL https://claude.ai/install.sh | bash`)
+- **GitHub CLI** (`gh`) for PR workflows
+
+### `scripts/setup.sh` — wires context and commands
+
+1. **Symlinks** `context/*.md` into `~/.claude/context/` so any repo's `CLAUDE.md` can import them
+2. **Copies** `commands/*.md` into `~/.claude/commands/` so they appear as `/command-name` slash commands in Claude Code
+3. **Writes** a `CLAUDE.md` in the current repo if one does not exist yet (uses the template as a base)
+4. **Writes** `.cursorrules` / `.windsurfrules` for Cursor/Windsurf if those tools are detected
+
+Each repo's own `CLAUDE.md` uses Claude Code's `@` import syntax to pull in the shared context:
+
+```markdown
+@~/.claude/context/architecture.md
+@~/.claude/context/engineering-standards.md
+```
+
+Claude loads these at the start of every session, combining the shared platform context with
+repo-specific overrides.
+
+---
+
+## Claude Code overview
+
+[Claude Code](https://code.claude.com) is Anthropic's agentic CLI coding tool. It reads your
+codebase, edits files, runs commands, and integrates with your development tools directly from
+the terminal.
+
+### Installation
+
+```bash
+# macOS, Linux, WSL
+curl -fsSL https://claude.ai/install.sh | bash
+
+# Authenticate
+claude auth login
+```
+
+### Key commands
+
+| Command | Description |
+|---------|-------------|
+| `claude` | Start an interactive session |
+| `claude "fix the login bug"` | Start with an initial prompt |
+| `claude -p "query"` | One-shot print mode (non-interactive) |
+| `claude -c` | Continue the most recent conversation |
+| `claude update` | Update to the latest version |
+| `claude auth login` | Sign in to your Anthropic account |
+| `claude auth status` | Show authentication status |
+
+### Slash commands
+
+Once `scripts/setup.sh` has run, these are available in any Claude Code session:
+
+| Command | Description |
+|---------|-------------|
+| `/pr-summary` | Generate a PR title and description |
+| `/review` | Review current branch diff against project standards |
+| `/test` | Generate tests for an Action, endpoint, or business flow |
+| `/adr` | Scaffold an Architecture Decision Record |
+
+### CLAUDE.md files
+
+Claude reads `CLAUDE.md` files to understand project context. The hierarchy:
+
+| Location | Scope |
+|----------|-------|
+| `~/.claude/CLAUDE.md` | Personal preferences, all projects |
+| `./CLAUDE.md` or `./.claude/CLAUDE.md` | Repo-specific, shared with the team |
+| `./CLAUDE.local.md` | Personal, repo-specific, not committed |
+
+Context files can be imported using `@path/to/file` syntax. The templates in this repo use this
+to pull in the shared `~/.claude/context/` documents.
+
+### Project rules
+
+For larger projects, split instructions across `.claude/rules/*.md` files. Each file can be
+scoped to specific paths using YAML frontmatter:
+
+```markdown
+---
+paths:
+  - "src/api/**/*.ts"
+---
+
+# API Rules
+- All endpoints must include input validation
+```
+
+Rules without a `paths` field load at every session start, just like `CLAUDE.md`.
+
+### Settings
+
+Claude Code settings live in `~/.claude/settings.json` (user) and `.claude/settings.json`
+(project). Key options:
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(npm run test *)", "Bash(git diff *)"],
+    "deny": ["Read(./.env)", "Read(./secrets/**)"]
+  }
+}
+```
+
+See [Claude Code settings docs](https://code.claude.com/docs/en/settings) for the full reference.
+
+---
+
+## Agent Skills
+
+Agent Skills are a complementary layer to the context documents and commands this repo provides.
+They are reusable, domain-specific AI guidance for a specific workflow or area of a codebase.
+
+### What they are
+
+A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are invoked with
+`/skill-name` or loaded automatically when Claude determines they are relevant. Unlike the always-loaded context docs, skills load on demand — keeping context lean.
+
+### Where they live
+
+| Location | Who reads it |
+|----------|-------------|
+| `.claude/skills/` | Claude Code (native) |
+| `.github/skills/` | Claude Code + Copilot |
+
+### How they relate to this repo
+
+| Layer | What it provides | Format |
+|-------|-----------------|--------|
+| **dotai** (this repo) | Shared platform context, engineering standards, slash commands | Wired in by setup script |
+| **Skills** | Workflow and domain guidance for a specific repo | Markdown files, loaded on demand |
+
+---
+
+## Layering model
+
+```
+Global layer (this repo)
+├── context/architecture.md          ← always in scope (imported by CLAUDE.md)
+├── context/engineering-standards.md
+├── context/domain-language.md
+└── ...
+
+Repo-specific layer (each repo's CLAUDE.md)
+└── @~/.claude/context/architecture.md
+    @~/.claude/context/engineering-standards.md
+    ...
+    # Additional notes for this repo:
+    #   - This service is the only one using event sourcing
+    #   - All routes require BootstrapTenant middleware
+```
+
+---
+
+## Keeping context current
+
+Context documents must be treated like documentation — they have an owner and must be updated
+when engineering standards change. If you raise a PR that changes a convention covered in
+`context/`, raise a companion PR to this repo at the same time.
+
+Stale context is worse than no context. Developers lose trust in AI guidance quickly if it
+confidently gives wrong answers.
+
+---
+
+## Contributing
+
+1. Branch from `main`
+2. Make your changes to context docs or commands
+3. Open a PR with a clear description of what changed and why
+4. At least one reviewer required
+
