@@ -1,6 +1,6 @@
 Analyse the database schema across the RoE backend repositories.
 
-Produce `docs/analysis/technical/05-database-schema.md` covering:
+Produce `docs/analysis/technical/database-schema.md` covering:
 
 1. **Migration Inventory**: List all migrations across rock-of-eye-api, rock-of-eye-pms-core, and rock-of-eye-sso
 2. **Key Tables**: For each major table, document columns, types, indexes, and foreign keys

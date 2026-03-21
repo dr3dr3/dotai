@@ -1,6 +1,6 @@
 Perform a security and authentication review of the RoE platform.
 
-Produce `docs/analysis/technical/10-security-auth-review.md` covering:
+Produce `docs/analysis/technical/security-auth-review.md` covering:
 
 1. **Authentication**: Sanctum configuration, token types, session handling, SSO token flow
 2. **Authorization**: Roles and permissions system, policies, gates, middleware guards

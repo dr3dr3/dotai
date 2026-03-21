@@ -1,5 +1,5 @@
 {
-    "name": "DR3DR3-DEVCONTAINER-TEMPLATE",
+    "name": "DR3DR3-DOTAI",
 
     "build": {
         "dockerfile": "Dockerfile"

@@ -12,6 +12,6 @@ For the specified portal, produce detailed analysis covering:
 6. **Configuration**: Quasar config, environment variables, build setup
 7. **Observations**: Code patterns, inconsistencies, technical debt
 
-Write output to the appropriate docs file (06 for All-in-One, 07 for Client Portal, 08 for Partner Portal) in the folder /doc/analysis/technical/.
+Write output to the appropriate docs file (frontend-all-in-one, frontend-client, or frontend-partner) in the folder /docs/analysis/technical/.
 
 Read CLAUDE.md first for project context.

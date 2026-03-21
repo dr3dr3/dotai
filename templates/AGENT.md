@@ -6,16 +6,6 @@
 
 ---
 
-## Engineering context
-
-@~/.claude/context/architecture.md
-@~/.claude/context/engineering-standards.md
-@~/.claude/context/domain-language.md
-@~/.claude/context/testing-philosophy.md
-@~/.claude/context/platform-context.md
-
----
-
 ## What this repo is
 
 **[REPO NAME]** — [REPO DESCRIPTION]
@@ -31,7 +21,7 @@ Tech: [e.g., Laravel 12, PHP 8.3]
 1. Business logic belongs in **Action classes**, never in Controllers
 2. **Never hard-code tenant IDs** — always from request context
 3. **Never commit `.env` files** — use `.env.example` as the template
-4. **Use domain terminology** from `context/domain-language.md`
+4. **Use domain terminology** as defined in this repo's domain language documentation
 5. **Check ADRs** before implementing in any ADR-covered area (`docs/architecture-decision-records/`)
 
 ---

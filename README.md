@@ -9,7 +9,7 @@ Think of it as dotfiles for Claude Code: it packages up the things Claude needs 
 your engineering environment that it cannot infer from code alone.
 
 > **Context documents and slash commands are complementary, not the same thing.** Context docs
-> (in `context/`) give Claude persistent knowledge about your platform. Slash commands (in
+> live in each individual repo's `CLAUDE.md` (and imported files). Slash commands (in
 > `commands/`) are reusable prompts invoked with `/command-name` inside a Claude Code session.
 > Both are wired in by the setup script.
 
@@ -19,12 +19,6 @@ your engineering environment that it cannot infer from code alone.
 
 ```
 dotai/
-├── context/                       ← Context documents imported by CLAUDE.md
-│   ├── architecture.md            ← System architecture, service communication, auth flows
-│   ├── engineering-standards.md   ← Coding conventions, patterns, hard rules
-│   ├── testing-philosophy.md      ← Testing approach, frameworks, what good tests look like
-│   ├── platform-context.md        ← Tools, environments, third-party integrations
-│   └── domain-language.md         ← Domain terminology — always consult this
 ├── commands/                      ← Slash commands for Claude Code (/command-name)
 │   ├── pr-summary.md              ← Generate a PR description following project conventions
 │   ├── adr.md                     ← Scaffold an Architecture Decision Record
@@ -34,7 +28,7 @@ dotai/
 │   ├── CLAUDE.md                  ← Base CLAUDE.md template — copy into individual repos and adapt
 │   └── AGENT.md                   ← Equivalent for other AI tools (Cursor, Windsurf, Codex)
 ├── scripts/
-│   ├── setup.sh                   ← Wire context + commands into Claude Code (and Cursor/Windsurf)
+│   ├── setup.sh                   ← Wire commands into Claude Code (and Cursor/Windsurf)
 │   └── update.sh                  ← Pull latest and re-link
 ├── setup.sh                       ← Install AI tools (Claude Code CLI, GitHub CLI)
 └── README.md                      ← This file
@@ -96,22 +90,14 @@ Two setup scripts with distinct responsibilities:
 - **Claude Code CLI** via the official Anthropic installer (`curl -fsSL https://claude.ai/install.sh | bash`)
 - **GitHub CLI** (`gh`) for PR workflows
 
-### `scripts/setup.sh` — wires context and commands
+### `scripts/setup.sh` — wires commands
 
-1. **Symlinks** `context/*.md` into `~/.claude/context/` so any repo's `CLAUDE.md` can import them
-2. **Copies** `commands/*.md` into `~/.claude/commands/` so they appear as `/command-name` slash commands in Claude Code
-3. **Writes** a `CLAUDE.md` in the current repo if one does not exist yet (uses the template as a base)
-4. **Writes** `.cursorrules` / `.windsurfrules` for Cursor/Windsurf if those tools are detected
+1. **Copies** `commands/*.md` into `~/.claude/commands/` so they appear as `/command-name` slash commands in Claude Code
+2. **Writes** a `CLAUDE.md` in the current repo if one does not exist yet (uses the template as a base)
+3. **Writes** `.cursorrules` / `.windsurfrules` for Cursor/Windsurf if those tools are detected
 
-Each repo's own `CLAUDE.md` uses Claude Code's `@` import syntax to pull in the shared context:
-
-```markdown
-@~/.claude/context/architecture.md
-@~/.claude/context/engineering-standards.md
-```
-
-Claude loads these at the start of every session, combining the shared platform context with
-repo-specific overrides.
+Each repo's own `CLAUDE.md` contains context relevant to that codebase. Context lives in the repo
+that owns it — not in a shared layer.
 
 ---
 
@@ -164,8 +150,8 @@ Claude reads `CLAUDE.md` files to understand project context. The hierarchy:
 | `./CLAUDE.md` or `./.claude/CLAUDE.md` | Repo-specific, shared with the team |
 | `./CLAUDE.local.md` | Personal, repo-specific, not committed |
 
-Context files can be imported using `@path/to/file` syntax. The templates in this repo use this
-to pull in the shared `~/.claude/context/` documents.
+Context files can be imported using `@path/to/file` syntax. Each repo's `CLAUDE.md` uses this
+to pull in additional context files that live alongside the codebase.
 
 ### Project rules
 
@@ -225,37 +211,6 @@ A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are
 |-------|-----------------|--------|
 | **dotai** (this repo) | Shared platform context, engineering standards, slash commands | Wired in by setup script |
 | **Skills** | Workflow and domain guidance for a specific repo | Markdown files, loaded on demand |
-
----
-
-## Layering model
-
-```
-Global layer (this repo)
-├── context/architecture.md          ← always in scope (imported by CLAUDE.md)
-├── context/engineering-standards.md
-├── context/domain-language.md
-└── ...
-
-Repo-specific layer (each repo's CLAUDE.md)
-└── @~/.claude/context/architecture.md
-    @~/.claude/context/engineering-standards.md
-    ...
-    # Additional notes for this repo:
-    #   - This service is the only one using event sourcing
-    #   - All routes require BootstrapTenant middleware
-```
-
----
-
-## Keeping context current
-
-Context documents must be treated like documentation — they have an owner and must be updated
-when engineering standards change. If you raise a PR that changes a convention covered in
-`context/`, raise a companion PR to this repo at the same time.
-
-Stale context is worse than no context. Developers lose trust in AI guidance quickly if it
-confidently gives wrong answers.
 
 ---
 

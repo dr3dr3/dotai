@@ -1,6 +1,6 @@
 Analyse all third-party integrations across the RoE platform.
 
-Produce `docs/analysis/technical/09-third-party-integrations.md` covering each integration:
+Produce `docs/analysis/technical/third-party-integrations.md` covering each integration:
 
 For each external service (Stripe, Adyen, SecurePay, Airwallex, Xero, Zoho, EngageBay, Twilio, OpenAI, Sentry, AWS S3):
 

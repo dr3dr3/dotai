@@ -6,21 +6,6 @@
 
 ---
 
-## Shared context
-
-All engineering standards, architecture, testing philosophy, domain language, and platform context
-are documented in the shared dotai context layer. Import them directly:
-
-@~/.claude/context/architecture.md
-@~/.claude/context/engineering-standards.md
-@~/.claude/context/testing-philosophy.md
-@~/.claude/context/platform-context.md
-@~/.claude/context/domain-language.md
-
-If those files are not available, the full context is in the `dotai` repo at `context/`.
-
----
-
 ## What this repo is
 
 **[REPO NAME]** — [REPO DESCRIPTION: 1-2 sentences on what this service does and its role in the platform.]

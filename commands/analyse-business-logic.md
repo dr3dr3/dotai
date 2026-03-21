@@ -1,6 +1,6 @@
 Map the core business logic flows in the RoE platform.
 
-Produce `docs/analysis/technical/12-business-logic-map.md` covering:
+Produce `docs/analysis/technical/business-logic-map.md` covering:
 
 1. **Order Lifecycle**: Trace an order from creation to fulfillment. What statuses exist? What triggers transitions? Which modules are involved?
 2. **Garment Configuration**: How are garments defined? Measurements, styles, fabrics, customisations. What models and relationships are involved?

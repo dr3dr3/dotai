@@ -1,6 +1,6 @@
 Create a Linear project with issues from an implementation document.
 
-Usage: Provide the path to a markdown implementation document, e.g. "/linear-create-project docs/to-implement/my-feature.md"
+Usage: Provide the path to a markdown implementation document, e.g. "/linear-create-project docs/implementation-plans/my-feature.md"
 
 The document should contain tasks/phases with titles, descriptions, estimates, priorities, and dependencies. The skill will parse the document and create a structured Linear project with all issues.
 

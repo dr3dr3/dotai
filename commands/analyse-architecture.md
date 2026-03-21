@@ -1,6 +1,6 @@
 Analyse the overall architecture of the RoE platform across all 6 repositories.
 
-Produce `docs/analysis/technical/01-architecture-overview.md` covering:
+Produce `docs/analysis/technical/architecture-overview.md` covering:
 
 1. **System Architecture**: How the 6 repos relate. Draw a text-based diagram showing the relationships between API, PMS-Core, SSO, and the 3 frontend portals.
 2. **Authentication Flow**: Trace the SSO flow - how a user authenticates and how tokens are shared across services.

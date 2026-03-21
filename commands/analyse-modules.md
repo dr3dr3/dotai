@@ -13,6 +13,6 @@ For the specified module, produce detailed analysis covering:
 7. **External Dependencies**: Any third-party API calls or package usage
 8. **Observations**: Anything notable - patterns, complexity, potential issues
 
-Write the output to the appropriate docs file (02 for API modules, 03 for PMS-Core, 04 for SSO) in the folder /doc/analysis/technical/. Append to the file if it already exists.
+Write the output to the appropriate docs file (backend-api for API modules, backend-pms-core for PMS-Core, backend-sso for SSO) in the folder /docs/analysis/technical/. Append to the file if it already exists.
 
 Read CLAUDE.md first for project context.
