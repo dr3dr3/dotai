@@ -35,6 +35,23 @@ for f in "$DEVEX_DIR/commands/"*.md; do
   echo "  ✓ /$(basename "$name" .md)"
 done
 
+# ── Claude Code skills ───────────────────────────────────────────────────────
+# Symlink each skill dir (one containing a SKILL.md) into ~/.claude/skills/ so
+# updates here are picked up immediately. Personal collection — applies
+# everywhere this user runs Claude Code.
+
+CLAUDE_SKILLS_DIR="$CLAUDE_DIR/skills"
+mkdir -p "$CLAUDE_SKILLS_DIR"
+
+echo ""
+echo "→ Linking skills into ~/.claude/skills/"
+for d in "$DEVEX_DIR/skills/"*/; do
+  [ -f "${d}SKILL.md" ] || continue
+  name="$(basename "$d")"
+  ln -sfn "${d%/}" "$CLAUDE_SKILLS_DIR/$name"
+  echo "  ✓ $name"
+done
+
 # ── Global ~/.claude/CLAUDE.md ───────────────────────────────────────────────
 
 GLOBAL_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"

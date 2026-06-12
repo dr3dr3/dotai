@@ -1,0 +1,2 @@
+# Runtime artifacts — never commit drafts (may contain message bodies) or audit logs
+logs/

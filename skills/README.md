@@ -23,6 +23,10 @@ These skills help you write, refactor, and fix code.
 - **setup-pre-commit** — Set up Husky pre-commit hooks with lint-staged, Prettier, type checking, and tests.
 - **git-guardrails-claude-code** — Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, etc.) before they execute.
 
+## Communication
+
+- **agent-email** — Send and receive email *as the agent* via AgentMail (`agent@rockofeye.net`). Human-in-the-loop only: draft → review → `--confirm` send, hard recipient allowlist, secret redaction, audit trail. Personal to André.
+
 ## Writing Skills
 
 - **write-a-skill** — Create new skills with proper structure, progressive disclosure, and bundled resources.
