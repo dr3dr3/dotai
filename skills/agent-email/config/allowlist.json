@@ -1,4 +1,6 @@
 {
-  "_comment": "HARD allowlist — the agent may ONLY email these addresses (applies to To, Cc, and replies). Empty array = block all sends (safe default). Add André and the Founder.",
-  "recipients": []
+  "_comment": "HARD allowlist — the agent may ONLY email these addresses (applies to To, Cc, and replies). Empty array = block all sends (safe default).",
+  "recipients": [
+    { "name": "André Dreyer", "email": "andre.dreyer@rockofeye.ai" }
+  ]
 }
