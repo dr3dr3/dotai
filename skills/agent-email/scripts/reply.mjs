@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { parseArgs, fail } from './lib/config.mjs';
 import { redact } from './lib/redact.mjs';
-import { enforceAllowlist, footer, renderPreview, writeDraft } from './lib/compose.mjs';
+import { enforceAllowlist, extractEmail, footer, renderPreview, writeDraft } from './lib/compose.mjs';
 import { resolveInboxId, getMessage } from './lib/agentmail.mjs';
 
 const args = parseArgs();
@@ -20,7 +20,7 @@ if (!rawBody) fail('Missing --body or --body-file');
 
 const inboxId = await resolveInboxId();
 const original = await getMessage(inboxId, args.message);
-const replyTo = original.from || (original.from_ && original.from_.address);
+const replyTo = extractEmail(original.from || (original.from_ && original.from_.address));
 if (!replyTo) fail('Could not determine the original sender to reply to.');
 
 // The agent may only converse with the allowlist — replies included.

@@ -10,6 +10,13 @@ export function splitAddrs(s) {
   return String(s).split(',').map((x) => x.trim()).filter(Boolean);
 }
 
+// Extract the bare email from a header value like "Name <email@x>" or "email@x".
+export function extractEmail(s) {
+  if (!s) return '';
+  const m = String(s).match(/<([^>]+)>/);
+  return (m ? m[1] : String(s)).trim();
+}
+
 // Hard allowlist gate. Returns the lowercased recipient list or exits.
 export function enforceAllowlist(recipients) {
   const allow = allowlist();

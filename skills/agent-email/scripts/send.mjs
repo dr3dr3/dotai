@@ -57,7 +57,6 @@ const rec = audit({
   message_id: messageId,
   confirmed: true,
   redactions_applied: draft.redactCount || 0,
-  actor: process.env.USER || 'unknown',
 });
 
 console.log(`\n✓ Sent to ${draft.to.join(', ')}` + (messageId ? ` (message ${messageId})` : ''));
