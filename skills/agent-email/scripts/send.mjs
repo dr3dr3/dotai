@@ -36,6 +36,7 @@ const payload = {
   ...(draft.cc && draft.cc.length ? { cc: draft.cc } : {}),
   subject: draft.subject,
   text: draft.body,
+  ...(draft.bodyHtml ? { html: draft.bodyHtml } : {}),
 };
 
 let result;
