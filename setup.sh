@@ -46,7 +46,7 @@ fi
 #     via npm — the devcontainer ships Node 22; for other containers we guard.
 # -----------------------------------------------------------------------------
 if ! command -v npm &>/dev/null; then
-    echo "⚠ npm not found — skipping Codex/varlock (install Node, then re-run)."
+    echo "⚠ npm not found — skipping Codex/varlock/Pi (install Node, then re-run)."
 else
     # Codex CLI (OpenAI) — secondary agent
     if command -v codex &>/dev/null; then
@@ -64,16 +64,20 @@ else
         echo "→ Installing varlock..."
         npm install -g varlock && echo "✓ varlock installed"
     fi
-fi
 
-# Pi Harness (lightweight; hooks the host's Ollama via $OLLAMA_HOST).
-# TODO(andre): drop in the real install command for Pi. Left as a no-op so the
-# script never fails on an unknown package. Reaches host Ollama at
-# host.docker.internal:11434 (set via OLLAMA_HOST in devcontainer.json).
-if command -v pi &>/dev/null; then
-    echo "✓ Pi Harness already installed — skipping."
-else
-    echo "⚠ Pi Harness not installed — add its install command in setup.sh (section 1b)."
+    # Pi Harness — self-extensible coding agent (earendil-works/pi).
+    # Installed with --ignore-scripts per the vendor docs (https://pi.dev/docs).
+    # Pi has NO built-in permission system, so running it inside the container
+    # is the intended sandbox. For local models, point it at the host Ollama via
+    # ~/.config/pi/models.json (OpenAI-compatible endpoint host.docker.internal
+    # :11434/v1) — see the cheat-sheet; cloud needs ANTHROPIC_API_KEY etc.
+    if command -v pi &>/dev/null; then
+        echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing Pi Harness (@earendil-works/pi-coding-agent)..."
+        npm install -g --ignore-scripts @earendil-works/pi-coding-agent \
+            && echo "✓ Pi installed"
+    fi
 fi
 
 # -----------------------------------------------------------------------------

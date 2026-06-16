@@ -123,7 +123,9 @@ Two setup scripts with distinct responsibilities:
 - **Claude Code CLI** via the official Anthropic installer (`curl -fsSL https://claude.ai/install.sh | bash`)
 - **Codex CLI** (`@openai/codex`) — secondary agent (npm; needs Node)
 - **varlock** — resolves `op://` secret refs into the env at launch (npm)
-- **Pi Harness** — placeholder hook (add the install command in section 1b)
+- **Pi Harness** (`@earendil-works/pi-coding-agent`) — self-extensible agent;
+  installed `--ignore-scripts` per vendor docs. No built-in permission system,
+  so the container is its sandbox. Point it at host Ollama via `models.json`.
 - **GitHub CLI** (`gh`) for PR workflows
 
 > These agents run **inside the container** by design — the macOS host stays
