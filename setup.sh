@@ -41,6 +41,42 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# 1b. Secondary agents + secrets tooling (Codex, varlock; Pi Harness optional)
+#     These run *inside* the container so the host stays agent-free. Installed
+#     via npm — the devcontainer ships Node 22; for other containers we guard.
+# -----------------------------------------------------------------------------
+if ! command -v npm &>/dev/null; then
+    echo "⚠ npm not found — skipping Codex/varlock (install Node, then re-run)."
+else
+    # Codex CLI (OpenAI) — secondary agent
+    if command -v codex &>/dev/null; then
+        echo "✓ Codex $(codex --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing Codex CLI (@openai/codex)..."
+        npm install -g @openai/codex && echo "✓ Codex installed"
+    fi
+
+    # varlock — resolves op:// references into the env at agent launch time.
+    # Pairs with the mounted 1Password agent.sock (see devcontainer.json).
+    if command -v varlock &>/dev/null; then
+        echo "✓ varlock $(varlock --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing varlock..."
+        npm install -g varlock && echo "✓ varlock installed"
+    fi
+fi
+
+# Pi Harness (lightweight; hooks the host's Ollama via $OLLAMA_HOST).
+# TODO(andre): drop in the real install command for Pi. Left as a no-op so the
+# script never fails on an unknown package. Reaches host Ollama at
+# host.docker.internal:11434 (set via OLLAMA_HOST in devcontainer.json).
+if command -v pi &>/dev/null; then
+    echo "✓ Pi Harness already installed — skipping."
+else
+    echo "⚠ Pi Harness not installed — add its install command in setup.sh (section 1b)."
+fi
+
+# -----------------------------------------------------------------------------
 # 2.  GitHub CLI (gh)
 #     Used for: gh pr create, gh auth, git workflows
 # -----------------------------------------------------------------------------

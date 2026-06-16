@@ -30,7 +30,7 @@ dotai/
 ├── scripts/
 │   ├── setup.sh                   ← Wire commands into Claude Code (and Cursor/Windsurf)
 │   └── update.sh                  ← Pull latest and re-link
-├── setup.sh                       ← Install AI tools (Claude Code CLI, GitHub CLI)
+├── setup.sh                       ← Install AI tools (Claude Code, Codex, varlock, GitHub CLI)
 └── README.md                      ← This file
 ```
 
@@ -81,6 +81,39 @@ bash .ai/dotai/scripts/update.sh
 
 ---
 
+## macOS host integration (OrbStack)
+
+On the macOS host, AI agents are **not** installed — the host only boots
+containers and holds secrets (see the
+[dotfiles](https://github.com/dr3dr3/dotfiles) repo). This dotai devcontainer
+wires three host integrations via `.devcontainer/devcontainer.json`:
+
+| Integration | How | Why |
+|-------------|-----|-----|
+| **1Password** | bind-mount `agent.sock` + `SSH_AUTH_SOCK` remoteEnv | biometric `op`/`varlock` and `git push` in-container, no keys on disk |
+| **Host share** | bind-mount `~/host-share` → `/host` (read-write) | edit host files from inside the container |
+| **Host Ollama** | `OLLAMA_HOST=http://host.docker.internal:11434` | reach the host's native Ollama from the container |
+
+> **Prerequisites:** enable 1Password ▸ Settings ▸ Developer ▸ *Use the SSH
+> agent* (the socket must exist before boot), and `mkdir -p ~/host-share` on the
+> host. Both are handled by the dotfiles `bootstrap-mac.sh`.
+
+To add the same wiring to **another** project's devcontainer, drop this in its
+`devcontainer.json` (adjust `remoteUser`/paths to match that image):
+
+```jsonc
+"mounts": [
+  "source=${localEnv:HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock,target=/home/dev/.1password/agent.sock,type=bind",
+  "source=${localEnv:HOME}/host-share,target=/host,type=bind,consistency=cached"
+],
+"remoteEnv": {
+  "SSH_AUTH_SOCK": "/home/dev/.1password/agent.sock",
+  "OLLAMA_HOST": "http://host.docker.internal:11434"
+}
+```
+
+---
+
 ## How it works
 
 Two setup scripts with distinct responsibilities:
@@ -88,7 +121,14 @@ Two setup scripts with distinct responsibilities:
 ### `setup.sh` (repo root) — installs AI tools
 
 - **Claude Code CLI** via the official Anthropic installer (`curl -fsSL https://claude.ai/install.sh | bash`)
+- **Codex CLI** (`@openai/codex`) — secondary agent (npm; needs Node)
+- **varlock** — resolves `op://` secret refs into the env at launch (npm)
+- **Pi Harness** — placeholder hook (add the install command in section 1b)
 - **GitHub CLI** (`gh`) for PR workflows
+
+> These agents run **inside the container** by design — the macOS host stays
+> agent-free and just boots the containers (see the host dotfiles repo). The
+> dotai devcontainer also bakes Codex + varlock into its image.
 
 ### `scripts/setup.sh` — wires commands
 

@@ -112,5 +112,14 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Add ~/.local/bin to PATH so the `claude` binary is accessible
 ENV PATH="/home/${USERNAME}/.local/bin:$PATH"
 
+# Secondary agents + secrets tooling (run in-container; the host stays agent-free):
+#   - @openai/codex : OpenAI Codex CLI (secondary agent)
+#   - varlock       : resolves op:// refs into env at launch, via the mounted
+#                     1Password agent.sock (see devcontainer.json mounts/remoteEnv)
+# Installed globally with sudo (npm's global prefix is root-owned; the dev user
+# has passwordless sudo). Pin/September-audit these as needed.
+RUN sudo npm install -g @openai/codex varlock \
+    && codex --version && varlock --version
+
 # Default command
 CMD ["/bin/bash"]
