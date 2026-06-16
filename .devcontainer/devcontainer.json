@@ -8,6 +8,19 @@
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
     "workspaceFolder": "/workspace",
 
+    // Extra bind mounts from the macOS host.
+    "mounts": [
+        // 1Password biometric SSH / CLI agent. The host app must have
+        // Settings ▸ Developer ▸ "Use the SSH agent" enabled. The socket only
+        // exists while 1Password is running — if it's absent at boot, Docker
+        // creates a *directory* in its place, so keep 1Password running.
+        // In-container `op`/`varlock` then resolve op:// refs with a biometric tap.
+        "source=${localEnv:HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock,target=/home/dev/.1password/agent.sock,type=bind",
+        // Host share — work on host files from inside the container (read-write).
+        // Create it on the host first:  mkdir -p ~/host-share
+        "source=${localEnv:HOME}/host-share,target=/host,type=bind,consistency=cached"
+    ],
+
     "customizations": {
         "vscode": {
             "extensions": [
@@ -35,7 +48,11 @@
 
     // Set environment variables
     "remoteEnv": {
-        "AWS_REGION": "ap-southeast-2"
+        "AWS_REGION": "ap-southeast-2",
+        // Point SSH (and op's SSH-based unlock) at the mounted 1Password agent.
+        "SSH_AUTH_SOCK": "/home/dev/.1password/agent.sock",
+        // Reach the host's native Ollama (OrbStack maps host.docker.internal).
+        "OLLAMA_HOST": "http://host.docker.internal:11434"
     },
     
     // Connect as the non-root user.

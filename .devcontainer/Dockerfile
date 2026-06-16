@@ -112,5 +112,21 @@ RUN curl -fsSL https://claude.ai/install.sh | bash
 # Add ~/.local/bin to PATH so the `claude` binary is accessible
 ENV PATH="/home/${USERNAME}/.local/bin:$PATH"
 
+# Secondary agents + secrets tooling (run in-container; the host stays agent-free):
+#   - @openai/codex : OpenAI Codex CLI (secondary agent)
+#   - varlock       : resolves op:// refs into env at launch, via the mounted
+#                     1Password agent.sock (see devcontainer.json mounts/remoteEnv)
+# Installed globally with sudo (npm's global prefix is root-owned; the dev user
+# has passwordless sudo). Pin/audit these as needed.
+RUN sudo npm install -g @openai/codex varlock \
+    && codex --version && varlock --version
+
+# Pi Harness (earendil-works/pi) — separate layer because it must be installed
+# with --ignore-scripts (vendor guidance), which we do NOT want applied to the
+# packages above (it would skip Codex's binary postinstall). Pi has no built-in
+# permission system, so the container IS its sandbox.
+RUN sudo npm install -g --ignore-scripts @earendil-works/pi-coding-agent \
+    && pi --version
+
 # Default command
 CMD ["/bin/bash"]

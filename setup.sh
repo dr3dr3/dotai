@@ -41,6 +41,46 @@ else
 fi
 
 # -----------------------------------------------------------------------------
+# 1b. Secondary agents + secrets tooling (Codex, varlock; Pi Harness optional)
+#     These run *inside* the container so the host stays agent-free. Installed
+#     via npm — the devcontainer ships Node 22; for other containers we guard.
+# -----------------------------------------------------------------------------
+if ! command -v npm &>/dev/null; then
+    echo "⚠ npm not found — skipping Codex/varlock/Pi (install Node, then re-run)."
+else
+    # Codex CLI (OpenAI) — secondary agent
+    if command -v codex &>/dev/null; then
+        echo "✓ Codex $(codex --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing Codex CLI (@openai/codex)..."
+        npm install -g @openai/codex && echo "✓ Codex installed"
+    fi
+
+    # varlock — resolves op:// references into the env at agent launch time.
+    # Pairs with the mounted 1Password agent.sock (see devcontainer.json).
+    if command -v varlock &>/dev/null; then
+        echo "✓ varlock $(varlock --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing varlock..."
+        npm install -g varlock && echo "✓ varlock installed"
+    fi
+
+    # Pi Harness — self-extensible coding agent (earendil-works/pi).
+    # Installed with --ignore-scripts per the vendor docs (https://pi.dev/docs).
+    # Pi has NO built-in permission system, so running it inside the container
+    # is the intended sandbox. For local models, point it at the host Ollama via
+    # ~/.config/pi/models.json (OpenAI-compatible endpoint host.docker.internal
+    # :11434/v1) — see the cheat-sheet; cloud needs ANTHROPIC_API_KEY etc.
+    if command -v pi &>/dev/null; then
+        echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
+    else
+        echo "→ Installing Pi Harness (@earendil-works/pi-coding-agent)..."
+        npm install -g --ignore-scripts @earendil-works/pi-coding-agent \
+            && echo "✓ Pi installed"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # 2.  GitHub CLI (gh)
 #     Used for: gh pr create, gh auth, git workflows
 # -----------------------------------------------------------------------------
