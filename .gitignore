@@ -1,0 +1,4 @@
+# MemPalace — never commit palace data or logs (large, machine-specific,
+# contains verbatim session/doc text). Config files are committed; state is not.
+mempalace/state/
+mempalace/**/seed.log
