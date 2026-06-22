@@ -7,13 +7,40 @@ on PC restart / devcontainer rebuild. Personal use only; **no Rock of Eye AWS in
 
 ## Decisions (2026-06-22)
 
-- **Backend: self-hosted Postgres + `pgvector` on the TrueNAS, reachable only over my
-  personal Tailscale tailnet.** Chosen over Neon (cloud) because RoE-derived verbatim
-  text stays on hardware I control, on a private network. $0 running cost.
+- **Backend: self-hosted Postgres + `pgvector` in a Docker container on the always-on
+  Windows PC**, reachable over my personal Tailscale tailnet. **Pivoted from the TrueNAS
+  (2026-06-22)** to skip NAS setup pain — the Windows PC is already on the tailnet, always
+  on, and AI can drive its Docker setup. Same data-governance win as the NAS plan
+  (self-hosted, hardware I control, tailnet-only — not Neon/cloud); the palace text already
+  lived on this PC, so no new exposure beyond the tailnet port. $0 running cost.
 - **Recall, not literal resume.** No syncing of raw `~/.claude/projects/*.jsonl` across
   machines. Each env points its mempalace at the shared backend; `wake-up`/`search`
   reconstructs context and I start a fresh session. (Cross-machine `claude --resume` is
   unsupported/fragile anyway.)
+
+## STATUS (2026-06-22) — Phase 1–3 DONE on the Windows PC
+
+- **Server up:** `pgvector/pgvector:pg16` container `mempalace-pg` on the Windows PC,
+  volume `mempalace-pgdata`, `restart: unless-stopped`. Files in `C:\Users\andre\mempalace-pg\`.
+  PostgreSQL 16.14, pgvector 0.8.3. Creds in 1Password item "MemPalace pgvector" (Private vault).
+- **Tailnet:** tailnet `goby-trout.ts.net`; this PC = `mango` / `100.108.239.14`;
+  MacBook = `drem5` / `100.103.130.52`. Firewall allows 5432 only from the tailnet CGNAT
+  range + Docker/WSL host-internal; LAN + internet default-denied.
+- **Reach:** this devcontainer → `host.docker.internal:5432` (no Tailscale needed locally,
+  verified). Mac → `mango.goby-trout.ts.net:5432` over tailnet (still needs the in-container
+  sidecar — Phase 2 below, the only remaining unknown).
+- **This env wired (config-driven, no flags):** `~/.mempalace/config.json` (gitignored,
+  mode 600) sets `backend=pgvector`, `palace_path=~/.mempalace/palace-pg` (separate dir —
+  the backend refuses to mix with the old chroma palace's artifacts), `pgvector_dsn` (holds
+  the password), `pgvector_namespace=andre-shared`, `embedding_model=minilm`. So `status`/
+  `search`/`mine`/`seed.sh`/the auto-mine hooks all hit pgvector with zero flags.
+- **pgvector extra + NUL patch:** `uv tool install 'mempalace[pgvector]'` for psycopg, then
+  `patch-pgvector-nul.py` (wired into `setup.sh`) strips NUL (0x00) bytes that Chroma
+  tolerated but Postgres text/jsonb reject — convo transcripts contain them. Upstream bug in
+  mempalace 3.4.1 (latest); remove the patch once fixed upstream.
+- **Seeded:** re-mined (no cross-backend migrate exists) into the `andre-shared` namespace —
+  all docs wings + the claude-sessions (conversations) wing. Old local chroma palace kept as
+  an offline cache at `~/.mempalace/palace`.
 
 ## Why this is sound
 

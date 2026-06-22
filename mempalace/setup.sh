@@ -43,13 +43,25 @@ fi
 
 # 3. Install the mempalace CLI + MCP server in an isolated env ------------------
 #    uv tool keeps chromadb/numpy/grpcio off the system Python (PEP 668 safe).
-if command -v mempalace >/dev/null 2>&1; then
-    echo "  • mempalace $(mempalace --version 2>/dev/null | grep -o '[0-9.]*' | head -1) already installed"
-else
-    echo "  • installing mempalace via uv tool…"
-    uv tool install mempalace
-fi
+#    The shared pgvector backend (Postgres on the always-on Windows PC, reached
+#    via host.docker.internal locally / tailnet from the Mac) needs the
+#    [pgvector] extra for psycopg. We pick the variant from config.json's backend
+#    and --force so the right extras are present even if a plain install existed.
+BACKEND="$(python3 -c "import json; print(json.load(open('$STATE/config.json')).get('backend','chroma'))" 2>/dev/null || echo chroma)"
+if [ "$BACKEND" = "pgvector" ]; then PKG_SPEC='mempalace[pgvector]'; else PKG_SPEC='mempalace'; fi
+echo "  • installing $PKG_SPEC via uv tool… (backend=$BACKEND)"
+uv tool install "$PKG_SPEC" --force
 echo "  • binaries: $(command -v mempalace) , $(command -v mempalace-mcp)"
+
+# 3b. Strip NUL (0x00) bytes in the pgvector backend (upstream bug) -------------
+#     Chroma tolerated NUL in drawer text; Postgres text/jsonb reject it, so
+#     convo mining crashes without this. Idempotent; no-op when pgvector isn't
+#     installed. Re-applied here because uv tool install above replaces vendored
+#     files. Remove once fixed upstream (mempalace > 3.4.1).
+if [ "$BACKEND" = "pgvector" ]; then
+    uv tool run --from "$PKG_SPEC" python "$BASE/patch-pgvector-nul.py" \
+        || echo "  ⚠ NUL patch failed — convo mining into pgvector may crash"
+fi
 
 # 4. Install the Claude Code plugin (MCP server + Stop/PreCompact hooks + skills) -
 #    Claude Code runs as the VS Code extension here, so `claude` isn't on PATH —
