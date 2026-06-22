@@ -41,6 +41,29 @@ on PC restart / devcontainer rebuild. Personal use only; **no Rock of Eye AWS in
 - **Seeded:** re-mined (no cross-backend migrate exists) into the `andre-shared` namespace —
   all docs wings + the claude-sessions (conversations) wing. Old local chroma palace kept as
   an offline cache at `~/.mempalace/palace`.
+- **MacBook (`drem5`) connected 2026-06-22 — Phase 2/5 done for the Mac.** Reaches the DB via
+  a **host `socat` launchd forwarder** (`com.dr3dr3.mempalace-pgvector-forward`, RunAtLoad+
+  KeepAlive): Mac host `:5433` → `mango:5432`; the Mac's `local-dev-env` devcontainer (OrbStack)
+  connects at `host.docker.internal:5433`. Cross-machine recall verified (Mac read a drawer the
+  Windows PC wrote). The in-container Tailscale option was unnecessary given the host forwarder.
+
+## ⚠️ SHARED-PALACE INVARIANTS — get any of these wrong and you SILENTLY FORK into a new empty table
+
+The pgvector **table name is `mempalace_<namespace>_<sha256(palace_path)[:16]>_mempalace_{drawers,closets}`**.
+So joining the *same* palace requires ALL of these to match byte-for-byte on every env:
+
+1. **`pgvector_namespace`** = `andre-shared`.
+2. **`palace_path`** = `/home/vscode/.mempalace/palace-pg` — **THIS IS HASHED INTO THE TABLE NAME.**
+   `sha256("/home/vscode/.mempalace/palace-pg")[:16]` = `db426f05c18fc7c5` (the live table id).
+   It works across the Win + Mac envs only because both are the same `vscode`/`/home/vscode`
+   devcontainer. A different home/user/path → different hash → a brand-new empty palace with
+   no error. **Verify by querying `pg_tables` through the connection before trusting a new env.**
+3. **embedding model** = `minilm` (384-dim).
+4. Same DSN db/user (`mempalace`/`mempalace`), of course.
+
+To attach a new env without re-seeding: match 1–4, create the local `pgvector_backend.json`
+marker (the backend's `_write_marker()` writes only that local file — no DB write), do NOT run
+`seed.sh`. New envs contribute via the auto-mine hooks.
 
 ## Why this is sound
 
@@ -106,6 +129,8 @@ you rebuild, you can re-mine later). Skip if you don't care about that edge.
   - `MEMPALACE_BACKEND=pgvector`
   - `MEMPALACE_PGVECTOR_DSN=postgresql://mempalace:<pw>@nas.<tailnet>.ts.net:5432/mempalace`
   - `MEMPALACE_PGVECTOR_NAMESPACE=andre-shared`   ← SAME on every env = shared palace
+  - `palace_path` IDENTICAL on every env — it is hashed into the table name (see the
+    SHARED-PALACE INVARIANTS section above). `/home/vscode/.mempalace/palace-pg`.
   - embedding model stays `minilm` (already pinned) — must match everywhere (384-dim).
 - Seed (no cross-backend migrate exists → re-mine into pgvector):
   `mempalace mine ~/.claude/projects --mode convos --agent andre-winpc-env1`
