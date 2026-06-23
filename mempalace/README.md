@@ -2,17 +2,26 @@
 
 A time-boxed evaluation of [MemPalace](https://github.com/MemPalace/mempalace)
 (MIT, open-source, local-first AI memory) wired into Claude Code for my work in
-`local-dev-env`. **Personal — not shared.** Everything lives here under
-`/workspace/.ai/dotai/mempalace/`, which is gitignored by `/workspace/.ai/.gitignore`
-and outside the `local-dev-env` repo, so nothing leaks into team code.
+`local-dev-env`. **Personal infra, but shared across my own environments.** The
+palace is a self-hosted Postgres + `pgvector` backend reachable over my personal
+Tailscale tailnet, so AI-session memory is captured once and recalled from any of
+my machines/devcontainers (Windows PC, MacBook). No Rock of Eye AWS infra and no
+third-party cloud is involved — see [`shared-state-plan.md`](shared-state-plan.md)
+for the full backend design and the **SHARED-PALACE INVARIANTS** (get them wrong
+and an env silently forks into a new empty palace).
+
+This `mempalace/` dir is tracked in the **`dotai`** repo (scripts, README, plans);
+only `state/` — the palace data, `config.json`, and the DSN it holds — is
+gitignored, so no credentials or memory text are ever committed.
 
 ## What it is
 
-Stores conversation/doc text **verbatim** in a local ChromaDB-backed "palace"
-and retrieves by semantic search. No API key, nothing leaves the machine (the
-default backend is local; remote Qdrant/pgvector backends are opt-in and **left
-off**). Integrates with Claude Code as a plugin: an MCP server (33 tools),
-auto-save hooks, and slash commands/skills.
+Stores conversation/doc text **verbatim** in a "palace" and retrieves by semantic
+search. No API key, no SaaS: the backend is a self-hosted Postgres + `pgvector`
+container (`mempalace-pg`) on my always-on Windows PC, tailnet-only — reached from
+this devcontainer at `host.docker.internal:5432`, namespace `andre-shared`. A local
+ChromaDB palace is kept only as an offline fallback. Integrates with Claude Code as
+a plugin: an MCP server (33 tools), auto-save hooks, and slash commands/skills.
 
 ## Division of labour — MemPalace vs Graphify
 
@@ -78,7 +87,12 @@ PATH (Claude Code runs as the VS Code extension), but the extension **bundles** 
 usable binary at `~/.vscode-server/extensions/anthropic.claude-code-*/resources/
 native-binary/claude`; the script resolves the newest one and runs
 `plugin marketplace add` + `plugin install --scope user`. Re-run after a rebuild
-(it wipes `~/.claude`); the palace data under `state/` is untouched.
+(it wipes `~/.claude`); the palace data lives in Postgres, so nothing is lost.
+`setup.sh` reads `state/config.json` and installs the matching backend driver —
+`mempalace[pgvector]` plus the NUL-strip patch when the backend is `pgvector`,
+else plain `mempalace`. (After a rebuild the CLI is gone, so re-running `setup.sh`
+is what restores the `[pgvector]` extra — a bare `uv tool install mempalace`
+misses it and `status` fails with a `psycopg` dependency error.)
 
 > Plugin install needs network. If you run `setup.sh` from a fully sandboxed
 > shell that can't resolve `github.com`, do the plugin step from a normal
@@ -94,9 +108,9 @@ bash /workspace/.ai/dotai/mempalace/seed.sh
 
 | Setting | Value | Note |
 |---|---|---|
-| Embedding model | `minilm` (all-MiniLM-L6-v2, English) | pinned in `state/config.json`; lighter than `embeddinggemma` |
-| Backend | ChromaDB (local default) | remote backends deliberately not enabled |
-| Palace path | `state/palace` | via the `~/.mempalace` symlink |
+| Embedding model | `minilm` (all-MiniLM-L6-v2, 384-dim, English) | pinned in `state/config.json`; must match byte-for-byte on every env sharing the palace |
+| Backend | **self-hosted Postgres + `pgvector`** (namespace `andre-shared`) | container `mempalace-pg` on the Windows PC, tailnet-only; `host.docker.internal:5432` from here. ChromaDB remains as an offline fallback only. |
+| Palace path | `state/palace-pg` | via the `~/.mempalace` symlink; the path is **hashed into the pgvector table name** — keep it identical across envs (see invariants in `shared-state-plan.md`) |
 
 ## Hooks (what fires automatically once the plugin is installed)
 
@@ -128,6 +142,11 @@ rm -rf state/palace state/hallways.json state/tunnels.json state/locks
 bash /workspace/.ai/dotai/mempalace/seed.sh   # config.json (embedder) is kept
 ```
 
+> **pgvector backend:** the wipe above only clears the *local* Chroma artifacts.
+> The live palace is in Postgres — re-scoping there means dropping the
+> `mempalace_andre-shared_…` tables (or re-mining, which dedups), not deleting
+> local files. It is shared across envs, so coordinate before wiping it.
+
 `seed.sh` re-discovers `docs/` folders at run time, so re-running it after
 cloning more repos / adding docs automatically widens coverage — no edits needed.
 
@@ -146,11 +165,13 @@ rm -rf /workspace/.ai/dotai/mempalace  # data + scripts
 
 ## Status
 
-- [x] Installed `mempalace` 3.4.1 via `uv tool`
+- [x] Installed `mempalace` (`[pgvector]` extra) via `uv tool`
 - [x] `~/.mempalace` → `state/` symlink, embedding model pinned to `minilm`
 - [x] Claude Code plugin installed (user scope) — automated in `setup.sh`
 - [x] Scope decided: **memory + docs** (Graphify owns code structure)
-- [x] Palace seeded — **8,057 drawers**: Claude sessions + ai-context + all
+- [x] Backend: **shared self-hosted pgvector** on the tailnet (namespace
+      `andre-shared`) — Windows PC + MacBook connected. See `shared-state-plan.md`.
+- [x] Palace seeded into `andre-shared`: Claude sessions + ai-context + all
       `docs/` (local-dev-env, infrastructure, per-repo). No raw source.
 - [ ] Reload VS Code window to load MCP server + hooks into the live session
 - [ ] Verdict: _TBD after a week of real use_
