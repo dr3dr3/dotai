@@ -147,6 +147,40 @@ if ! command -v claude &>/dev/null; then
   fi
 fi
 
+# ── Linear personal token from 1Password (personal dotai) ──────────────────────
+# Resolve my personal Linear API key from 1Password so BOTH the Linear CLI and
+# the key-based `linear` MCP (registered below) come up authenticated without
+# pasting keys. Pinned to my personal account + "Rock of Eye" vault; the key is
+# the secure-note body (field notesPlain). Gracefully skips if op can't resolve
+# it (not signed in / no agent.sock in this context), so a run never hard-fails.
+LINEAR_OP_ACCOUNT="my.1password.com"
+LINEAR_OP_REF="op://Rock of Eye/Linear API Key/notesPlain"
+if [ -z "${LINEAR_ACCESS_TOKEN:-}" ] && command -v op &>/dev/null; then
+  echo ""
+  echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF)"
+  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>/dev/null)" \
+     && [ -n "$_linear_tok" ]; then
+    export LINEAR_ACCESS_TOKEN="$_linear_tok"
+    export LINEAR_API_KEY="${LINEAR_API_KEY:-$_linear_tok}"  # env name used by the CLI / skills
+    unset _linear_tok
+    echo "  ✓ Linear key resolved from 1Password"
+  else
+    echo "  ⚠ Could not resolve Linear key from 1Password (op not signed in / no agent.sock?) — skipping"
+  fi
+fi
+
+# Authenticate the Linear CLI with that key. --plaintext writes to ~/.config/linear
+# (on the persisted volume, survives rebuilds); the headless container has no keyring.
+if [ -n "${LINEAR_ACCESS_TOKEN:-}" ] && command -v linear &>/dev/null; then
+  if linear auth token &>/dev/null; then
+    echo "  ✓ Linear CLI already authenticated"
+  elif linear auth login --plaintext --key "$LINEAR_ACCESS_TOKEN" &>/dev/null; then
+    echo "  ✓ Linear CLI authenticated (key from 1Password)"
+  else
+    echo "  ⚠ Linear CLI login failed"
+  fi
+fi
+
 # ── Claude Code Plugins ───────────────────────────────────────────────────────
 
 if command -v claude &>/dev/null; then
