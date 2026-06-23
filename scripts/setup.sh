@@ -126,6 +126,27 @@ elif [ -f "$CLAUDE_SETTINGS_FILE" ]; then
   echo "→ .claude/settings.json already exists — leaving it unchanged"
 fi
 
+# ── Claude Code CLI ───────────────────────────────────────────────────────────
+# Personal setup — install the Claude Code CLI if it's missing so the plugin
+# registration below (guarded by `command -v claude`) actually runs instead of
+# silently skipping. This lives in dotai, not the shared devcontainer/ai-devex.
+if ! command -v claude &>/dev/null; then
+  if command -v npm &>/dev/null; then
+    echo ""
+    echo "→ Installing Claude Code CLI (npm -g @anthropic-ai/claude-code)"
+    # --allow-scripts runs the package postinstall (install.cjs) that npm's
+    # allow-scripts gating otherwise blocks.
+    if npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code; then
+      echo "  ✓ Claude Code installed: $(claude --version 2>/dev/null || echo 'check PATH')"
+    else
+      echo "  ⚠ Claude Code install failed — install manually: npm install -g @anthropic-ai/claude-code"
+    fi
+  else
+    echo ""
+    echo "⚠ npm not found — cannot install Claude Code CLI"
+  fi
+fi
+
 # ── Claude Code Plugins ───────────────────────────────────────────────────────
 
 if command -v claude &>/dev/null; then
