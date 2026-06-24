@@ -92,6 +92,11 @@ emit_ro() {  # emit_ro VAR_NAME
     echo "  ✓ RO token available to agent: $name"
   fi
 }
+# Model-provider keys the HARNESS itself needs to run (not access to our systems —
+# they spend against the provider). Without these, Claude Code / Codex can't run.
+emit_ro ANTHROPIC_API_KEY   # Claude Code / Claude-based agents
+emit_ro OPENAI_API_KEY      # Codex / OpenAI-based agents
+# Read-only integration tokens for research:
 emit_ro SENTRY_TOKEN        # scope: project:read, event:read
 emit_ro LINEAR_TOKEN        # RO-by-convention (see profiles/README — known caveat)
 emit_ro SLACK_TOKEN         # scope: channels:history, search:read (NO chat:write)
