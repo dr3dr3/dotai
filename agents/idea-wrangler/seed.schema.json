@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://rockofeye.ai/schemas/idea-wrangler-seed.json",
+  "title": "Idea Wrangler Seed",
+  "description": "The structured output of André's /brain-fart triage — the typed input to the Idea Wrangler agent. The agent reads this from the file at $SANDBOX_INPUT. If it is missing or invalid, the agent fails loudly rather than guessing.",
+  "type": "object",
+  "required": ["raw_idea", "initial_read", "why_mark_wants_it", "suspected_problems", "must_investigate"],
+  "additionalProperties": false,
+  "properties": {
+    "raw_idea": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Mark's idea, VERBATIM. Never paraphrased. Reproduced as-is in section 1 of the concept."
+    },
+    "initial_read": {
+      "type": "string",
+      "description": "André's quick take on the idea."
+    },
+    "why_mark_wants_it": {
+      "type": "string",
+      "description": "André's guess at Mark's underlying intent / motivation."
+    },
+    "suspected_problems": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "What André already thinks is wrong, risky, or contentious about the idea."
+    },
+    "must_investigate": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Pointers the agent should prioritise researching first."
+    },
+    "short_name": {
+      "type": "string",
+      "description": "Optional. A short slug for the idea (used in the issue title and idempotency check). If omitted, the agent derives one."
+    }
+  }
+}
