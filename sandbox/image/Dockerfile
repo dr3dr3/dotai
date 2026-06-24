@@ -65,7 +65,7 @@ RUN sudo npm install -g @anthropic-ai/sandbox-runtime && echo "sandbox-runtime i
 # ── The substrate scripts + writable areas ───────────────────────────────────
 COPY --chown=root:root sandbox /opt/sandbox
 RUN sudo chmod -R a+rX /opt/sandbox \
-    && sudo chmod a+rx /opt/sandbox/entrypoint.sh /opt/sandbox/phases/*.sh \
+    && sudo chmod a+rx /opt/sandbox/entrypoint.sh /opt/sandbox/phases/*.sh /opt/sandbox/test/*.sh \
     && sudo mkdir -p /work /var/log/sandbox \
     && sudo chown -R $USERNAME:$USERNAME /work /var/log/sandbox
 

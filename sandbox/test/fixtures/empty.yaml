@@ -1,0 +1,3 @@
+# Fixture: no repos (exercises the "nothing to clone" setup path).
+repos: []
+docs: []
