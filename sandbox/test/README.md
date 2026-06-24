@@ -44,9 +44,9 @@ which execs [assert-agent-phase.sh](assert-agent-phase.sh) instead of a real har
 so it verifies the box from the inside without needing Claude/Codex auth. It clones a
 tiny public repo ([fixtures/repos.yaml](fixtures/repos.yaml)).
 
-> Compose mounts the 1Password `agent.sock`. Have 1Password running, or comment that
-> mount out of [../compose/docker-compose.yml](../compose/docker-compose.yml) on a
-> credential-less box.
+> **Cross-platform.** Tier 1 uses the portable base compose only — no host mounts, no
+> secrets — so it runs identically on **Docker Desktop (Windows/WSL2)**, **OrbStack
+> (macOS)**, and Linux. On Windows, run it from a **WSL2** shell. No 1Password needed.
 
 ### Try a real harness manually
 

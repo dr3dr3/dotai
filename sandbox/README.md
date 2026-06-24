@@ -68,10 +68,34 @@ setup) cross into the agent phase.
 
 ## Run it locally
 
+Works the same on **Docker Desktop (Windows/WSL2)**, **OrbStack (macOS)**, and Linux —
+the base compose mounts no host-specific paths.
+
 ```bash
-# Build the agent image + Squid proxy, bring up the stack
-docker compose -f sandbox/compose/docker-compose.yml build
+# 1. Build the agent + egress-proxy images
+bash sandbox/image/build.sh
+
+# 2. Bring up the stack (agent on an internal network, all egress via the allowlist)
 SANDBOX_PROFILE=claude-code docker compose -f sandbox/compose/docker-compose.yml up
+```
+
+**Secrets** for local runs come from a gitignored `.env.local` at the repo root (any OS),
+or `-e KEY=value` on the CLI. On **macOS only**, you can instead resolve `op://` refs via
+1Password by adding the overlay:
+
+```bash
+docker compose -f sandbox/compose/docker-compose.yml \
+               -f sandbox/compose/docker-compose.mac.yml up
+```
+
+> **On Windows**, run these from a **WSL2** shell (bash + the Docker Desktop CLI). The
+> sandbox runs Linux containers under Docker Desktop's WSL2 backend.
+
+To verify the box end-to-end, run the test suite — see [test/](test/):
+
+```bash
+bash sandbox/test/smoke.sh         # Tier 0 — no Docker
+bash sandbox/test/integration.sh   # Tier 1 — Docker; proves the live egress + boundary
 ```
 
 See [compose/](compose/) for the local flow and [deploy/](deploy/) for Fargate.

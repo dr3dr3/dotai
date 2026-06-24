@@ -1,4 +1,6 @@
-# AI Sandbox — local run (Docker / OrbStack).
+# AI Sandbox — local run. PORTABLE base: works on Docker Desktop (Windows/WSL2),
+# OrbStack (macOS), and plain Docker (Linux). It mounts NO host-specific paths, so
+# nothing here breaks across OSes.
 #
 # Topology that enforces the egress allowlist WITHOUT relying on the proxy env alone:
 #   - `internal_net` is `internal: true` → NO gateway to the internet.
@@ -7,9 +9,13 @@
 #   - the `egress` proxy is on BOTH internal_net and external_net, so it (and only it)
 #     can leave, gated by sandbox/egress/allowlist.conf.
 #
-# Build first (base → agent → egress):  bash sandbox/image/build.sh
-# Then run:                             SANDBOX_PROFILE=claude-code \
-#                                         docker compose -f sandbox/compose/docker-compose.yml up
+# Build first:  bash sandbox/image/build.sh
+# Run:          SANDBOX_PROFILE=claude-code \
+#                 docker compose -f sandbox/compose/docker-compose.yml up
+#
+# Secrets for local runs come from a gitignored ../../.env.local (all OSes). On
+# macOS/OrbStack you can instead resolve op:// refs via 1Password by ALSO passing the
+# overlay:  -f docker-compose.yml -f docker-compose.mac.yml   (see that file).
 name: ai-sandbox
 
 services:
@@ -40,17 +46,16 @@ services:
       HTTPS_PROXY: http://egress:3128
       NO_PROXY: localhost,127.0.0.1,egress
       AWS_REGION: ap-southeast-2
-    # Read-only integration tokens for local runs (use a gitignored env file, or
-    # rely on varlock + the mounted 1Password agent.sock below).
+    # Read-only integration tokens for local runs. Portable across all OSes: put
+    # KEY=value lines in a gitignored ../../.env.local (or pass -e on the CLI). On
+    # macOS, the docker-compose.mac.yml overlay adds op:// resolution via 1Password.
     env_file:
       - path: ../../.env.local
         required: false
     volumes:
       # Live-edit the substrate scripts without rebuilding (local dev convenience).
+      # Relative path → resolves the same on Windows, macOS, and Linux.
       - ../../sandbox:/opt/sandbox:ro
-      # 1Password agent socket → varlock resolves op:// refs in 00-secrets.sh.
-      # Only present while 1Password is running on the host; optional for local dev.
-      - ${HOME}/.1password/agent.sock:/home/dev/.1password/agent.sock
     tmpfs:
       - /run/sandbox:mode=0700            # RO tokens file lives here (never on disk)
 

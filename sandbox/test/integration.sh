@@ -11,8 +11,9 @@
 #
 # Usage:  bash sandbox/test/integration.sh [--no-build]
 #
-# Note: compose mounts the 1Password agent.sock; have 1Password running, or comment
-# that mount out of compose/docker-compose.yml for a credential-less CI box.
+# Portable: uses the base compose only (no host-specific mounts, no secrets), so it
+# runs identically on Docker Desktop (Windows/WSL2), OrbStack (macOS), and Linux.
+# On Windows, run it from a WSL2 shell (bash + the Docker Desktop CLI).
 # =============================================================================
 set -uo pipefail
 

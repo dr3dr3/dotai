@@ -1,0 +1,21 @@
+# macOS / OrbStack overlay — opt-in.
+#
+# Adds the 1Password agent socket so varlock can resolve op:// secret refs at setup
+# (biometric unlock on the host), matching the dotai devcontainer pattern. This path
+# is a unix socket only on macOS; on Windows 1Password uses a named pipe, so this
+# overlay is macOS-only and is kept OUT of the portable base.
+#
+# Usage (from the repo root):
+#   docker compose \
+#     -f sandbox/compose/docker-compose.yml \
+#     -f sandbox/compose/docker-compose.mac.yml up
+#
+# Requires 1Password running with Settings ▸ Developer ▸ "Use the SSH agent" enabled.
+services:
+  agent:
+    volumes:
+      - ${HOME}/.1password/agent.sock:/home/dev/.1password/agent.sock
+    environment:
+      # Setup-phase only — entrypoint.sh deliberately drops SSH_AUTH_SOCK at the
+      # SETUP→AGENT boundary, so the agent phase never sees the 1Password socket.
+      SSH_AUTH_SOCK: /home/dev/.1password/agent.sock
