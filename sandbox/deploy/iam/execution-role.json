@@ -1,0 +1,26 @@
+{
+  "Comment": "EXECUTION role — what ECS itself may do to START the task (pull the image, inject secrets, create log streams). This role is used by the ECS agent at launch, NOT by the running agent process. It can read the specific sandbox secrets so ECS can inject them as env into the SETUP phase; they are dropped at the SETUP->AGENT boundary. Scope the secret ARNs to /roe/sandbox/* only.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PullImageAndLogs",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "InjectSandboxSecrets",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:ap-southeast-2:*:secret:/roe/sandbox/*"
+    }
+  ]
+}

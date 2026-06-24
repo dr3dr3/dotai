@@ -1,0 +1,35 @@
+# repos.yaml — codebases the sandbox clones into the agent's working area.
+#
+# The SETUP phase (phases/10-setup.sh) reads this file and clones each entry
+# READ-ONLY under `roe-codebase/<dir>`. Clones are shallow by default. There are
+# NO push credentials in the agent phase — this is reference context, not a
+# working tree the agent pushes from.
+#
+# Schema (per entry):
+#   url   (required)  git URL. Prefer https://. Auth (if the repo is private) comes
+#                     from GITHUB_TOKEN, which exists ONLY during setup and is
+#                     dropped before the agent runs.
+#   dir   (required)  destination directory under roe-codebase/
+#   ref   (optional)  branch / tag / commit to check out. Default: the repo's HEAD.
+#   depth (optional)  shallow clone depth. Default: 1. Use 0 for a full clone.
+#   docs  (optional)  true to also index this repo's docs into the Graphify graph.
+#
+# Keep this list tight: every repo here widens the agent's private-data surface
+# (leg 1 of the lethal trifecta). Only add what the agent genuinely needs as context.
+
+repos:
+  # --- Examples — replace with real repos --------------------------------------
+  # - url: https://github.com/rockofeye/platform-api
+  #   dir: platform-api
+  #   ref: main
+  #   depth: 1
+  #   docs: true
+  #
+  # - url: https://github.com/rockofeye/web-app
+  #   dir: web-app
+  []
+
+# Optional: standalone documentation sources (not git repos) to fold into context.
+# Each is fetched during setup and indexed by Graphify. Must be on the egress
+# allowlist (egress/allowlist.conf) to be reachable.
+docs: []

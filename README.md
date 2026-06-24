@@ -30,9 +30,19 @@ dotai/
 ├── scripts/
 │   ├── setup.sh                   ← Wire commands into Claude Code (and Cursor/Windsurf)
 │   └── update.sh                  ← Pull latest and re-link
+├── sandbox/                       ← AI Sandbox: hardened container for autonomous agents
+│   ├── egress/                    ← Deny-by-default egress allowlist proxy (the keystone)
+│   ├── phases/                    ← Two-phase run: setup (secrets) → agent (locked down)
+│   ├── profiles/                  ← The harness contract (Claude Code / Codex / Pi, pluggable)
+│   ├── compose/ + deploy/         ← Run locally (Docker/OrbStack) or on AWS Fargate
+│   └── README.md                  ← Substrate overview + threat model
 ├── setup.sh                       ← Install AI tools (Claude Code, Codex, varlock, GitHub CLI)
 └── README.md                      ← This file
 ```
+
+> The **`sandbox/`** directory is a separate capability from the rest of this repo — a
+> hardened container for running autonomous agents unattended. See the
+> [AI Sandbox](#ai-sandbox) section below.
 
 ---
 
@@ -140,6 +150,87 @@ Two setup scripts with distinct responsibilities:
 
 Each repo's own `CLAUDE.md` contains context relevant to that codebase. Context lives in the repo
 that owns it — not in a shared layer.
+
+---
+
+## AI Sandbox
+
+The [`sandbox/`](sandbox/) directory is a **hardened, containerized substrate for running
+autonomous AI agents** across the SDLC — work you delegate to agents that run unattended,
+locally or in the cloud, rather than the interactive sessions you drive yourself.
+
+It packages everything an agent needs (your codebase, a queryable knowledge graph,
+read-only access to Sentry/Linear/Slack, and a guarded email channel) inside a box that is
+locked down so a compromised or prompt-injected agent **cannot exfiltrate data or push
+code**. The agent *harness and workflow are pluggable* — the sandbox is the box; what runs
+inside it is configured per instance and is out of scope for the substrate itself.
+
+> **This is separate from `.devcontainer/`.** The devcontainer is your general-purpose,
+> interactive AI dev environment (you drive it, it has your credentials). The sandbox is a
+> self-contained, unattended runtime with its **own image** ([`sandbox/image/Dockerfile`](sandbox/image/Dockerfile))
+> and hard guardrails. Neither depends on the other.
+
+|  | `.devcontainer/` | `sandbox/` |
+|--|------------------|------------|
+| **Purpose** | General-purpose interactive AI dev environment | Unattended runtime for autonomous agents |
+| **Who drives it** | You | An agent harness + workflow (pluggable) |
+| **Runs** | OrbStack on your machine | Local (Docker/OrbStack) **or** AWS Fargate |
+| **Credentials** | Full (1Password, git push) | Read-only tokens only; no git push creds |
+| **Entrypoint** | `bash` (interactive) | Two-phase, locked-down `entrypoint.sh` |
+
+### Security model
+
+The design target is the **"lethal trifecta"**: a prompt-injected agent becomes a breach
+only when it has *private-data access* **and** *untrusted-content exposure* **and** an
+*external-communication channel* at once. The sandbox attacks the third leg:
+
+- **Egress allowlist (the keystone)** — a deny-by-default [Squid proxy](sandbox/egress/);
+  the agent has no direct internet route and can only reach a small, reviewed set of hosts.
+- **Two-phase run** — a **setup** phase (with secrets + network) clones the codebase
+  read-only and builds context; then a hard `exec env -i` boundary drops every
+  write-capable secret before the **agent** phase starts. No git push token, no `op://`
+  resolution — only read-only integration tokens cross.
+- **One sanctioned write-channel** — [`agent-email`](skills/agent-email/) (allowlist +
+  secret redaction + audit) is deliberately the *only* way an agent emits content outward.
+- **Read-only IAM on cloud** — on Fargate, the running agent's task role can do almost
+  nothing (write audit logs, read its own identity); a separate execution role injects
+  secrets at start. The agent cannot fetch raw secrets even though the task launched with them.
+- **Inner confinement** — Anthropic's `sandbox-runtime` confines the filesystem to the
+  working tree for harnesses without their own permission model (e.g. Pi).
+
+### Run it locally
+
+```bash
+# Build the agent + egress-proxy images (self-contained; no devcontainer needed)
+bash sandbox/image/build.sh
+
+# Bring up the stack — agent on an internal network, all egress via the allowlist proxy
+SANDBOX_PROFILE=claude-code docker compose -f sandbox/compose/docker-compose.yml up
+```
+
+### Run it on AWS Fargate
+
+Same image, thin orchestration ([`sandbox/deploy/`](sandbox/deploy/)):
+
+```bash
+bash sandbox/deploy/bootstrap.sh                       # one-time: ECR, log groups, IAM roles
+bash sandbox/deploy/run.sh --subnets subnet-… \
+  --security-groups sg-… --profile claude-code --operator you
+```
+
+### Plugging in a harness
+
+The substrate is harness-agnostic. A [profile](sandbox/profiles/) is one `.env` + a config
+dir; the substrate stages it and execs `$HARNESS_CMD`. Profiles ship for Claude Code, Codex,
+and Pi — adding another is one file, no substrate changes. The agent's *workflow* (what it
+actually does) lives inside the harness and is intentionally out of scope here.
+
+| What to read | Where |
+|--------------|-------|
+| Substrate overview + threat model | [sandbox/README.md](sandbox/README.md) |
+| The harness contract | [sandbox/profiles/README.md](sandbox/profiles/README.md) |
+| Egress allowlist (how to edit) | [sandbox/egress/README.md](sandbox/egress/README.md) |
+| Fargate deployment | [sandbox/deploy/README.md](sandbox/deploy/README.md) |
 
 ---
 

@@ -1,0 +1,60 @@
+# AI Sandbox — local run (Docker / OrbStack).
+#
+# Topology that enforces the egress allowlist WITHOUT relying on the proxy env alone:
+#   - `internal_net` is `internal: true` → NO gateway to the internet.
+#   - the `agent` is attached ONLY to internal_net, so its sole route off-box is the
+#     proxy. A process that ignores HTTPS_PROXY simply cannot reach the internet.
+#   - the `egress` proxy is on BOTH internal_net and external_net, so it (and only it)
+#     can leave, gated by sandbox/egress/allowlist.conf.
+#
+# Build first (base → agent → egress):  bash sandbox/image/build.sh
+# Then run:                             SANDBOX_PROFILE=claude-code \
+#                                         docker compose -f sandbox/compose/docker-compose.yml up
+name: ai-sandbox
+
+services:
+  egress:
+    image: roe-sandbox-egress:latest
+    build:
+      context: ../egress
+      dockerfile: Dockerfile
+    networks: [internal_net, external_net]
+    restart: unless-stopped
+    # Healthcheck is defined in the image; the agent waits for it (depends_on).
+
+  agent:
+    image: roe-sandbox-agent:latest
+    build:
+      context: ../..                     # repo root — the image COPYs sandbox/
+      dockerfile: sandbox/image/Dockerfile
+    depends_on:
+      egress:
+        condition: service_healthy        # fail-closed: no agent until the gate is up
+    networks: [internal_net]              # NO external_net — no direct internet
+    environment:
+      SANDBOX_ENV: local
+      SANDBOX_PROFILE: ${SANDBOX_PROFILE:-claude-code}
+      SANDBOX_OPERATOR: ${SANDBOX_OPERATOR:-}
+      # All traffic via the proxy. NO_PROXY keeps loopback + the proxy host direct.
+      HTTP_PROXY: http://egress:3128
+      HTTPS_PROXY: http://egress:3128
+      NO_PROXY: localhost,127.0.0.1,egress
+      AWS_REGION: ap-southeast-2
+    # Read-only integration tokens for local runs (use a gitignored env file, or
+    # rely on varlock + the mounted 1Password agent.sock below).
+    env_file:
+      - path: ../../.env.local
+        required: false
+    volumes:
+      # Live-edit the substrate scripts without rebuilding (local dev convenience).
+      - ../../sandbox:/opt/sandbox:ro
+      # 1Password agent socket → varlock resolves op:// refs in 00-secrets.sh.
+      # Only present while 1Password is running on the host; optional for local dev.
+      - ${HOME}/.1password/agent.sock:/home/dev/.1password/agent.sock
+    tmpfs:
+      - /run/sandbox:mode=0700            # RO tokens file lives here (never on disk)
+
+networks:
+  internal_net:
+    internal: true     # the keystone: agent has no internet gateway here
+  external_net: {}     # only the egress proxy is attached to this
