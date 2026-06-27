@@ -149,6 +149,53 @@ rm -rf "$SKILLS_TMP"
 echo "✓ Skills installed to $SKILLS_DIR"
 
 # -----------------------------------------------------------------------------
+# 3b. Claude Code guard hooks (personal, ~/.claude — always-on for André)
+#     Installs guard hooks into ~/.claude/hooks/ and registers them in
+#     ~/.claude/settings.json. Home-level so they fire for ANY project root —
+#     unlike the project-level copy ai-devex installs into a repo's .claude/,
+#     which only fires when that repo is the open project. Canonical source of
+#     each script is ai-devex/hooks/; dotai bundles a copy so personal setup is
+#     self-contained. Idempotent — re-running never duplicates a registration.
+# -----------------------------------------------------------------------------
+HOOKS_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/hooks"
+if [ -d "$HOOKS_SRC_DIR" ] && command -v python3 &>/dev/null; then
+    HOME_HOOKS_DIR="$HOME/.claude/hooks"
+    HOME_SETTINGS="$HOME/.claude/settings.json"
+    mkdir -p "$HOME_HOOKS_DIR"
+
+    echo "→ Installing personal guard hooks into ~/.claude/hooks/"
+    for hook_src in "$HOOKS_SRC_DIR/"*.sh; do
+        [ -f "$hook_src" ] || continue
+        cp -f "$hook_src" "$HOME_HOOKS_DIR/$(basename "$hook_src")"
+        chmod +x "$HOME_HOOKS_DIR/$(basename "$hook_src")"
+        echo "✓ $(basename "$hook_src")"
+    done
+
+    if [ -f "$HOME_HOOKS_DIR/guard-instance-docker.sh" ]; then
+        python3 - "$HOME_SETTINGS" "$HOME_HOOKS_DIR/guard-instance-docker.sh" <<'PY'
+import json, os, sys
+path, cmd = sys.argv[1], sys.argv[2]
+data = {}
+if os.path.exists(path):
+    with open(path) as f:
+        try: data = json.load(f)
+        except Exception: data = {}
+pre = data.setdefault("hooks", {}).setdefault("PreToolUse", [])
+exists = any(h.get("command") == cmd for blk in pre if isinstance(blk, dict)
+             for h in blk.get("hooks", []) if isinstance(h, dict))
+if not exists:
+    pre.append({"matcher": "Bash", "hooks": [{"type": "command", "command": cmd}]})
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2); f.write("\n")
+    print("✓ registered guard-instance-docker.sh in ~/.claude/settings.json")
+else:
+    print("✓ guard-instance-docker.sh already registered (~/.claude)")
+PY
+    fi
+fi
+
+# -----------------------------------------------------------------------------
 # Done
 # -----------------------------------------------------------------------------
 echo ""
