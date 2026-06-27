@@ -41,6 +41,14 @@ else
     echo "  • config.json already present — leaving as-is"
 fi
 
+# 2b. Install the L0 identity (who you are) used by `wake-up` -------------------
+#     state/ is gitignored, so the committed template (identity.txt next to this
+#     script) is copied in on first setup. `-n` never clobbers a local edit.
+if [ -f "$BASE/identity.txt" ]; then
+    cp -n "$BASE/identity.txt" "$STATE/identity.txt" 2>/dev/null || true
+    echo "  • identity.txt installed (~/.mempalace/identity.txt)"
+fi
+
 # 3. Install the mempalace CLI + MCP server in an isolated env ------------------
 #    uv tool keeps chromadb/numpy/grpcio off the system Python (PEP 668 safe).
 #    The shared pgvector backend (Postgres on the always-on Windows PC, reached
@@ -83,10 +91,48 @@ else
     "$CLAUDE_BIN" plugin install mempalace@mempalace 2>&1 | tail -2
 fi
 
+# 5. Register the SessionStart wake-up hook ------------------------------------
+#    The plugin ships Stop/PreCompact (auto-save) hooks but NOT a SessionStart
+#    one, so palace recall isn't proactive by default. This wires
+#    `mempalace hook run --hook session-start` into ~/.claude/settings.json so
+#    ~600-900 tokens of palace context are injected at the start of every session
+#    — rebuild-proof + cross-machine (the palace lives on the tailnet backend).
+#    settings.json is container-home (wiped on rebuild), which is why this runs
+#    here. Idempotent JSON merge: preserves any existing hooks (e.g. codegraph).
+HOOK_SH="$BASE/hooks/session-start.sh"
+chmod +x "$HOOK_SH" 2>/dev/null || true
+SETTINGS="$HOME/.claude/settings.json"
+mkdir -p "$HOME/.claude"
+HOOK_CMD="bash $HOOK_SH" python3 - "$SETTINGS" <<'PY'
+import json, os, sys
+path = sys.argv[1]
+cmd = os.environ["HOOK_CMD"]
+try:
+    with open(path) as f:
+        cfg = json.load(f)
+except (FileNotFoundError, json.JSONDecodeError):
+    cfg = {}
+hooks = cfg.setdefault("hooks", {})
+ss = hooks.setdefault("SessionStart", [])
+present = any(
+    h.get("command") == cmd
+    for group in ss if isinstance(group, dict)
+    for h in group.get("hooks", []) if isinstance(h, dict)
+)
+if present:
+    print("  • SessionStart wake-up hook already registered — skipping")
+else:
+    ss.append({"hooks": [{"type": "command", "command": cmd}]})
+    with open(path, "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
+    print("  • registered MemPalace SessionStart wake-up hook in settings.json")
+PY
+
 cat <<'EOF'
 
 ✅ Setup done. Reload the VS Code window so the MCP server + Stop/PreCompact
-   hooks load into your running session.
+   + SessionStart wake-up hooks load into your running session.
 
 Seed the palace (downloads the ~300MB MiniLM model on first run):
 

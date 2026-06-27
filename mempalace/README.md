@@ -56,15 +56,43 @@ duplicate Graphify, but fuzzier and noisier). It mines:
 If you ever miss "find code by description" semantic search, add a *curated* code
 slice (Actions/Entities — never fixtures), don't re-mirror the tree.
 
+## Memory model — MemPalace vs Claude `MEMORY.md` vs session files
+
+Three places can hold "memory"; they layer, they don't compete. **MemPalace is
+the system of record.**
+
+| | Claude `MEMORY.md` | session files (`/workspace/session-*.md`) | **MemPalace** |
+|---|---|---|---|
+| Job | tiny always-on cache | polished human handoff | durable semantic recall (why / decisions / history) |
+| Auto-loaded into context? | ✅ every session (it's the index) | ❌ only when pointed at one | ✅ via the **SessionStart wake-up hook** + on demand via `search` |
+| Survives devcontainer rebuild? | ❌ container overlay — wiped | ✅ `/workspace` host bind | ✅ Postgres on the tailnet |
+| Cross-machine? | ❌ | ❌ | ✅ namespace `andre-shared` |
+| How content gets in | hand-written | hand-written | **auto-mined** from conversations + `ai-context` + every `docs/` |
+
+Rules of thumb:
+- **Default to MemPalace.** It mines your sessions automatically and is the only
+  durable + cross-machine store. Recall with `mempalace search "…"`; the wake-up
+  hook surfaces the essentials at session start without being asked.
+- **Keep `MEMORY.md` lean** — only the handful of mistake-preventing / current-
+  focus facts you want in front of the agent *every* session. It's a cache, not
+  the archive (and it's wiped on rebuild). Back it up to `/workspace` if it holds
+  anything not yet mined.
+- **Session files are optional now** — their durable-handoff value is covered by
+  MemPalace mining the conversation. Write one only when you want a curated
+  human-readable artifact.
+
 ## Layout
 
 ```
 mempalace/
-├── setup.sh    # idempotent installer — run after each devcontainer rebuild
-├── seed.sh     # mine Claude sessions + ai-context + every docs/ folder
-├── README.md   # this file
-└── state/      # ← ~/.mempalace symlinks here (palace data + config + model)
-                #   persists across rebuilds because /workspace is a host bind
+├── setup.sh       # idempotent installer — run after each devcontainer rebuild
+├── seed.sh        # mine Claude sessions + ai-context + every docs/ folder
+├── identity.txt   # L0 "who you are" — committed template; setup.sh copies it into state/
+├── hooks/
+│   └── session-start.sh   # SessionStart wake-up hook (registered into settings.json by setup.sh)
+├── README.md      # this file
+└── state/         # ← ~/.mempalace symlinks here (palace data + config + model + live identity.txt)
+                   #   gitignored; persists across rebuilds because /workspace is a host bind
 ```
 
 ## Why a symlink + re-runnable script
@@ -112,11 +140,32 @@ bash /workspace/.ai/dotai/mempalace/seed.sh
 | Backend | **self-hosted Postgres + `pgvector`** (namespace `andre-shared`) | container `mempalace-pg` on the Windows PC, tailnet-only; `host.docker.internal:5432` from here. ChromaDB remains as an offline fallback only. |
 | Palace path | `state/palace-pg` | via the `~/.mempalace` symlink; the path is **hashed into the pgvector table name** — keep it identical across envs (see invariants in `shared-state-plan.md`) |
 
-## Hooks (what fires automatically once the plugin is installed)
+## Hooks (what fires automatically)
 
+From the **plugin** (auto-save):
 - **Stop** — saves conversation context ~every 15 messages (fires at each
   turn-end; watch for latency — this is the main "is it worth it" signal).
 - **PreCompact** — preserves memories before context compaction.
+
+Added by **us** (proactive recall — the plugin doesn't ship this):
+- **SessionStart** → `hooks/session-start.sh`, registered into
+  `~/.claude/settings.json` by `setup.sh` (idempotent JSON merge that preserves
+  any existing hooks, e.g. codegraph). It injects the `wake-up` primer (L0
+  identity + L1 essential story) as `additionalContext` at the start of every
+  session, so recall is **automatic** — no need to ask. It prefers the official
+  `mempalace hook run --hook session-start` and falls back to emitting `wake-up`
+  if that returns nothing. **Fail-open:** if the binary is missing or the palace
+  backend is unreachable (offline / tailnet down), it emits nothing and never
+  delays the session. Because `~/.claude` is wiped on rebuild, `setup.sh`
+  re-registers it every run.
+
+## Identity (L0)
+
+`wake-up`'s first block is your identity, read from `~/.mempalace/identity.txt`.
+The committed template lives at `mempalace/identity.txt`; `setup.sh` copies it
+into the gitignored `state/` (`cp -n`, never clobbering a local edit). Keep it to
+**durable** facts (who you are, role, environment, working preferences, team) —
+*current* work belongs in the palace + the Claude `MEMORY.md`, not here.
 
 ## Evaluate
 
@@ -168,6 +217,9 @@ rm -rf /workspace/.ai/dotai/mempalace  # data + scripts
 - [x] Installed `mempalace` (`[pgvector]` extra) via `uv tool`
 - [x] `~/.mempalace` → `state/` symlink, embedding model pinned to `minilm`
 - [x] Claude Code plugin installed (user scope) — automated in `setup.sh`
+- [x] **SessionStart wake-up hook** (`hooks/session-start.sh`) — proactive recall,
+      auto-registered into `settings.json` by `setup.sh` (fail-open)
+- [x] **L0 identity** (`identity.txt`) installed into `state/` by `setup.sh`
 - [x] Scope decided: **memory + docs** (Graphify owns code structure)
 - [x] Backend: **shared self-hosted pgvector** on the tailnet (namespace
       `andre-shared`) — Windows PC + MacBook connected. See `shared-state-plan.md`.

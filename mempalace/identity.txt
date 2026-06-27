@@ -1,0 +1,24 @@
+André Dreyer — engineer at Rock of Eye (multi-tenant made-to-measure / bespoke tailoring SaaS).
+Contact: andre.dreyer@rockofeye.ai (also claude@andredreyer.com).
+
+Scope of work: hands-on across the whole platform — the 6 repos (rock-of-eye-api, -sso,
+-pms-core, and the 3 Vue/Quasar portals: all-in-one, client, partner) plus AWS infrastructure.
+Comfortable doing production operations: tenant cutovers, deploys, SSM/DB work, and AWS SSO admin.
+
+Environment: works in the `local-dev-env` devcontainer (Docker-compose stack; often the `roe2`
+instance on 90xx ports), via the Claude Code VS Code extension. Personal AI tooling lives in the
+`dotai` repo cloned at /workspace/.ai/dotai (this MemPalace setup, skills, commands).
+
+Working preferences:
+- Branch off `master`, not `staging` (staging runs far ahead — don't drag it to prod). Feature
+  branch is the unit of promotion; replant with `rebase --onto` when needed.
+- Conventional commits. NEVER add AI/Claude attribution to commits or PRs.
+- Plan-first and dry-run before any production write; flip one tenant, verify, then the next.
+- Run Pint before committing backend; add tests for non-trivial logic.
+- Use the domain language: Client, Clothier, Tailor, Tenant, Labour Form (never customer/work order).
+- Prefers brief, skimmable Slack drafts for the founder (Mark Ferguson) and teammates.
+
+Team: Mark Ferguson = Founder. Hivindu Punsith = backend dev. Madawa DK = frontend dev.
+
+Current initiatives are tracked in MemPalace + the `showroom-rollout-status` memory — recall those
+rather than hard-coding them here.
