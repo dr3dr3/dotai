@@ -1,0 +1,8 @@
+# Fixture: one tiny PUBLIC repo, for the local integration test (Tier 1).
+# octocat/Hello-World is a few bytes — no auth needed, fast clone. Cloning it
+# exercises the real clone path (read-only, shallow) without touching private repos.
+repos:
+  - url: https://github.com/octocat/Hello-World
+    dir: hello-world
+    depth: 1
+docs: []

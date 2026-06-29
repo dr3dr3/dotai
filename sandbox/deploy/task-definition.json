@@ -1,0 +1,66 @@
+{
+  "_comment": "AI Sandbox Fargate task. Two containers in one task: `agent` (the substrate image) + `egress` (Squid allowlist proxy). They share the task network namespace, so the agent reaches the proxy at localhost:3128. Placeholders (ACCOUNT_ID, IMAGE_*) are substituted by deploy/run.sh. See deploy/README.md.",
+  "family": "roe-ai-sandbox",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "1024",
+  "memory": "4096",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/roe-sandbox-execution",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/roe-sandbox-task",
+  "runtimePlatform": { "cpuArchitecture": "ARM64", "operatingSystemFamily": "LINUX" },
+  "volumes": [{ "name": "ro-tokens" }],
+  "containerDefinitions": [
+    {
+      "name": "egress",
+      "image": "IMAGE_EGRESS",
+      "essential": true,
+      "portMappings": [{ "containerPort": 3128, "protocol": "tcp" }],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -fsS --proxy http://localhost:3128 --connect-timeout 2 -o /dev/null http://localhost:3128 || exit 1"],
+        "interval": 10, "timeout": 5, "retries": 5, "startPeriod": 10
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/roe/sandbox",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "egress"
+        }
+      }
+    },
+    {
+      "name": "agent",
+      "image": "IMAGE_AGENT",
+      "essential": true,
+      "dependsOn": [{ "containerName": "egress", "condition": "HEALTHY" }],
+      "environment": [
+        { "name": "SANDBOX_ENV", "value": "fargate" },
+        { "name": "SANDBOX_PROFILE", "value": "claude-code" },
+        { "name": "HTTP_PROXY", "value": "http://localhost:3128" },
+        { "name": "HTTPS_PROXY", "value": "http://localhost:3128" },
+        { "name": "NO_PROXY", "value": "localhost,127.0.0.1,169.254.170.2,169.254.169.254" },
+        { "name": "AWS_REGION", "value": "ap-southeast-2" },
+        { "name": "SANDBOX_AUDIT_GROUP", "value": "/roe/sandbox/audit" }
+      ],
+      "secrets": [
+        { "name": "GITHUB_TOKEN", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:/roe/sandbox/github-ro" },
+        { "name": "SENTRY_TOKEN", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:/roe/sandbox/sentry-ro" },
+        { "name": "LINEAR_TOKEN", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:/roe/sandbox/linear-ro" },
+        { "name": "SLACK_TOKEN", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:/roe/sandbox/slack-ro" },
+        { "name": "AGENTMAIL_API_KEY", "valueFrom": "arn:aws:secretsmanager:ap-southeast-2:ACCOUNT_ID:secret:/roe/sandbox/agentmail" }
+      ],
+      "mountPoints": [
+        { "sourceVolume": "ro-tokens", "containerPath": "/run/sandbox", "readOnly": false }
+      ],
+      "linuxParameters": { "initProcessEnabled": true },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/roe/sandbox",
+          "awslogs-region": "ap-southeast-2",
+          "awslogs-stream-prefix": "agent"
+        }
+      }
+    }
+  ]
+}

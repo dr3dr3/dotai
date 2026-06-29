@@ -1,0 +1,16 @@
+{
+  "short_name": "tailor-handoff-notes",
+  "raw_idea": "What if the app could just auto-write the handoff notes between the fitter and the tailor? Mark saw a competitor demo something like it and thinks we're behind.",
+  "initial_read": "Sounds like a summarisation feature bolted onto the fitting flow. Might be real, might be shiny-competitor-envy. The 'handoff' moment is genuinely painful today.",
+  "why_mark_wants_it": "I think he's worried we look less 'AI-powered' than competitors, and he separately keeps hearing that the fitter→tailor handoff loses detail. He may be conflating those two.",
+  "suspected_problems": [
+    "We don't capture structured fitting data yet — there may be nothing good to summarise from.",
+    "Tailors may not trust auto-generated notes for high-value alterations.",
+    "Could be a solution looking for a problem if the real pain is data capture, not summarisation."
+  ],
+  "must_investigate": [
+    "Do we already capture fitting data in a structured form anywhere in the codebase?",
+    "Is there Sentry/usage signal that the handoff step is where things break or get abandoned?",
+    "Has a 'notes' or 'handoff' feature been proposed/rejected in Linear before?"
+  ]
+}

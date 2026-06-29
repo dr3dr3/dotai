@@ -1,0 +1,9 @@
+# Codex config staged into ~/.codex in the sandbox agent phase.
+# Committed, non-secret config only. The OpenAI API key (if used) arrives via the
+# two-phase secret flow, not from here.
+#
+# Codex honours HTTP(S)_PROXY from the environment, so no proxy config is needed —
+# the substrate exports the egress proxy vars into the agent phase.
+#
+# Add Codex-specific settings here as the workflow is defined (out of scope for the
+# substrate). Kept minimal intentionally.

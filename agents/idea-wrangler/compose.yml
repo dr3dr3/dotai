@@ -1,0 +1,34 @@
+# Idea Wrangler — local run overlay on the base sandbox compose.
+#
+# Mounts the agent definition, standing context, and seed into the sandbox, and
+# selects the idea-wrangler profile. The base compose stays generic; this overlay is
+# the workload-specific layer.
+#
+# NOTE on paths: Compose resolves relative volume paths against the PROJECT directory,
+# which is the directory of the FIRST -f file (sandbox/compose/). That's why the paths
+# below are written relative to sandbox/compose/ (../../ = repo root), the same as the
+# base file — even though this overlay lives in agents/idea-wrangler/.
+#
+# Run from the repo root (one-shot):
+#   docker compose \
+#     -f sandbox/compose/docker-compose.yml \
+#     -f agents/idea-wrangler/compose.yml \
+#     run --rm agent
+#
+# Use a REAL seed instead of the example: point SANDBOX_INPUT at your own mounted file,
+# or replace the seed volume below.
+name: ai-sandbox
+
+services:
+  agent:
+    environment:
+      SANDBOX_PROFILE: idea-wrangler
+      SANDBOX_INPUT: /opt/seed/seed.json
+      SANDBOX_CONTEXT_DIR: /opt/context
+      # Read-only research tokens for local runs come from ../../.env.local (base
+      # compose env_file): LINEAR_TOKEN (or LINEAR_API_KEY), SENTRY_TOKEN, AGENTMAIL_API_KEY.
+    volumes:
+      - ../../agents/idea-wrangler:/opt/workload:ro
+      - ../../context:/opt/context:ro
+      # The seed. Swap this for your real triaged seed, or override SANDBOX_INPUT.
+      - ../../agents/idea-wrangler/seed.example.json:/opt/seed/seed.json:ro

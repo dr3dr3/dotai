@@ -1,0 +1,25 @@
+{
+  "$comment": "Claude Code config staged into ~/.claude in the sandbox agent phase. Deny-list mirrors templates/settings.json (the repo default) so the agent cannot read secrets even within the box. The egress proxy and two-phase secret boundary are the primary controls; this is defense-in-depth.",
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(pwd:*)",
+      "Bash(which:*)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(./secrets/**)",
+      "Read(/run/sandbox/**)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)",
+      "Bash(sudo:*)"
+    ]
+  }
+}

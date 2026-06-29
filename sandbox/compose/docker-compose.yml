@@ -1,0 +1,65 @@
+# AI Sandbox — local run. PORTABLE base: works on Docker Desktop (Windows/WSL2),
+# OrbStack (macOS), and plain Docker (Linux). It mounts NO host-specific paths, so
+# nothing here breaks across OSes.
+#
+# Topology that enforces the egress allowlist WITHOUT relying on the proxy env alone:
+#   - `internal_net` is `internal: true` → NO gateway to the internet.
+#   - the `agent` is attached ONLY to internal_net, so its sole route off-box is the
+#     proxy. A process that ignores HTTPS_PROXY simply cannot reach the internet.
+#   - the `egress` proxy is on BOTH internal_net and external_net, so it (and only it)
+#     can leave, gated by sandbox/egress/allowlist.conf.
+#
+# Build first:  bash sandbox/image/build.sh
+# Run:          SANDBOX_PROFILE=claude-code \
+#                 docker compose -f sandbox/compose/docker-compose.yml up
+#
+# Secrets for local runs come from a gitignored ../../.env.local (all OSes). On
+# macOS/OrbStack you can instead resolve op:// refs via 1Password by ALSO passing the
+# overlay:  -f docker-compose.yml -f docker-compose.mac.yml   (see that file).
+name: ai-sandbox
+
+services:
+  egress:
+    image: roe-sandbox-egress:latest
+    build:
+      context: ../egress
+      dockerfile: Dockerfile
+    networks: [internal_net, external_net]
+    restart: unless-stopped
+    # Healthcheck is defined in the image; the agent waits for it (depends_on).
+
+  agent:
+    image: roe-sandbox-agent:latest
+    build:
+      context: ../..                     # repo root — the image COPYs sandbox/
+      dockerfile: sandbox/image/Dockerfile
+    depends_on:
+      egress:
+        condition: service_healthy        # fail-closed: no agent until the gate is up
+    networks: [internal_net]              # NO external_net — no direct internet
+    environment:
+      SANDBOX_ENV: local
+      SANDBOX_PROFILE: ${SANDBOX_PROFILE:-claude-code}
+      SANDBOX_OPERATOR: ${SANDBOX_OPERATOR:-}
+      # All traffic via the proxy. NO_PROXY keeps loopback + the proxy host direct.
+      HTTP_PROXY: http://egress:3128
+      HTTPS_PROXY: http://egress:3128
+      NO_PROXY: localhost,127.0.0.1,egress
+      AWS_REGION: ap-southeast-2
+    # Read-only integration tokens for local runs. Portable across all OSes: put
+    # KEY=value lines in a gitignored ../../.env.local (or pass -e on the CLI). On
+    # macOS, the docker-compose.mac.yml overlay adds op:// resolution via 1Password.
+    env_file:
+      - path: ../../.env.local
+        required: false
+    volumes:
+      # Live-edit the substrate scripts without rebuilding (local dev convenience).
+      # Relative path → resolves the same on Windows, macOS, and Linux.
+      - ../../sandbox:/opt/sandbox:ro
+    tmpfs:
+      - /run/sandbox:mode=0700            # RO tokens file lives here (never on disk)
+
+networks:
+  internal_net:
+    internal: true     # the keystone: agent has no internet gateway here
+  external_net: {}     # only the egress proxy is attached to this

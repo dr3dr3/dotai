@@ -1,0 +1,4 @@
+{
+  "$comment": "Pi config staged into ~/.config/pi in the sandbox agent phase. Committed, non-secret config only. Model API keys arrive via the two-phase secret flow. Pi honours HTTP(S)_PROXY, so all model traffic goes through the egress allowlist. Locally you may point Pi at the host Ollama (host.docker.internal:11434) — add that host to egress/allowlist.conf if you do.",
+  "models": {}
+}

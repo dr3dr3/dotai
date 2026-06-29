@@ -1,0 +1,29 @@
+{
+  "_comment": "Idea Wrangler config. Non-secret settings only — tokens arrive via the sandbox two-phase secret flow (LINEAR_TOKEN, SENTRY_TOKEN, AGENTMAIL_API_KEY). Fill in the PLACEHOLDER values before the first real run; run.sh / emit.mjs fail loudly if the intake address is still a placeholder.",
+
+  "linear": {
+    "_comment": "Output destination. Idea Wrangler EMAILS the concept to your Linear team intake address (Settings → Team → Intake → email-to-issue). Subject becomes the issue title, body becomes the description; it lands in that team's Triage. No Linear write-API is used.",
+    "intake_email": "PLACEHOLDER-team-intake@rockofeye.linear.app",
+    "team_key": "ROE",
+    "graphql_endpoint": "https://api.linear.app/graphql"
+  },
+
+  "sentry": {
+    "_comment": "Read-only research source. Set org + the projects worth scanning. Leave projects empty to skip Sentry (the agent degrades gracefully and notes the gap).",
+    "org": "PLACEHOLDER-sentry-org",
+    "projects": [],
+    "api_base": "https://sentry.io/api/0"
+  },
+
+  "agentmail": {
+    "_comment": "The sending inbox (the agent's own mailbox). Must match an existing AgentMail inbox; see skills/agent-email.",
+    "inbox": "agent@rockofeye.net"
+  },
+
+  "run": {
+    "_comment": "Timebox + harness invocation. timeout_secs caps a single run so a weak idea can't burn a long session. claude_flags runs Claude Code unattended — safe because the container + egress allowlist are the sandbox, and the model has NO send capability. Tune flags to your Claude Code version if needed.",
+    "timeout_secs": 900,
+    "kill_fast_timeout_secs": 180,
+    "claude_flags": "--permission-mode bypassPermissions"
+  }
+}

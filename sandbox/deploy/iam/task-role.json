@@ -1,0 +1,21 @@
+{
+  "Comment": "TASK role — the AGENT's runtime identity. Deliberately near-zero. The running agent can do almost nothing with AWS: only write its own audit to CloudWatch and read its own caller identity. It explicitly CANNOT read secrets (that is the execution role's job, at task start, before the agent phase). This split is the load-bearing control.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AuditToCloudWatch",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:ap-southeast-2:*:log-group:/roe/sandbox*:*"
+    },
+    {
+      "Sid": "ResolveActorForAudit",
+      "Effect": "Allow",
+      "Action": "sts:GetCallerIdentity",
+      "Resource": "*"
+    }
+  ]
+}
