@@ -8,17 +8,16 @@
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
     "workspaceFolder": "/workspace",
 
-    // Extra bind mounts from the macOS host.
+    // Extra bind mounts from the host. Cross-platform (Windows + macOS/Linux):
+    // exactly one of USERPROFILE (Windows) / HOME (macOS/Linux) is set, so the
+    // concatenation below resolves to the correct home dir on each host.
     "mounts": [
-        // 1Password biometric SSH / CLI agent. The host app must have
-        // Settings ▸ Developer ▸ "Use the SSH agent" enabled. The socket only
-        // exists while 1Password is running — if it's absent at boot, Docker
-        // creates a *directory* in its place, so keep 1Password running.
-        // In-container `op`/`varlock` then resolve op:// refs with a biometric tap.
-        "source=${localEnv:HOME}/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock,target=/home/dev/.1password/agent.sock,type=bind",
         // Host share — work on host files from inside the container (read-write).
-        // Create it on the host first:  mkdir -p ~/host-share
-        "source=${localEnv:HOME}/host-share,target=/host,type=bind,consistency=cached"
+        // Create it on the host first:  Windows  ->  mkdir %USERPROFILE%\host-share
+        //                               macOS    ->  mkdir -p ~/host-share
+        // (Docker Desktop will auto-create it as root if missing, which can cause
+        //  permission issues, so creating it yourself first is recommended.)
+        "source=${localEnv:USERPROFILE}${localEnv:HOME}/host-share,target=/host,type=bind,consistency=cached"
     ],
 
     "customizations": {
