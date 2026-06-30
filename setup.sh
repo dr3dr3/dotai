@@ -78,6 +78,22 @@ else
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent \
             && echo "✓ Pi installed"
     fi
+
+    # Wire Pi to the host Mac's native Ollama (reached via host.docker.internal in
+    # the devcontainer; OLLAMA_HOST is already set in devcontainer.json). Pi reads
+    # ~/.pi/agent/models.json; source of truth is the committed sandbox profile
+    # config. Install-if-missing so a hand-edited local config is never clobbered.
+    if command -v pi &>/dev/null; then
+        PI_MODELS_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sandbox/profiles/config/pi/models.json"
+        PI_MODELS_DST="$HOME/.pi/agent/models.json"
+        if [ -f "$PI_MODELS_DST" ]; then
+            echo "✓ Pi model config already present at $PI_MODELS_DST — leaving as-is."
+        elif [ -f "$PI_MODELS_SRC" ]; then
+            mkdir -p "$(dirname "$PI_MODELS_DST")"
+            cp "$PI_MODELS_SRC" "$PI_MODELS_DST"
+            echo "✓ Staged Pi → Ollama model config at $PI_MODELS_DST"
+        fi
+    fi
 fi
 
 # -----------------------------------------------------------------------------
