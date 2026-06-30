@@ -9,8 +9,18 @@
         "supportsReasoningEffort": false
       },
       "models": [
-        { "id": "qwen3.5:35b-a3b-coding-nvfp4", "name": "Qwen3.5 35B Coding (local Ollama)" },
-        { "id": "gemma4:26b-mlx", "name": "Gemma4 26B (local Ollama)" }
+        {
+          "id": "qwen3.5:35b-a3b-coding-nvfp4",
+          "name": "Qwen3.5 35B Coding (local Ollama)",
+          "reasoning": true,
+          "compat": { "thinkingFormat": "qwen" }
+        },
+        {
+          "id": "gemma4:26b-mlx",
+          "name": "Gemma4 26B (local Ollama)",
+          "reasoning": true,
+          "compat": { "thinkingFormat": "qwen" }
+        }
       ]
     }
   }
