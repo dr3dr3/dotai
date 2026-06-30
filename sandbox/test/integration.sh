@@ -59,10 +59,13 @@ case "$res" in
 esac
 
 # D. Fail-closed: stop the proxy, confirm no egress --------------------------
+# --no-deps is essential: a plain `compose run agent` would restart egress to
+# satisfy the agent's depends_on(service_healthy), resurrecting the proxy we just
+# stopped and defeating the test. With --no-deps the agent runs alone, proxy down.
 echo "D. fail-closed (proxy down)"
 $COMPOSE up -d egress >/dev/null 2>&1
 $COMPOSE stop egress >/dev/null 2>&1
-res="$(agent_bash 'curl -s --max-time 6 -o /dev/null -w "%{http_code}" https://api.github.com/zen; echo " exit=$?"')"
+res="$($COMPOSE run --rm --no-deps --entrypoint bash agent -lc 'curl -s --max-time 6 -o /dev/null -w "%{http_code}" https://api.github.com/zen; echo " exit=$?"' 2>/dev/null)"
 case "$res" in
   *"200 exit=0"*) bad "egress worked with proxy DOWN — not fail-closed! [$res]" ;;
   *) ok "no egress when proxy is down: [$res]" ;;
