@@ -36,6 +36,18 @@ export SANDBOX_RUN_ID="${SANDBOX_RUN_ID:-$(date +%Y%m%dT%H%M%SZ)-$$}"
 RO_TOKENS_FILE="${SANDBOX_RO_TOKENS:-/run/sandbox/ro-tokens.env}"
 export SANDBOX_RO_TOKENS="$RO_TOKENS_FILE"
 
+# That dir is a root-owned mount (tmpfs locally, an ephemeral task volume on
+# Fargate), but this entrypoint runs as the non-root sandbox user — so take
+# ownership up front or 10-setup can't write the RO-tokens file. sudo is image-
+# granted (NOPASSWD) and used only here in the privileged setup stage, before the
+# `env -i` boundary; the locked-down agent phase never gets it.
+RO_TOKENS_DIR="$(dirname "$RO_TOKENS_FILE")"
+if [ ! -w "$RO_TOKENS_DIR" ]; then
+  sudo mkdir -p "$RO_TOKENS_DIR" \
+    && sudo chown "$(id -u):$(id -g)" "$RO_TOKENS_DIR" \
+    && sudo chmod 0700 "$RO_TOKENS_DIR"
+fi
+
 _audit() { node "$SANDBOX_DIR/lib/audit.mjs" "$@" || true; }
 
 echo "── AI Sandbox ─ run=$SANDBOX_RUN_ID env=$SANDBOX_ENV profile=$SANDBOX_PROFILE"

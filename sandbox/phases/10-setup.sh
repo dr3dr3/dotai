@@ -29,13 +29,17 @@ if [ -f "$REPOS_YAML" ] && command -v yq >/dev/null 2>&1; then
     dir="$(yq -r ".repos[$i].dir // \"\"" "$REPOS_YAML")"
     ref="$(yq -r ".repos[$i].ref // \"\"" "$REPOS_YAML")"
     depth="$(yq -r ".repos[$i].depth // 1" "$REPOS_YAML")"
+    private="$(yq -r ".repos[$i].private // false" "$REPOS_YAML")"
     [ -z "$url" ] || [ -z "$dir" ] && continue
 
     dest="$SANDBOX_WORKDIR/$dir"
-    echo "  → cloning $url → roe-codebase/$dir (ref=${ref:-HEAD} depth=$depth)"
+    echo "  → cloning $url → roe-codebase/$dir (ref=${ref:-HEAD} depth=$depth private=$private)"
 
+    # Only repos explicitly marked `private: true` get the token. Public repos
+    # clone anonymously — never send a write-capable token to a public endpoint,
+    # and an invalid/placeholder token would otherwise 401 even a public clone.
     auth_args=()
-    if [ -n "${GITHUB_TOKEN:-}" ] && [[ "$url" == https://github.com/* ]]; then
+    if [ "$private" = "true" ] && [ -n "${GITHUB_TOKEN:-}" ] && [[ "$url" == https://github.com/* ]]; then
       auth_args=(-c "http.https://github.com/.extraheader=Authorization: Bearer ${GITHUB_TOKEN}")
     fi
     depth_args=(); [ "$depth" != "0" ] && depth_args=(--depth "$depth")
