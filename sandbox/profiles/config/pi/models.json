@@ -1,4 +1,17 @@
 {
-  "$comment": "Pi config staged into ~/.config/pi in the sandbox agent phase. Committed, non-secret config only. Model API keys arrive via the two-phase secret flow. Pi honours HTTP(S)_PROXY, so all model traffic goes through the egress allowlist. Locally you may point Pi at the host Ollama (host.docker.internal:11434) — add that host to egress/allowlist.conf if you do.",
-  "models": {}
+  "providers": {
+    "ollama": {
+      "baseUrl": "http://host.docker.internal:11434/v1",
+      "api": "openai-completions",
+      "apiKey": "ollama",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        { "id": "qwen3.5:35b-a3b-coding-nvfp4", "name": "Qwen3.5 35B Coding (local Ollama)" },
+        { "id": "gemma4:26b-mlx", "name": "Gemma4 26B (local Ollama)" }
+      ]
+    }
+  }
 }
