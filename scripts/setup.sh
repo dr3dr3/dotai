@@ -110,20 +110,48 @@ else
   echo "→ CLAUDE.md already exists in repo — leaving it unchanged"
 fi
 
-# ── Repo .claude/settings.json ──────────────────────────────────────────────
+# ── ~/.claude/settings.json — merge permissions from template ────────────────
 
-CLAUDE_SETTINGS_DIR="$REPO_DIR/.claude"
-CLAUDE_SETTINGS_FILE="$CLAUDE_SETTINGS_DIR/settings.json"
+SETTINGS_TEMPLATE="$DEVEX_DIR/templates/settings.json"
 
-if [ ! -f "$CLAUDE_SETTINGS_FILE" ] && [ -f "$DEVEX_DIR/templates/settings.json" ]; then
-  echo ""
-  echo "→ No .claude/settings.json found — copying template"
-  mkdir -p "$CLAUDE_SETTINGS_DIR"
-  cp "$DEVEX_DIR/templates/settings.json" "$CLAUDE_SETTINGS_FILE"
-  echo "  ✓ .claude/settings.json created from template (review and adjust permissions)"
-elif [ -f "$CLAUDE_SETTINGS_FILE" ]; then
-  echo ""
-  echo "→ .claude/settings.json already exists — leaving it unchanged"
+echo ""
+echo "→ Merging permissions into ~/.claude/settings.json"
+
+if [ -f "$SETTINGS_TEMPLATE" ]; then
+  python3 - "$GLOBAL_SETTINGS" "$SETTINGS_TEMPLATE" <<'PYEOF'
+import json, sys
+
+settings_path = sys.argv[1]
+template_path = sys.argv[2]
+
+with open(settings_path) as f:
+    settings = json.load(f)
+
+with open(template_path) as f:
+    template = json.load(f)
+
+# Merge permissions: union of allow/deny lists, preserving existing entries
+tpl_perms = template.get("permissions", {})
+cur_perms = settings.get("permissions", {})
+
+for key in ("allow", "deny"):
+    existing = set(cur_perms.get(key, []))
+    incoming = set(tpl_perms.get(key, []))
+    merged = sorted(existing | incoming)
+    if merged:
+        cur_perms[key] = merged
+
+if cur_perms:
+    settings["permissions"] = cur_perms
+
+with open(settings_path, "w") as f:
+    json.dump(settings, f, indent=2)
+    f.write("\n")
+
+print("  ✓ permissions merged into ~/.claude/settings.json")
+PYEOF
+else
+  echo "  ⚠ No template found at $SETTINGS_TEMPLATE — skipping"
 fi
 
 # ── Claude Code CLI ───────────────────────────────────────────────────────────
@@ -183,19 +211,46 @@ fi
 
 # ── Claude Code Plugins ───────────────────────────────────────────────────────
 
+# Resolve claude binary — may not be on PATH when running under sudo
+CLAUDE_BIN=""
 if command -v claude &>/dev/null; then
+  CLAUDE_BIN="claude"
+elif [ -x "$HOME/.local/bin/claude" ]; then
+  CLAUDE_BIN="$HOME/.local/bin/claude"
+elif [ -n "${SUDO_USER:-}" ]; then
+  _sudo_home="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+  if [ -x "$_sudo_home/.local/bin/claude" ]; then
+    CLAUDE_BIN="$_sudo_home/.local/bin/claude"
+  fi
+fi
+
+if [ -n "$CLAUDE_BIN" ]; then
   echo ""
-  echo "→ Registering Claude Code plugins"
+  echo "→ Registering Claude Code plugins (using $CLAUDE_BIN)"
 
   # Helper: register an MCP server scoped to the user; skips if already present
   _mcp_add() {
     local name="$1"; shift
-    if claude mcp get "$name" &>/dev/null 2>&1; then
+    if "$CLAUDE_BIN" mcp get "$name" &>/dev/null 2>&1; then
       echo "  → $name already registered — skipping"
     else
-      claude mcp add --scope user "$name" -- "$@" \
+      "$CLAUDE_BIN" mcp add --scope user "$name" -- "$@" \
         && echo "  ✓ $name" \
         || echo "  ✗ $name — registration failed (verify package name)"
+    fi
+  }
+
+  # Helper: register a remote (HTTP) MCP server scoped to the user; skips if present.
+  # Remote servers authenticate via OAuth rather than an env-var token — after
+  # registration, run /mcp inside a Claude Code session to complete the browser flow.
+  _mcp_add_http() {
+    local name="$1"; local url="$2"
+    if "$CLAUDE_BIN" mcp get "$name" &>/dev/null 2>&1; then
+      echo "  → $name already registered — skipping"
+    else
+      "$CLAUDE_BIN" mcp add --transport http --scope user "$name" "$url" \
+        && echo "  ✓ $name (remote — run /mcp to authenticate)" \
+        || echo "  ✗ $name — registration failed"
     fi
   }
 
@@ -219,6 +274,11 @@ if command -v claude &>/dev/null; then
     echo "  ⚠ linear — skipped (set LINEAR_ACCESS_TOKEN and re-run to register)"
   fi
 
+  # Notion — official remote MCP (OAuth). AI read/write over Notion pages,
+  # databases, and search. After registration, run /mcp in a Claude Code session
+  # to authorise and choose which pages/teamspaces to expose.
+  _mcp_add_http notion          https://mcp.notion.com/mcp
+
   # Code-simplifier and Claude-md-management are native Claude Code plugins.
   # They require a marketplace to be configured before installation.
   # Add a marketplace with: claude plugin marketplace add <url-or-github-repo>
@@ -229,7 +289,7 @@ if command -v claude &>/dev/null; then
 else
   echo ""
   echo "⚠ Claude Code not found — skipping plugin registration"
-  echo "  Install Claude Code and re-run this script to register plugins"
+  echo "  Install Claude Code (~/.local/bin/claude) and re-run this script to register plugins"
 fi
 
 # ── Cursor / Windsurf ────────────────────────────────────────────────────────
@@ -261,7 +321,7 @@ if [ -f "$REPO_DIR/CLAUDE.md" ] && grep -q "\[REPO NAME\]" "$REPO_DIR/CLAUDE.md"
   echo "  1. Open CLAUDE.md and fill in the repo-specific sections (search for [REPO NAME])"
 fi
 echo "  • Slash commands in Claude Code: /pr-summary, /review, /test, /adr"
-echo "  • MCP plugins registered:        superpowers, context7, code-reviewer, pr-review-toolkit, linear"
+echo "  • MCP plugins registered:        superpowers, context7, code-reviewer, pr-review-toolkit, linear, notion"
 echo "  • Marketplace plugins:           configure a marketplace to install code-simplifier + claude-md-management"
 echo "  • Start a session:               claude"
 echo ""
