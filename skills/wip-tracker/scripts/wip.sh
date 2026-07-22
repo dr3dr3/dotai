@@ -281,14 +281,22 @@ cmd_refresh() {
 _JQ_RANK='
 def rank:
   (.prs // []) as $p
-  | if   ($p|length)==0 then (if (.state=="done" or .state=="verified") then 7 else 5 end)
+  # explicit human state wins first — a workstream marked done/verified
+  # sinks regardless of PR-derived status.
+  | if   .state=="done" then 7
+    elif .state=="verified" then 6
+    elif ($p|length)==0 then 5
     elif any($p[]; .lastKnown.ci=="failing") then 0
     elif any($p[]; .lastKnown.state=="OPEN" and (.lastKnown.draft|not)
               and .lastKnown.review=="APPROVED" and .lastKnown.mergeable=="MERGEABLE") then 1
-    elif any($p[]; .lastKnown.state=="MERGED" and (.deploy.status!="deployed")) then 2
+    # 🚢 only when a merged PR is *genuinely* behind its staging deploy. Repos
+    # outside the deploy host-map (local-dev-env, portals) report deploy=unknown
+    # — that is n/a, not "awaiting deploy", so it must NOT trip rank 2.
+    elif any($p[]; .lastKnown.state=="MERGED" and .deploy.status=="not-deployed") then 2
     elif any($p[]; .lastKnown.state=="OPEN" and (.lastKnown.draft|not)) then 3
     elif any($p[]; .lastKnown.draft==true) then 4
-    elif all($p[]; .lastKnown.state=="MERGED" and .deploy.status=="deployed") then 6
+    # all PRs merged (deploy verified or n/a) → ready to verify & archive.
+    elif all($p[]; .lastKnown.state=="MERGED") then 6
     else 5 end;
 def emoji: {"0":"❌","1":"✅","2":"🚢","3":"⏳","4":"📝","5":"🌱","6":"🚀","7":"✔️"}[(.|tostring)];
 '
@@ -331,7 +339,7 @@ cmd_render() {
       3) headline="awaiting review" ;;
       4) headline="draft" ;;
       5) headline="in progress${branch:+ ($branch)}" ;;
-      6) headline="deployed — verify & archive" ;;
+      6) headline="merged — verify & archive" ;;
       7) headline="done" ;;
     esac
     printf '%s  %s  —  %s\n' "$emoji" "$name" "$headline"
