@@ -51,6 +51,30 @@ bash .../wip.sh register --name "Compact labour form" --linear ENG-2129 \
 - The slug is derived from the Linear id (else branch). `register` is idempotent
   — re-running updates the record and re-captures the session.
 
+## Updating a session that's already tracked
+
+When the user is inside an already-tracked session and wants to update its entry
+("update my WIP", "track the PR I just raised", "mark this awaiting review",
+"set my next step to …"), **resolve this session's slug first** — don't guess it
+from the branch, and don't create a second record:
+
+```bash
+SLUG=$(bash .../wip.sh whoami)   # this session's record, matched by resume id
+```
+
+Then apply the update with that slug (`set` / `add-pr` / `depends`), e.g.:
+
+```bash
+bash .../wip.sh set --slug "$SLUG" --state awaiting-review --next "ping reviewer"
+bash .../wip.sh add-pr --slug "$SLUG" --repo rock-of-eye-api --number 977
+```
+
+`register` with no `--slug` also self-heals: it now matches this session by
+resume id and updates the existing record in place (even if it was created under
+a custom slug), so re-registering never duplicates. If `whoami` prints nothing,
+the session isn't tracked yet — `register` it (see above). Finish by printing
+`view` so the user sees the updated cockpit.
+
 ## Attaching a PR
 
 Right after a PR is raised (or when the user mentions one), attach it. Detect

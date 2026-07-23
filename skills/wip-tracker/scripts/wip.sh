@@ -21,6 +21,7 @@
 #   archive    retire a finished session to $WIP_DIR/archive
 #   rm         delete a session record
 #   path       print the file path for a slug
+#   whoami     print THIS session's slug (matched by resume id), if tracked
 #
 # Everything degrades gracefully: no gh auth / no network -> last-known snapshot.
 # =============================================================================
@@ -34,6 +35,16 @@ _now()      { date -u +%Y-%m-%dT%H:%M:%SZ; }
 _die()      { echo "wip: $*" >&2; exit 1; }
 _slugify()  { echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'; }
 _file()     { echo "$WIP_DIR/$1.json"; }
+
+# ---- the slug of THIS session's record (matched by stable resume id) ---------
+_current_slug() {
+  local rid="${CLAUDE_CODE_SESSION_ID:-}" f
+  [[ -z "$rid" ]] && return 0
+  for f in "$WIP_DIR"/*.json; do
+    [[ -e "$f" ]] || continue
+    [[ "$(jq -r '.session.resumeId // ""' "$f")" == "$rid" ]] && { jq -r '.slug' "$f"; return 0; }
+  done
+}
 
 # ---- staging build-info host map (portals have no stamp -> unknown) ----------
 _deploy_host() {
@@ -87,11 +98,17 @@ cmd_register() {
 
   local session; session="$(_capture_session)"
   local branch; branch="$(jq -r '.branch' <<<"$session")"
-  # derive slug if omitted: linear id, else branch, else session id
+  # slug resolution when --slug omitted:
+  #  1. this session is ALREADY tracked (match by resume id) → update in place,
+  #     even if it was registered under a custom slug. Prevents duplicates.
+  #  2. otherwise derive: linear id, else branch, else session id.
   if [[ -z "$slug" ]]; then
-    if   [[ -n "$linear" ]]; then slug="$(_slugify "$linear")"
-    elif [[ -n "$branch" && "$branch" != "HEAD" ]]; then slug="$(_slugify "$branch")"
-    else slug="$(_slugify "${CLAUDE_CODE_SESSION_ID:-session}" | cut -c1-12)"; fi
+    slug="$(_current_slug)"
+    if [[ -z "$slug" ]]; then
+      if   [[ -n "$linear" ]]; then slug="$(_slugify "$linear")"
+      elif [[ -n "$branch" && "$branch" != "HEAD" ]]; then slug="$(_slugify "$branch")"
+      else slug="$(_slugify "${CLAUDE_CODE_SESSION_ID:-session}" | cut -c1-12)"; fi
+    fi
   fi
   [[ -z "$name" ]] && name="$slug"
 
@@ -400,6 +417,7 @@ case "${1:-view}" in
   archive)  shift; cmd_archive "$@" ;;
   rm)       shift; cmd_rm "$@" ;;
   path)     shift; cmd_path "$@" ;;
+  whoami)   shift; _current_slug || true ;;
   help|-h|--help) grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//' ;;
   *) _die "unknown command '${1}' (try: view register add-pr set refresh archive)" ;;
 esac
