@@ -279,12 +279,37 @@ if [ -n "$CLAUDE_BIN" ]; then
   # to authorise and choose which pages/teamspaces to expose.
   _mcp_add_http notion          https://mcp.notion.com/mcp
 
-  # Code-simplifier and Claude-md-management are native Claude Code plugins.
-  # They require a marketplace to be configured before installation.
-  # Add a marketplace with: claude plugin marketplace add <url-or-github-repo>
-  # Then uncomment the lines below:
-  #   claude plugin install --scope user code-simplifier
-  #   claude plugin install --scope user claude-md-management
+  # Helper: register a plugin marketplace (idempotent) then install a plugin at
+  # user scope. Marketplace + install state live in ~/.claude (settings.json
+  # `extraKnownMarketplaces` + the plugins cache) and are shared with the VS Code
+  # extension, so a plugin added here also shows up under `/plugins` there.
+  _plugin_add() {
+    local plugin="$1"; local marketplace="$2"; local repo="$3"
+    if "$CLAUDE_BIN" plugin marketplace list 2>/dev/null | grep -q "$marketplace"; then
+      :
+    else
+      "$CLAUDE_BIN" plugin marketplace add "$repo" &>/dev/null \
+        && echo "  ✓ marketplace $marketplace ($repo)" \
+        || echo "  ✗ marketplace $marketplace — add failed ($repo)"
+    fi
+    if "$CLAUDE_BIN" plugin list 2>/dev/null | grep -q "$plugin"; then
+      echo "  → $plugin already installed — skipping"
+    else
+      "$CLAUDE_BIN" plugin install "$plugin@$marketplace" --scope user &>/dev/null \
+        && echo "  ✓ $plugin" \
+        || echo "  ✗ $plugin — install failed (run: $CLAUDE_BIN plugin install $plugin@$marketplace)"
+    fi
+  }
+
+  # Impeccable — design fluency for frontend work: 1 skill, 23 `/impeccable`
+  # commands (polish, audit, critique, typeset, distill, document …) + curated
+  # anti-pattern ("slop") detection, and the portable DESIGN.md format we author
+  # our design systems in. https://impeccable.style
+  _plugin_add impeccable impeccable pbakaus/impeccable
+
+  # Code-simplifier and Claude-md-management are other native plugins you can add
+  # the same way once their marketplaces are published, e.g.:
+  #   _plugin_add code-simplifier <marketplace> <owner/repo>
 
 else
   echo ""
