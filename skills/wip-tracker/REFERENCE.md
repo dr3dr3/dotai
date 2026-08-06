@@ -65,6 +65,11 @@ These are your *intent* about the workstream. The per-PR `lastKnown.state`
 
 Ties break by `updatedAt`. Ranking is computed in `wip.sh` (`_JQ_RANK`).
 
+**Handoff-note flag.** An in-flight record (rank ≤5) with an empty `nextAction`
+would give a thin `handoff` brief, so the cockpit flags it: the header shows
+`⚠ N without a handoff note` and each such row shows `⚠ no handoff note`. Merged/
+done rows (rank 6–7) are never flagged. Set one with `set --next "…"`.
+
 ## Live refresh contract
 
 **PR status** — `gh pr view <n> --repo rock-of-eye/<repo> --json

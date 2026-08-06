@@ -176,6 +176,31 @@ jump straight to the window that unblocks you. If nothing tracks it yet, it
 shows the ref plainly and the link lights up automatically once that session
 registers. Note: `dependsOn` doesn't change a row's rank — it annotates it.
 
+## Leave a handoff note before a session closes
+
+The `handoff` brief is only as good as the `next` (and `notes`) captured before the
+session was closed. So treat a wrapping-up session as a cue to record one — this is
+the single highest-value habit for making a fresh session able to continue.
+
+**When to prompt for it.** If this session is tracked and the user signals they're
+wrapping up — "done for now", "I'll stop here", "closing this", "EOD", stepping
+away, or they just committed/pushed and the immediate task is finished with nothing
+queued this turn — proactively offer a one-line handoff note:
+
+```bash
+bash .../wip.sh set --slug "$(bash .../wip.sh whoami)" \
+     --next "the very next concrete step" \
+     --notes "where things stand / any gotcha the next session needs"
+```
+
+- Make `--next` a *concrete next action* ("rebase #239 on master, then request review"),
+  not a status ("in progress"). That sentence is what a fresh session acts on.
+- Keep it to **one crisp confirm** — propose the note, apply on a yes. Do NOT nag
+  every turn or re-ask once it's set.
+- The cockpit flags records that lack this: the header shows `⚠ N without a handoff
+  note` and each such row shows `⚠ no handoff note`. If you see that flag for the
+  current session while wrapping up, fix it.
+
 ## Finishing up
 
 When a workstream is fully merged **and** deployed **and** verified, archive it

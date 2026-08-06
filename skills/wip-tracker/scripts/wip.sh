@@ -367,7 +367,11 @@ cmd_render() {
     echo "WIP — no active sessions. Run: wip register --name \"...\" --linear ENG-000"
     return
   fi
-  echo "WIP — $count active session(s)   ·   $(date -u '+%Y-%m-%d %H:%M UTC')"
+  # in-flight records (rank ≤5) with no next-action give a thin handoff — count them.
+  local thin; thin="$(jq '[.[] | select((.nextAction // "")=="" and .rank<=5)] | length' <<<"$data")"
+  local hdr="WIP — $count active session(s)   ·   $(date -u '+%Y-%m-%d %H:%M UTC')"
+  [[ "$thin" -gt 0 ]] && hdr+="   ·   ⚠ $thin without a handoff note"
+  echo "$hdr"
   echo
   local i
   for ((i=0; i<count; i++)); do
@@ -422,7 +426,8 @@ cmd_render() {
       if [[ -n "$dnote" ]]; then printf '   ⛔ blocked on %s  (%s)\n' "$disp" "$dnote"
       else printf '   ⛔ blocked on %s\n' "$disp"; fi
     done
-    [[ -n "$next" ]] && printf '   ▶ %s\n' "$next"
+    if [[ -n "$next" ]]; then printf '   ▶ %s\n' "$next"
+    elif [[ "$rank" -le 5 ]]; then printf '   ⚠ no handoff note — set one before you close: set --next "…"\n'; fi
     # return path
     local ret="   ↳"
     [[ -n "$resume" ]] && ret+=" claude --resume $resume"
