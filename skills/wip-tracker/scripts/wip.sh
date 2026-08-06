@@ -25,6 +25,7 @@
 #   rm         delete a session record
 #   path       print the file path for a slug
 #   whoami     print THIS session's slug (matched by resume id), if tracked
+#   cheatsheet print the daily-prompts cheatsheet (CHEATSHEET.md)
 #
 # Everything degrades gracefully: no gh auth / no network -> last-known snapshot.
 # =============================================================================
@@ -32,6 +33,8 @@ set -uo pipefail
 
 WIP_DIR="${WIP_DIR:-/workspace/.wip}"
 GH_ORG="${WIP_GH_ORG:-rock-of-eye}"
+# skill root (parent of scripts/) — cd+pwd resolves the ~/.claude/skills symlink
+SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)"
 mkdir -p "$WIP_DIR/archive"
 
 _now()      { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -472,6 +475,10 @@ cmd_archive() {
 }
 cmd_rm()      { local slug="${1:-}"; [[ -z "$slug" ]] && _die "rm needs a slug"; rm -f "$(_file "$slug")"; echo "removed $slug"; }
 cmd_path()    { _file "${1:-}"; }
+cmd_cheatsheet() {
+  local cs="$SKILL_DIR/CHEATSHEET.md"
+  [[ -f "$cs" ]] && cat "$cs" || echo "cheatsheet not found (expected $cs)"
+}
 
 # ---- continue a WIP in a FRESH session: brief + take ownership ----------------
 cmd_handoff() {
@@ -547,6 +554,7 @@ case "${1:-view}" in
   rm)       shift; cmd_rm "$@" ;;
   path)     shift; cmd_path "$@" ;;
   whoami)   shift; _current_slug || true ;;
+  cheatsheet|cheat) shift; cmd_cheatsheet ;;
   help|-h|--help) grep -E '^#( |$)' "$0" | sed 's/^# \{0,1\}//' ;;
   *) _die "unknown command '${1}' (try: view register add-pr set refresh archive)" ;;
 esac
