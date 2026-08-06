@@ -58,6 +58,24 @@ deliberate when you find an existing record: treat "already tracked" as the
 normal case, apply the update, and say so in one line (e.g. "Updated your existing
 entry ‹slug›."). Don't narrate it as a problem or ask whether to re-register.
 
+**Branch capture — pass `--branch` on a shared checkout.** RoE's `/workspace` and
+`/workspace/repos/*` are ONE shared checkout per repo volume: any parallel session
+moves the branch, so the auto-captured HEAD is last-writer-wins, not this
+session's. The tracker detects this — it marks such a branch **unreliable and
+hides it** in the cockpit (identity still holds via the resume id). Only a
+**worktree** checkout yields a trustworthy auto branch. So when you know the
+branch this session actually worked on (you created/pushed it — even if it's since
+been merged and deleted), pass it explicitly so the record is accurate:
+
+```bash
+bash .../wip.sh register --name "…" --branch fix/eng-2345-preview-media
+bash .../wip.sh set --slug "$SLUG" --branch fix/eng-2345-preview-media   # correct it later
+```
+
+An explicit `--branch` (or a worktree) is shown; a bare shared-checkout HEAD is
+not. Never present the auto-captured branch of a `/workspace`-rooted session as
+fact.
+
 ## Updating a session that's already tracked
 
 When the user is inside an already-tracked session and wants to update its entry

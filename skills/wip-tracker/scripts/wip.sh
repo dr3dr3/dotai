@@ -58,7 +58,7 @@ _deploy_host() {
 
 # ---- capture the current session's identity ---------------------------------
 _capture_session() {
-  local harness resume cwd branch toplevel worktree
+  local harness resume cwd branch toplevel worktree gitdir commondir in_worktree reliable
   resume="${CLAUDE_CODE_SESSION_ID:-}"
   case "${AI_AGENT:-}" in
     claude-code*) harness="claude-code" ;;
@@ -68,14 +68,29 @@ _capture_session() {
   cwd="$PWD"
   branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   toplevel="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-  worktree="null"
-  if [[ "$toplevel" == *"/.worktrees/"* ]]; then
-    worktree="$(jq -Rn --arg p "$toplevel" '$p')"
+  gitdir="$(git rev-parse --absolute-git-dir 2>/dev/null || true)"
+  commondir="$(git rev-parse --git-common-dir 2>/dev/null || true)"
+  [[ -n "$commondir" && "$commondir" != /* ]] && commondir="$(cd "$commondir" 2>/dev/null && pwd || echo "$commondir")"
+  # Worktree vs shared main checkout. A linked worktree has its own git-dir
+  # (…/.git/worktrees/<name>) distinct from the common dir; RoE also always nests
+  # worktrees under …/.worktrees/. Either signal ⇒ worktree.
+  in_worktree=false
+  if [[ "$toplevel" == *"/.worktrees/"* ]] \
+     || { [[ -n "$gitdir" && -n "$commondir" && "$gitdir" != "$commondir" ]]; }; then
+    in_worktree=true
   fi
+  worktree="null"
+  [[ "$in_worktree" == true && -n "$toplevel" ]] && worktree="$(jq -Rn --arg p "$toplevel" '$p')"
+  # Branch reliability. A worktree is pinned to its own branch → the captured
+  # HEAD is genuinely this session's. A SHARED checkout (/workspace,
+  # /workspace/repos/*) is moved between branches by any parallel session, so its
+  # HEAD is last-writer-wins, NOT ours — mark it unreliable so nothing trusts it.
+  reliable=$([[ "$in_worktree" == true ]] && echo true || echo false)
   jq -n \
-    --arg harness "$harness" --arg resume "$resume" \
-    --arg cwd "$cwd" --arg branch "$branch" --argjson worktree "$worktree" \
-    '{harness:$harness, resumeId:$resume, cwd:$cwd, branch:$branch, worktreePath:$worktree}'
+    --arg harness "$harness" --arg resume "$resume" --arg cwd "$cwd" \
+    --arg branch "$branch" --argjson worktree "$worktree" --argjson reliable "$reliable" \
+    '{harness:$harness, resumeId:$resume, cwd:$cwd, branch:$branch,
+      branchReliable:$reliable, worktreePath:$worktree}'
 }
 
 # ---- write JSON atomically ---------------------------------------------------
@@ -86,18 +101,26 @@ _atomic_write() { # $1=file  (reads new content on stdin)
 
 # =============================================================================
 cmd_register() {
-  local slug="" name="" linear="" state="in-progress" next=""
+  local slug="" name="" linear="" state="in-progress" next="" branch_override=""
   while [[ $# -gt 0 ]]; do case "$1" in
     --slug)    slug="$2"; shift 2 ;;
     --name)    name="$2"; shift 2 ;;
     --linear)  linear="$2"; shift 2 ;;
     --state)   state="$2"; shift 2 ;;
     --next)    next="$2"; shift 2 ;;
+    --branch)  branch_override="$2"; shift 2 ;;
     *) _die "register: unknown arg $1" ;;
   esac; done
 
   local session; session="$(_capture_session)"
-  local branch; branch="$(jq -r '.branch' <<<"$session")"
+  # an explicitly-supplied branch (the session knows what it actually worked on,
+  # even if merged-and-gone) overrides the unreliable shared-checkout HEAD.
+  if [[ -n "$branch_override" ]]; then
+    session="$(jq -c --arg b "$branch_override" '.branch=$b | .branchReliable=true' <<<"$session")"
+  fi
+  local branch reliable
+  branch="$(jq -r '.branch' <<<"$session")"
+  reliable="$(jq -r '.branchReliable' <<<"$session")"
   # slug resolution when --slug omitted:
   #  1. this session is ALREADY tracked (match by resume id) → update in place,
   #     even if it was registered under a custom slug. Prevents duplicates.
@@ -106,7 +129,9 @@ cmd_register() {
     slug="$(_current_slug)"
     if [[ -z "$slug" ]]; then
       if   [[ -n "$linear" ]]; then slug="$(_slugify "$linear")"
-      elif [[ -n "$branch" && "$branch" != "HEAD" ]]; then slug="$(_slugify "$branch")"
+      # only derive a slug from the branch when it's RELIABLE (worktree or
+      # explicit --branch). A shared-checkout HEAD may be another session's.
+      elif [[ "$reliable" == true && -n "$branch" && "$branch" != "HEAD" ]]; then slug="$(_slugify "$branch")"
       else slug="$(_slugify "${CLAUDE_CODE_SESSION_ID:-session}" | cut -c1-12)"; fi
     fi
   fi
@@ -162,21 +187,23 @@ cmd_add_pr() {
 }
 
 cmd_set() {
-  local slug="" state="" next="" notes="" name=""
+  local slug="" state="" next="" notes="" name="" branch=""
   while [[ $# -gt 0 ]]; do case "$1" in
-    --slug)  slug="$2"; shift 2 ;;
-    --state) state="$2"; shift 2 ;;
-    --next)  next="$2"; shift 2 ;;
-    --notes) notes="$2"; shift 2 ;;
-    --name)  name="$2"; shift 2 ;;
+    --slug)   slug="$2"; shift 2 ;;
+    --state)  state="$2"; shift 2 ;;
+    --next)   next="$2"; shift 2 ;;
+    --notes)  notes="$2"; shift 2 ;;
+    --name)   name="$2"; shift 2 ;;
+    --branch) branch="$2"; shift 2 ;;
     *) _die "set: unknown arg $1" ;;
   esac; done
   local f; f="$(_file "$slug")"; [[ -f "$f" ]] || _die "no session '$slug'"
-  jq --arg state "$state" --arg next "$next" --arg notes "$notes" --arg name "$name" --arg now "$(_now)" \
+  jq --arg state "$state" --arg next "$next" --arg notes "$notes" --arg name "$name" --arg branch "$branch" --arg now "$(_now)" \
     '(if $state!="" then .state=$state else . end)
      | (if $next!=""  then .nextAction=$next else . end)
      | (if $notes!="" then .notes=$notes else . end)
      | (if $name!=""  then .name=$name else . end)
+     | (if $branch!="" then (.session.branch=$branch | .session.branchReliable=true) else . end)
      | .updatedAt=$now' "$f" | _atomic_write "$f"
   echo "updated $slug"
 }
@@ -337,7 +364,7 @@ cmd_render() {
   local i
   for ((i=0; i<count; i++)); do
     local row; row="$(jq -c ".[$i]" <<<"$data")"
-    local slug name state rank resume cwd branch worktree next
+    local slug name state rank resume cwd branch breliable worktree next
     slug="$(jq -r '.slug' <<<"$row")"
     name="$(jq -r '.name' <<<"$row")"
     state="$(jq -r '.state' <<<"$row")"
@@ -345,8 +372,11 @@ cmd_render() {
     resume="$(jq -r '.session.resumeId // ""' <<<"$row")"
     cwd="$(jq -r '.session.cwd // ""' <<<"$row")"
     branch="$(jq -r '.session.branch // ""' <<<"$row")"
+    breliable="$(jq -r '.session.branchReliable // false' <<<"$row")"
     worktree="$(jq -r '.session.worktreePath // ""' <<<"$row")"
     next="$(jq -r '.nextAction // ""' <<<"$row")"
+    # only surface a branch we can trust; a shared-checkout HEAD is not ours.
+    local shownbranch=""; [[ "$breliable" == true && -n "$branch" && "$branch" != "HEAD" ]] && shownbranch="$branch"
     local emoji headline
     emoji="$(jq -r '.emoji' <<<"$row")"
     case "$rank" in
@@ -355,7 +385,7 @@ cmd_render() {
       2) headline="MERGED, not yet on staging" ;;
       3) headline="awaiting review" ;;
       4) headline="draft" ;;
-      5) headline="in progress${branch:+ ($branch)}" ;;
+      5) headline="in progress${shownbranch:+ ($shownbranch)}" ;;
       6) headline="merged — verify & archive" ;;
       7) headline="done" ;;
     esac
@@ -389,7 +419,7 @@ cmd_render() {
     local ret="   ↳"
     [[ -n "$resume" ]] && ret+=" claude --resume $resume"
     if [[ -n "$worktree" && "$worktree" != "null" ]]; then ret+="   · worktree: $worktree"
-    elif [[ -n "$cwd" ]]; then ret+="   · $cwd"; fi
+    elif [[ -n "$cwd" ]]; then ret+="   · $cwd${shownbranch:+ @ $shownbranch}"; fi
     echo "$ret"
     echo
   done

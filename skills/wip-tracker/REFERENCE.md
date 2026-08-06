@@ -13,6 +13,7 @@
     "resumeId": "0a1f9de7-…",               // $CLAUDE_CODE_SESSION_ID → `claude --resume <id>`
     "cwd": "/workspace/repos/rock-of-eye-api",
     "branch": "feat/eng-2129-compact-labour-form",
+    "branchReliable": true,                 // true = worktree or explicit --branch; false = shared-checkout HEAD (hidden in cockpit)
     "worktreePath": null                    // set when the session sits in a repos/*/.worktrees/ checkout
   },
   "prs": [
