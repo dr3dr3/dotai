@@ -31,6 +31,7 @@
     { "on": "rock-of-eye-api#185", "note": "warm-cache AMI bake" }
     // .on may be: another session's slug · a repo#num / #num PR ref · free text
   ],
+  "priorSessions": ["<old-resumeId>", …],   // sessions that previously owned this work (handoff); their transcripts stay discoverable
   "nextAction": "get Sarada's review, then promote api→master",
   "notes": "",
   "createdAt": "2026-07-22T…Z",
@@ -95,6 +96,7 @@ none → `none`.
 | `wip.sh refresh [<slug>\|--all]` | live-refresh without rendering |
 | `wip.sh list` | enriched, priority-sorted JSON (for tooling) |
 | `wip.sh render` | render cockpit from cache, no refresh (offline-safe) |
+| `wip.sh handoff <slug>` (aliases `resume`, `continue`) | brief + take ownership in a fresh session; old id → `priorSessions`; prints prior transcript path |
 | `wip.sh archive <slug>` | move to `archive/` |
 | `wip.sh rm <slug>` | delete a record |
 | `wip.sh path <slug>` | print a record's file path |

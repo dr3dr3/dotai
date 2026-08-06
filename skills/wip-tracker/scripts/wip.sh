@@ -18,6 +18,8 @@
 #   list       emit the enriched, priority-sorted JSON array (for tooling)
 #   view       refresh all + render the human cockpit (the everyday command)
 #   render     render the cockpit without refreshing (offline-safe)
+#   handoff    continue a WIP in a FRESH session: brief + take ownership
+#              (aliases: resume, continue) — old session kept in .priorSessions
 #   archive    retire a finished session to $WIP_DIR/archive
 #   rm         delete a session record
 #   path       print the file path for a slug
@@ -44,6 +46,12 @@ _current_slug() {
     [[ -e "$f" ]] || continue
     [[ "$(jq -r '.session.resumeId // ""' "$f")" == "$rid" ]] && { jq -r '.slug' "$f"; return 0; }
   done
+}
+
+# ---- on-disk Claude Code transcript for a session id (empty if not found) -----
+_transcript_path() {
+  local id="${1:-}"; [[ -z "$id" ]] && return 0
+  find "$HOME/.claude/projects" -maxdepth 2 -name "$id.jsonl" 2>/dev/null | head -1
 }
 
 # ---- staging build-info host map (portals have no stamp -> unknown) ----------
@@ -435,6 +443,66 @@ cmd_archive() {
 cmd_rm()      { local slug="${1:-}"; [[ -z "$slug" ]] && _die "rm needs a slug"; rm -f "$(_file "$slug")"; echo "removed $slug"; }
 cmd_path()    { _file "${1:-}"; }
 
+# ---- continue a WIP in a FRESH session: brief + take ownership ----------------
+cmd_handoff() {
+  local slug="${1:-}"; [[ -z "$slug" ]] && _die "handoff needs a slug (see: wip.sh list)"
+  local f; f="$(_file "$slug")"; [[ -f "$f" ]] || _die "no session '$slug' (try: wip.sh list)"
+  _refresh_file "$f" >/dev/null 2>&1 || true          # live PR/deploy before briefing
+  local rec; rec="$(cat "$f")"
+  local name linear state next notes cwd branch breliable worktree oldrid
+  name="$(jq -r '.name' <<<"$rec")";        linear="$(jq -r '.linear // ""' <<<"$rec")"
+  state="$(jq -r '.state' <<<"$rec")";      next="$(jq -r '.nextAction // ""' <<<"$rec")"
+  notes="$(jq -r '.notes // ""' <<<"$rec")"; cwd="$(jq -r '.session.cwd // ""' <<<"$rec")"
+  branch="$(jq -r '.session.branch // ""' <<<"$rec")"
+  breliable="$(jq -r '.session.branchReliable // false' <<<"$rec")"
+  worktree="$(jq -r '.session.worktreePath // ""' <<<"$rec")"
+  oldrid="$(jq -r '.session.resumeId // ""' <<<"$rec")"
+
+  echo "═══ WIP handoff: $name  ($slug) ═══"
+  [[ -n "$linear" && "$linear" != "null" ]] && echo "Linear:   $linear"
+  echo "State:    $state"
+  local pn; pn="$(jq '.prs | length' <<<"$rec")"
+  if [[ "$pn" -gt 0 ]]; then
+    echo "PRs:"
+    jq -r '.prs[] | "  \(.repo)#\(.number)  \((.lastKnown.state // "?")|ascii_downcase)" +
+           (if .lastKnown.draft then " draft" else "" end) +
+           (if .lastKnown.review=="APPROVED" then " ✓approved" elif .lastKnown.review=="CHANGES_REQUESTED" then " ✗changes" else "" end) +
+           (if .lastKnown.ci=="failing" then " CI✗" elif .lastKnown.ci=="passing" then " CI✓" elif .lastKnown.ci=="pending" then " CI…" else "" end) +
+           "  " + (.deploy.target + ":" + .deploy.status) + "  " + (.url // "")' <<<"$rec"
+  fi
+  local dn k; dn="$(jq '(.dependsOn // []) | length' <<<"$rec")"
+  for ((k=0; k<dn; k++)); do
+    local don dnote; don="$(jq -r ".dependsOn[$k].on" <<<"$rec")"; dnote="$(jq -r ".dependsOn[$k].note // \"\"" <<<"$rec")"
+    echo "Blocked:  $(_resolve_dep "$don")${dnote:+  ($dnote)}"
+  done
+  [[ -n "$notes" ]] && echo "Notes:    $notes"
+  echo "▶ Next:   ${next:-<none recorded — read the transcript for context>}"
+  if [[ -n "$worktree" && "$worktree" != "null" ]]; then
+    echo "Work in:  $worktree"
+    echo "          (worktree — stage it to run/test: make stage-worktree REPO=<repo> BRANCH=<branch>)"
+  elif [[ "$breliable" == true && -n "$branch" && "$branch" != "HEAD" ]]; then
+    echo "Work in:  $cwd   (branch: $branch)"
+  else
+    echo "Work in:  $cwd"
+    [[ -n "$branch" && "$branch" != "HEAD" ]] && echo "          (recorded branch '$branch' came from a SHARED checkout — verify, don't trust it)"
+  fi
+  local tp; tp="$(_transcript_path "$oldrid")"
+  [[ -n "$tp" ]] && echo "History:  $tp" && echo "          (prior session's full transcript — read on demand for deep context)"
+
+  # take ownership: point the record at THIS session; keep the old one in history.
+  # deliberately PRESERVE cwd/branch/worktree (that's WHERE the work lives — not
+  # where this fresh session happens to have started).
+  local session newrid newharness
+  session="$(_capture_session)"; newrid="$(jq -r '.resumeId' <<<"$session")"; newharness="$(jq -r '.harness' <<<"$session")"
+  jq --arg old "$oldrid" --arg new "$newrid" --arg h "$newharness" --arg now "$(_now)" \
+    '.priorSessions = (((.priorSessions // []) + (if ($old|length)>0 and $old != $new then [$old] else [] end)) | unique)
+     | .session.resumeId = $new
+     | .session.harness = $h
+     | .updatedAt = $now' "$f" | _atomic_write "$f"
+  echo "─────"
+  echo "Ownership moved to this session. \"update my WIP\" now targets ‹$slug› here; old session kept in history."
+}
+
 case "${1:-view}" in
   register) shift; cmd_register "$@" ;;
   add-pr)   shift; cmd_add_pr "$@" ;;
@@ -444,6 +512,7 @@ case "${1:-view}" in
   list)     shift; cmd_list "$@" ;;
   view)     shift; cmd_view "$@" ;;
   render)   shift; cmd_render "$@" ;;
+  handoff|resume|continue) shift; cmd_handoff "$@" ;;
   archive)  shift; cmd_archive "$@" ;;
   rm)       shift; cmd_rm "$@" ;;
   path)     shift; cmd_path "$@" ;;

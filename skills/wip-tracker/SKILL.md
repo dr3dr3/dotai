@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", or wants to resume unfinished work across parallel sessions.
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", or wants to resume unfinished work across parallel sessions.
 ---
 
 # WIP Tracker
@@ -99,6 +99,38 @@ resume id and updates the existing record in place (even if it was created under
 a custom slug), so re-registering never duplicates. If `whoami` prints nothing,
 the session isn't tracked yet — `register` it (see above). Finish by printing
 `view` so the user sees the updated cockpit.
+
+## Continuing a WIP in a FRESH session (handoff)
+
+The user closed the session that owned some work and wants to pick it up **here**,
+in a new session, without `claude --resume`-ing the old one ("continue the WIP for
+the SSO login work", "pick up ‹slug› here", "resume the preview work in this
+session"). Do this:
+
+1. **Resolve the slug** from the name (run `wip.sh list`; match the user's words to
+   a record). Then run:
+
+   ```bash
+   bash .../wip.sh handoff <slug>      # aliases: resume, continue
+   ```
+
+2. `handoff` prints a **brief** (Linear, state, PRs w/ live status, blockers, notes,
+   next-action, where to work) and **moves ownership to this session** — the record's
+   resumeId now points here (old one saved in `priorSessions`); PRs/next/notes and the
+   **work location are preserved**. After this, "update my WIP" targets it from here.
+
+3. **Adopt the brief as your context** and **go to the work**: `cd` to "Work in:";
+   if it's a worktree, stage it (`make stage-worktree REPO=… BRANCH=…`). Treat a
+   branch flagged as "shared checkout" with suspicion — confirm the real branch.
+
+4. **Deep context on demand only.** The brief prints a `History:` path — the prior
+   session's full transcript (`…/<resumeId>.jsonl`). Read/summarise it **only if**
+   the next-action is thin, the user asks for full history, or you need a decision's
+   rationale. Otherwise the curated brief is enough — don't burn tokens on it by
+   default.
+
+5. **Confirm the plan in 1–2 lines** and continue the work. Update the record as you
+   go (`set --next …`, `add-pr …`).
 
 ## Attaching a PR
 
