@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions.
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage).
 ---
 
 # WIP Tracker
@@ -19,6 +19,22 @@ this work, and what is the one thing left to do?*
 
 Path to the script (resolve the symlink target if needed):
 `~/.claude/skills/wip-tracker/scripts/wip.sh`
+
+## Daily shorthand → what to do
+
+The user drives this with tiny phrases. Map them:
+
+| Says | Do |
+|------|----|
+| **"my wip"** / "what's my wip" | `view` — print the cockpit |
+| **"track this"** | register/update THIS session (resolve by resume id; infer name/linear/PRs) |
+| **"track PR #NNN"** | `add-pr` to this session (detect repo from cwd) |
+| **"park it — ‹next step›"** | `set --next "‹next step›"` on this session — the handoff note |
+| **"pick up ‹name›"** | resolve slug → `handoff <slug>` (brief + take ownership here) |
+| **"tidy my wip"** | run the Triage: cleanup & focus flow |
+
+Whatever the phrasing, honour intent. Keep responses tight — these are habit prompts,
+not conversations.
 
 ## Everyday command
 
