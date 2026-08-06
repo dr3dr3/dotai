@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "track this PR", "what needs my attention", or wants to resume unfinished work across parallel sessions.
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", or wants to resume unfinished work across parallel sessions.
 ---
 
 # WIP Tracker
@@ -34,12 +34,12 @@ review → 📝 draft → 🌱 in-progress → 🚀 deployed/verify → ✔️ d
 output. Add a one-line reading only if something clearly needs the user now
 (e.g. "api#976 is merged but not on staging — verify then promote to master").
 
-## Registering the current session
+## Registering (or updating) the current session
 
-When the user says "track this" / "register this session" / starts real work,
-create this session's record. The script auto-captures the resume id
-(`$CLAUDE_CODE_SESSION_ID`), harness, cwd, branch, and worktree path — you only
-supply the human bits:
+When the user says "track this" / "register this session" / "register or update
+this session" / starts real work, record this session. The script auto-captures
+the resume id (`$CLAUDE_CODE_SESSION_ID`), harness, cwd, branch, and worktree
+path — you only supply the human bits:
 
 ```bash
 bash .../wip.sh register --name "Compact labour form" --linear ENG-2129 \
@@ -50,6 +50,13 @@ bash .../wip.sh register --name "Compact labour form" --linear ENG-2129 \
   the branch, e.g. `feat/eng-2129-...` → `ENG-2129`, and confirm).
 - The slug is derived from the Linear id (else branch). `register` is idempotent
   — re-running updates the record and re-captures the session.
+
+**"register" and "update" are the same operation — always safe to run.** If this
+session is already tracked, `register` (with no `--slug`) matches it by resume id
+and updates it **in place** — it never creates a duplicate. So do NOT stop or
+deliberate when you find an existing record: treat "already tracked" as the
+normal case, apply the update, and say so in one line (e.g. "Updated your existing
+entry ‹slug›."). Don't narrate it as a problem or ask whether to re-register.
 
 ## Updating a session that's already tracked
 
