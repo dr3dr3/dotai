@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", or wants to resume unfinished work across parallel sessions.
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions.
 ---
 
 # WIP Tracker
@@ -200,6 +200,60 @@ bash .../wip.sh set --slug "$(bash .../wip.sh whoami)" \
 - The cockpit flags records that lack this: the header shows `⚠ N without a handoff
   note` and each such row shows `⚠ no handoff note`. If you see that flag for the
   current session while wrapping up, fix it.
+
+## Triage: cleanup & focus
+
+When the user asks to "clean up my WIP", "triage the board", "help me focus", or
+"what should I pick up" — run this as a guided pass, not a bulk auto-action. It
+combines the tracker (the index) with `gh` (PRs), Linear (tickets), and git
+(branches). **Do the safe, reversible steps freely; confirm anything destructive.**
+
+### 1. Survey (live)
+```bash
+bash .../wip.sh view          # refreshes every record's PRs/CI/deploy live
+```
+Read the board top-to-bottom. Note ⏳ `Nd cold` flags (stale) and `⚠ no handoff
+note` flags.
+
+### 2. Cleanup
+- **Archive finished work.** Records that are 🚀 (all PRs merged) or ✔️ (done) are
+  clutter. Propose the sweep, then:
+  ```bash
+  bash .../wip.sh archive --merged   # refreshes, then archives all rank 6+7 records
+  ```
+  It prints what it archived; it's reversible (files go to `.wip/archive/`).
+- **Linear — READ-ONLY.** For each remaining record with a `linear` id, check the
+  ticket via the Linear MCP (`get_issue`, `list_comments`) or the `linear` CLI:
+  has it moved to Done/Cancelled (work may be moot → flag for archive)? New comments
+  in recent days needing a reply? **Never mutate Linear** in a triage pass — no
+  `save_issue` (it overwrites the description), no status changes — unless the user
+  explicitly asks. Report; don't act.
+- **Local branch cleanup — CAREFUL (this is the one place you can lose work).**
+  Prefer the `review-git-branches` skill for the actual sweep. Rules:
+  1. A branch is a deletion candidate **only if its PR is merged/closed — proven via
+     `gh pr view`, NOT the record's `branch` field** (a shared-checkout branch is
+     last-writer-wins and may be wrong or already gone).
+  2. `git worktree list` first and **never delete a branch a worktree holds**
+     (`/workspace/repos/*/.worktrees/*`, `/workspace/.worktrees/*`) — another session
+     is using it.
+  3. A local branch with **no** PR: ask before deleting; it may be unpushed work.
+  Present the candidates with their merged-PR proof; delete only on an explicit yes.
+
+### 3. Focus
+After archiving, the board is just the in-flight set, already rank-sorted (❌ fix CI
+→ ✅ land → 🚢 deploy → ⏳ review → 📝 draft → 🌱 wip). Layer on:
+- **staleness** (⏳ cold = losing momentum), **Linear priority/state**, and
+- **blocker edges** — a record that *others* depend on (someone else's `⛔ blocked on`
+  points at its PR) is higher-leverage; unblocking it frees another session.
+
+Produce a short **"pick up next" list (top ~3)**: each with its one next action and
+the command to resume it — `claude --resume <id>` (reopen the old session) or
+`wip.sh handoff <slug>` (continue here in this session). Then offer to `handoff` the
+top pick.
+
+### Guardrails recap
+Archive = reversible. Linear = read-only. Branch deletion = merged-PR proof +
+worktree check + explicit confirmation. Never present a shared-checkout branch as fact.
 
 ## Finishing up
 

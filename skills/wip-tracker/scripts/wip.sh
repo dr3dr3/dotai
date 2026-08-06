@@ -20,7 +20,8 @@
 #   render     render the cockpit without refreshing (offline-safe)
 #   handoff    continue a WIP in a FRESH session: brief + take ownership
 #              (aliases: resume, continue) — old session kept in .priorSessions
-#   archive    retire a finished session to $WIP_DIR/archive
+#   archive    retire a session to $WIP_DIR/archive; `archive --merged` bulk-
+#              sweeps all finished (rank 6+7) records after a live refresh
 #   rm         delete a session record
 #   path       print the file path for a slug
 #   whoami     print THIS session's slug (matched by resume id), if tracked
@@ -315,7 +316,9 @@ _refresh_file() {
     fi
     prs_new="$(jq -c --argjson pr "$pr" '. + [$pr]' <<<"$prs_new")"
   done
-  jq --argjson prs "$prs_new" --arg now "$(_now)" '.prs=$prs | .updatedAt=$now' "$f" | _atomic_write "$f"
+  # live refresh bumps refreshedAt, NOT updatedAt — so staleness reflects real
+  # human inactivity, not the automated poll.
+  jq --argjson prs "$prs_new" --arg now "$(_now)" '.prs=$prs | .refreshedAt=$now' "$f" | _atomic_write "$f"
 }
 
 cmd_refresh() {
@@ -389,6 +392,12 @@ cmd_render() {
     next="$(jq -r '.nextAction // ""' <<<"$row")"
     # only surface a branch we can trust; a shared-checkout HEAD is not ours.
     local shownbranch=""; [[ "$breliable" == true && -n "$branch" && "$branch" != "HEAD" ]] && shownbranch="$branch"
+    # staleness: days since the last HUMAN change (updatedAt), not the last refresh.
+    local updated stale_days stale=""; updated="$(jq -r '.updatedAt // ""' <<<"$row")"
+    if [[ -n "$updated" ]]; then
+      stale_days=$(( ( $(date -u +%s) - $(date -u -d "$updated" +%s 2>/dev/null || date -u +%s) ) / 86400 ))
+      [[ "$stale_days" -ge "${WIP_STALE_DAYS:-7}" ]] && stale="   ⏳ ${stale_days}d cold"
+    fi
     local emoji headline
     emoji="$(jq -r '.emoji' <<<"$row")"
     case "$rank" in
@@ -401,7 +410,7 @@ cmd_render() {
       6) headline="merged — verify & archive" ;;
       7) headline="done" ;;
     esac
-    printf '%s  %s  —  %s\n' "$emoji" "$name" "$headline"
+    printf '%s  %s  —  %s%s\n' "$emoji" "$name" "$headline" "$stale"
     # PR lines
     local pn j; pn="$(jq '.prs | length' <<<"$row")"
     for ((j=0; j<pn; j++)); do
@@ -441,9 +450,25 @@ cmd_render() {
 
 cmd_view()    { cmd_refresh --all >/dev/null 2>&1 || true; cmd_render; }
 cmd_archive() {
-  local slug="${1:-}"; [[ -z "$slug" ]] && _die "archive needs a slug"
-  local f; f="$(_file "$slug")"; [[ -f "$f" ]] || _die "no session '$slug'"
-  mv "$f" "$WIP_DIR/archive/$slug.json"; echo "archived $slug"
+  local arg="${1:-}"; [[ -z "$arg" ]] && _die "archive needs a slug (or --merged / --done)"
+  # bulk sweep of FINISHED records. --merged = rank 6 (all PRs merged) + rank 7
+  # (explicit done); --done = rank 7 only. Refreshes live first so we never
+  # archive something whose PR merged only in our stale snapshot's imagination.
+  if [[ "$arg" == "--merged" || "$arg" == "--finished" || "$arg" == "--done" ]]; then
+    local minrank=6; [[ "$arg" == "--done" ]] && minrank=7
+    cmd_refresh --all >/dev/null 2>&1 || true
+    local slugs; slugs="$(cmd_list | jq -r --argjson r "$minrank" '.[] | select(.rank>=$r) | .slug')"
+    [[ -z "$slugs" ]] && { echo "nothing to archive (no finished records)"; return; }
+    local n=0 s
+    while IFS= read -r s; do
+      [[ -z "$s" ]] && continue
+      mv "$(_file "$s")" "$WIP_DIR/archive/$s.json" && { echo "archived $s"; n=$((n+1)); }
+    done <<< "$slugs"
+    echo "─── archived $n finished record(s) → $WIP_DIR/archive/ ───"
+    return
+  fi
+  local f; f="$(_file "$arg")"; [[ -f "$f" ]] || _die "no session '$arg'"
+  mv "$f" "$WIP_DIR/archive/$arg.json"; echo "archived $arg"
 }
 cmd_rm()      { local slug="${1:-}"; [[ -z "$slug" ]] && _die "rm needs a slug"; rm -f "$(_file "$slug")"; echo "removed $slug"; }
 cmd_path()    { _file "${1:-}"; }

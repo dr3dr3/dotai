@@ -35,7 +35,8 @@
   "nextAction": "get Sarada's review, then promote api→master",
   "notes": "",
   "createdAt": "2026-07-22T…Z",
-  "updatedAt": "2026-07-22T…Z"
+  "updatedAt": "2026-07-22T…Z",              // last HUMAN change (register/set/add-pr/depends/handoff) — drives staleness + tie-break
+  "refreshedAt": "2026-08-06T…Z"             // last live PR/deploy poll (refresh/view) — does NOT affect staleness
 }
 ```
 
@@ -103,10 +104,16 @@ none → `none`.
 | `wip.sh render` | render cockpit from cache, no refresh (offline-safe) |
 | `wip.sh handoff <slug>` (aliases `resume`, `continue`) | brief + take ownership in a fresh session; old id → `priorSessions`; prints prior transcript path |
 | `wip.sh archive <slug>` | move to `archive/` |
+| `wip.sh archive --merged` / `--done` | bulk-sweep finished records (rank 6+7 / rank 7) after a live refresh |
 | `wip.sh rm <slug>` | delete a record |
 | `wip.sh path <slug>` | print a record's file path |
 
-Env: `WIP_DIR` (default `/workspace/.wip`), `WIP_GH_ORG` (default `rock-of-eye`).
+Env: `WIP_DIR` (default `/workspace/.wip`), `WIP_GH_ORG` (default `rock-of-eye`),
+`WIP_STALE_DAYS` (default `7` — a record whose `updatedAt` is older shows `⏳ Nd cold`).
+
+**Staleness flag.** The cockpit appends `⏳ Nd cold` to any record whose last
+*human* change (`updatedAt`) is ≥ `WIP_STALE_DAYS` days ago. Live refreshes bump
+`refreshedAt`, not `updatedAt`, so polling never masks a cold record.
 
 ## Planned v2 — automatic capture
 
