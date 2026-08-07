@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage), "wip cheatsheet" (print the daily-prompts card).
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "update wip"/"sync my wip" (full mid-work sync of this session), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage), "wip cheatsheet" (print the daily-prompts card).
 ---
 
 # WIP Tracker
@@ -29,6 +29,7 @@ The user drives this with tiny phrases. Map them:
 | **"my wip"** / "what's my wip" | `view` — print the cockpit |
 | **"track this"** | register/update THIS session (resolve by resume id; infer name/linear/PRs) |
 | **"track PR #NNN"** | `add-pr` to this session (detect repo from cwd) |
+| **"update wip"** / "sync my wip" | full mid-work sync of THIS session — see below |
 | **"park it — ‹next step›"** | `set --next "‹next step›"` on this session — the handoff note |
 | **"pick up ‹name›"** | resolve slug → `handoff <slug>` (brief + take ownership here) |
 | **"tidy my wip"** | run the Triage: cleanup & focus flow |
@@ -110,6 +111,19 @@ Then apply the update with that slug (`set` / `add-pr` / `depends`), e.g.:
 bash .../wip.sh set --slug "$SLUG" --state awaiting-review --next "ping reviewer"
 bash .../wip.sh add-pr --slug "$SLUG" --repo rock-of-eye-api --number 977
 ```
+
+**"update wip" / "sync my wip" — the mid-work catch-all.** When the user has done
+more work and wants the record to reflect reality, do a full sync of THIS session
+(don't make them spell out each field):
+
+1. `SLUG=$(bash .../wip.sh whoami)` — resolve this session (if empty, `register` first).
+2. **Attach any new PRs** opened here that aren't on the record yet — detect from the
+   cwd repo (`gh pr list --author @me` / `gh pr view`), `add-pr` each with its target.
+3. **Refresh `--next`** to the current concrete next step (infer from recent work;
+   confirm in one line) and `set --notes` if state/context changed.
+4. `bash .../wip.sh view` (or refresh + show the entry) so the user sees the result.
+
+Keep it to one pass — attach, set, show — no interrogation.
 
 `register` with no `--slug` also self-heals: it now matches this session by
 resume id and updates the existing record in place (even if it was created under

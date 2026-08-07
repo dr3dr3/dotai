@@ -7,12 +7,13 @@ Tiny prompts, tied to moments in the day. Wording is forgiving — intent is wha
 | ☕ Checking in | **`my wip`** | The board — what needs you, ranked |
 | 🟢 Starting work | **`track this`** | Registers this session |
 | 🔀 Raised a PR | **`track PR #123`** | Attaches it to this session |
+| 🔄 Did more work | **`update wip`** | Syncs this session — new PRs, next step, live status |
 | 🅿️ Leaving a session | **`park it — <next step>`** | Saves your handoff note |
 | ↩️ Coming back fresh | **`pick up <name>`** | Continues that work here |
 | 🧹 Weekly | **`tidy my wip`** | Cleanup + focus triage |
 
 **The rhythm**
-- Daily: `my wip` → work → `track this` → (raised a PR) `track PR #123` → done for now? `park it — <next step>`
+- Daily: `my wip` → `track this` → work → `update wip` (as you go) → done for now? `park it — <next step>`
 - Resuming: `my wip` (spot it) → `pick up <name>` (fresh session)
 - Weekly: `tidy my wip`
 
