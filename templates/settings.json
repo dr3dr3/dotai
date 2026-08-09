@@ -5,10 +5,8 @@
       "Bash(cd:*)",
       "Bash(chmod:*)",
       "Bash(cp:*)",
-      "Bash(docker:*)",
       "Bash(dotnet:*)",
       "Bash(echo:*)",
-      "Bash(env:*)",
       "Bash(find:*)",
       "Bash(gh pr:*)",
       "Bash(gh repo:*)",
@@ -22,8 +20,6 @@
       "Bash(npx:*)",
       "Bash(pnpm:*)",
       "Bash(pwd)",
-      "Bash(rm:*)",
-      "Bash(terraform:*)",
       "Bash(test:*)",
       "Bash(touch:*)",
       "Bash(which:*)",
@@ -31,6 +27,7 @@
       "Edit",
       "Read",
       "Write",
+      "WebFetch(domain:api.linear.app)",
       "WebFetch(domain:code.visualstudio.com)",
       "WebFetch(domain:deepwiki.com)",
       "WebFetch(domain:docs.rustfs.com)",
@@ -39,21 +36,32 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:hub.docker.com)",
       "WebFetch(domain:mcr.microsoft.com)",
-      "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:api.linear.app)"
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ],
+    "ask": [
+      "Bash(aws:*)",
+      "Bash(docker *)",
+      "Bash(env *)",
+      "Bash(git push *)",
+      "Bash(rm *)",
+      "Bash(terraform *)"
     ],
     "deny": [
-      "Bash(aws:*)",
       "Bash(curl:*)",
+      "Bash(gh api *dispatches*)",
+      "Bash(gh workflow run *prod*)",
+      "Bash(git push *--tags*)",
       "Bash(rm -rf:*)",
       "Bash(ssh:*)",
       "Bash(sudo:*)",
+      "Bash(terraform apply*)",
+      "Bash(terraform destroy*)",
       "Bash(wget:*)",
-      "Read(.env)",
-      "Read(.env.*)",
-      "Read(./secrets/**)",
+      "Read(**/*.key)",
       "Read(**/*.pem)",
-      "Read(**/*.key)"
+      "Read(./secrets/**)",
+      "Read(.env)",
+      "Read(.env.*)"
     ]
   }
 }
