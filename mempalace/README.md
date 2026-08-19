@@ -14,6 +14,11 @@ This `mempalace/` dir is tracked in the **`dotai`** repo (scripts, README, plans
 only `state/` — the palace data, `config.json`, and the DSN it holds — is
 gitignored, so no credentials or memory text are ever committed.
 
+> **Using it day to day → [`USAGE.md`](USAGE.md).** Three phrases ("palace check",
+> "checkpoint this", "supersede: …"), the weekly upkeep, the post-rebuild order, and
+> the gotchas that bite. The protocol is also injected into every session via
+> `identity.txt`, so an agent knows it without being told.
+
 ## What it is
 
 Stores conversation/doc text **verbatim** in a "palace" and retrieves by semantic
@@ -86,6 +91,10 @@ Rules of thumb:
 ```
 mempalace/
 ├── setup.sh       # idempotent installer — run after each devcontainer rebuild
+├── set-dsn.sh     # write the pgvector password (fail-closed) + verify no fork
+├── attach.sh      # recreate the local marker after a rebuild (no re-seed)
+├── backup-memory.sh  # mirror Claude's memory/ dir off the volatile overlay
+├── USAGE.md       # ← THE DAILY HABIT: three phrases, weekly upkeep, gotchas
 ├── seed.sh        # mine Claude sessions + ai-context + every docs/ folder
 ├── identity.txt   # L0 "who you are" — committed template; setup.sh copies it into state/
 ├── hooks/
@@ -214,16 +223,48 @@ rm -rf /workspace/.ai/dotai/mempalace  # data + scripts
 
 ## Status
 
-- [x] Installed `mempalace` (`[pgvector]` extra) via `uv tool`
+- [x] Installed `mempalace` (`[pgvector]` extra) via `uv tool` — **3.7.1**
 - [x] `~/.mempalace` → `state/` symlink, embedding model pinned to `minilm`
 - [x] Claude Code plugin installed (user scope) — automated in `setup.sh`
-- [x] **SessionStart wake-up hook** (`hooks/session-start.sh`) — proactive recall,
-      auto-registered into `settings.json` by `setup.sh` (fail-open)
-- [x] **L0 identity** (`identity.txt`) installed into `state/` by `setup.sh`
+- [x] **SessionStart wake-up hook** — proactive recall, auto-registered, fail-open
+- [x] **L0 identity** + the memory protocol (`identity.txt`), injected every session
 - [x] Scope decided: **memory + docs** (Graphify owns code structure)
-- [x] Backend: **shared self-hosted pgvector** on the tailnet (namespace
-      `andre-shared`) — Windows PC + MacBook connected. See `shared-state-plan.md`.
-- [x] Palace seeded into `andre-shared`: Claude sessions + ai-context + all
-      `docs/` (local-dev-env, infrastructure, per-repo). No raw source.
-- [ ] Reload VS Code window to load MCP server + hooks into the live session
-- [ ] Verdict: _TBD after a week of real use_
+- [x] Backend: **shared self-hosted pgvector** on the tailnet (`andre-shared`)
+- [x] Palace seeded: Claude sessions + `ai-context` + all `docs/`. No raw source.
+
+### 2026-08-19 — restored after a silent seven-week outage
+
+The palace stopped receiving writes on **2026-06-28** — from *every* machine — and
+nothing surfaced it until it was checked on 2026-08-18. A devcontainer rebuild had
+removed the CLI, the plugin, the hook and the `~/.mempalace` symlink; the fail-open
+hook then made a dead palace indistinguishable from a healthy one.
+
+What that outage taught, now fixed:
+
+- [x] **Staleness guard** in `hooks/session-start.sh` — warns in-session when the
+      newest drawer is older than `MEMPALACE_STALE_DAYS` (7), and when the drawers
+      table is missing entirely (invariant drift / fork). Fail-open, ~4s budget.
+- [x] **`set-dsn.sh`** — fail-closed secret write (an empty `op read` once wrote a
+      0-char password and reported success) + the fork check.
+- [x] **`attach.sh`** — the marker step a rebuilt env needs before the CLI can see
+      the palace at all.
+- [x] **`backup-memory.sh`** — Claude's `memory/` dir (292 files) lives on the
+      container **overlay**, not `/workspace`; a rebuild deletes it. Now mirrored to
+      the gitignored `state/memory-backup/`, independent of MemPalace being up.
+- [x] **NUL patch retired** — upstream 3.7.1 sanitises NUL *and* lone surrogates
+      (`_strip_nul` / `strip_lone_surrogates`, issues #1829/#1833).
+- [x] **`memory/` mined as its own wing** so `--wing memory` is curated-only.
+- [x] **`wake-up` L1 suppressed** — measured ~700 tokens of mid-sentence fragments,
+      no better when wing-scoped. Primer is now ~660 tokens, identity + protocol.
+
+### Verdict (2026-08-19)
+
+**The archive earns its keep; the daily-recall layer had not — yet.** Local
+transcripts only reach back to 2026-07-19, so the palace is the *only* surviving
+record of everything before that, and it demonstrably holds knowledge that was
+later re-derived from scratch. Against that: seven weeks of real shipping happened
+without it, on `MEMORY.md` alone, unnoticed.
+
+So the trial continues on changed terms — **deliberate capture** (`USAGE.md`) rather
+than passive mining, with the staleness guard making a second silent death visible.
+Re-assess after a fortnight of the checkpoint habit.

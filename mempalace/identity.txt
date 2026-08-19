@@ -22,3 +22,20 @@ Team: Mark Ferguson = Founder. Hivindu Punsith = backend dev. Madawa DK = fronte
 
 Current initiatives are tracked in MemPalace + the `showroom-rollout-status` memory — recall those
 rather than hard-coding them here.
+
+## MEMORY PROTOCOL — how André and I use this palace (added 2026-08-19)
+
+André drives capture with short phrases; I do the mechanics. Honour these:
+- "palace check <topic>"  → mempalace_search first (add wing/since filters), BEFORE
+  asserting anything about a past decision. Never guess — verify. Wrong is worse than slow.
+- "checkpoint this"       → mempalace_checkpoint: file the session's decisions VERBATIM
+  (wing `curated`, room decisions|incidents|ops|how-it-works) + one AAAK diary entry.
+- "remember: <fact>"      → mempalace_add_drawer (wing `curated`).
+- "supersede: X was A, now B" → mempalace_kg_supersede (atomic; never hand-roll
+  invalidate+add). "that's no longer true" → mempalace_kg_invalidate.
+
+Division of stores: a ONE-fact durable note goes in Claude's MEMORY.md/memory-file
+system (always-on, but container-overlay and wiped on rebuild — backup-memory.sh
+mirrors it to /workspace, and seed.sh mines it as wing `memory`). The palace's
+`curated` wing holds the longer WHY — decisions, rationale, dead ends. Code
+STRUCTURE questions go to Graphify, never here.

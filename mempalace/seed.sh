@@ -23,9 +23,25 @@ WS=/workspace
 echo "→ Seeding MemPalace (docs + sessions)"
 
 # 1. Past Claude Code conversations -------------------------------------------
+# NOTE on --max-chunks-per-file: deliberately NOT set. The cap SKIPS an entire
+# file that exceeds it (miner.py: `return 0, room, "chunk_cap"`), it does not
+# truncate — so a low cap silently discards the biggest agentic sessions, which
+# are often the richest. Only set it to deliberately drop mega-files.
 if [ -d "$CONVOS_DIR" ]; then
     echo; echo "=== conversations: $CONVOS_DIR ==="
-    mempalace mine "$CONVOS_DIR" --mode convos --wing claude-sessions
+    mempalace mine "$CONVOS_DIR" --mode convos --wing claude-sessions --agent andre
+fi
+
+# 1b. Claude's own memory dir — HIGHEST signal, own wing ------------------------
+# ~/.claude/projects/-workspace/memory/ holds the hand-distilled memories (the
+# MEMORY.md index + ~290 one-fact files). Mining it as its own wing makes
+# `search --wing memory` a curated-only query instead of one polluted by
+# transcript noise. It is ALSO the most volatile corpus we have — it lives on
+# the container overlay, not /workspace, so a devcontainer rebuild deletes it.
+MEMORY_DIR="$HOME/.claude/projects/-workspace/memory"
+if [ -d "$MEMORY_DIR" ]; then
+    echo; echo "=== claude memory: $MEMORY_DIR ==="
+    mempalace mine "$MEMORY_DIR" --wing memory --agent andre
 fi
 
 # 2. Build a de-duplicated list of doc roots ----------------------------------

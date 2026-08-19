@@ -52,7 +52,11 @@ on PC restart / devcontainer rebuild. Personal use only; **no Rock of Eye AWS in
 The pgvector **table name is `mempalace_<namespace>_<sha256(palace_path)[:16]>_mempalace_{drawers,closets}`**.
 So joining the *same* palace requires ALL of these to match byte-for-byte on every env:
 
-1. **`pgvector_namespace`** = `andre-shared`.
+1. **`pgvector_namespace`** = `andre-shared`. ⚠️ The namespace is **slugged** into
+   the table name — `_slug()` in `backends/pgvector.py` maps `[^A-Za-z0-9_]` → `_`,
+   so the live tables are `mempalace_andre_shared_…` (underscore), NOT
+   `andre-shared`. Verified 2026-08-19: checking for the literal namespace makes a
+   correctly-attached env look like a fork.
 2. **`palace_path`** = `/home/vscode/.mempalace/palace-pg` — **THIS IS HASHED INTO THE TABLE NAME.**
    `sha256("/home/vscode/.mempalace/palace-pg")[:16]` = `db426f05c18fc7c5` (the live table id).
    It works across the Win + Mac envs only because both are the same `vscode`/`/home/vscode`
@@ -64,6 +68,19 @@ So joining the *same* palace requires ALL of these to match byte-for-byte on eve
 To attach a new env without re-seeding: match 1–4, create the local `pgvector_backend.json`
 marker (the backend's `_write_marker()` writes only that local file — no DB write), do NOT run
 `seed.sh`. New envs contribute via the auto-mine hooks.
+
+**This is not optional after a devcontainer rebuild, and it does not announce itself.**
+The marker lives in the container home, so a rebuild loses it and `mempalace status`
+reports **"No palace found at …/palace-pg"** — indistinguishable from a lost palace,
+while 24k+ drawers sit safely in Postgres. `attach.sh` writes the marker via the
+backend's own `_write_marker()` and then prints the status. (Confirmed 2026-08-19.)
+
+⚠️ **NEVER run `mempalace sync --apply --wing claude-sessions`.** `sync` prunes drawers
+whose source files are gitignored, deleted, or moved — and the mined session transcripts
+ARE deleted (`~/.claude` is container-home; a rebuild wipes it). Local transcripts only
+reach back to 2026-07-19, so the palace holds the ONLY copy of everything before that.
+`--dry-run` is the default and `--apply` requires an explicit `--wing`, so this can only
+happen deliberately. Don't do it deliberately.
 
 ## Why this is sound
 

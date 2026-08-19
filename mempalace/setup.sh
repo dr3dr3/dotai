@@ -61,15 +61,14 @@ echo "  • installing $PKG_SPEC via uv tool… (backend=$BACKEND)"
 uv tool install "$PKG_SPEC" --force
 echo "  • binaries: $(command -v mempalace) , $(command -v mempalace-mcp)"
 
-# 3b. Strip NUL (0x00) bytes in the pgvector backend (upstream bug) -------------
-#     Chroma tolerated NUL in drawer text; Postgres text/jsonb reject it, so
-#     convo mining crashes without this. Idempotent; no-op when pgvector isn't
-#     installed. Re-applied here because uv tool install above replaces vendored
-#     files. Remove once fixed upstream (mempalace > 3.4.1).
-if [ "$BACKEND" = "pgvector" ]; then
-    uv tool run --from "$PKG_SPEC" python "$BASE/patch-pgvector-nul.py" \
-        || echo "  ⚠ NUL patch failed — convo mining into pgvector may crash"
-fi
+# 3b. NUL / lone-surrogate sanitising — NOW FIXED UPSTREAM, no patch needed -----
+#     mempalace <= 3.4.1 crashed mining convos into pgvector because Postgres
+#     text/jsonb reject NUL (0x00) bytes that Chroma tolerated, so we carried
+#     patch-pgvector-nul.py. As of 3.7.1 upstream sanitises in upsert_rows
+#     (_strip_nul + strip_lone_surrogates, issues #1829 / #1833) — strictly more
+#     than our patch did. The patch's anchors no longer exist, so applying it
+#     just printed a scary failure on every run. Kept in the repo for reference
+#     only; re-enable ONLY if you ever pin mempalace back below 3.7.1.
 
 # 4. Install the Claude Code plugin (MCP server + Stop/PreCompact hooks + skills) -
 #    Claude Code runs as the VS Code extension here, so `claude` isn't on PATH —
