@@ -9,12 +9,14 @@ Tiny prompts, tied to moments in the day. Wording is forgiving — intent is wha
 | 🔀 Raised a PR | **`track PR #123`** | Attaches it to this session |
 | 🔄 Did more work | **`update wip`** | Syncs this session — new PRs, next step, live status |
 | 🅿️ Leaving a session | **`park it — <next step>`** | Saves your handoff note |
-| ↩️ Coming back fresh | **`pick up <name>`** | Continues that work here |
+| ↩️ Coming back fresh | **`pick up <name>`** | Continues that work here (it's on the board) |
+| 🔎 Lost the session entirely | **`/pick-up <topic>`** | Finds work the board never tracked, then registers it |
 | 🧹 Weekly | **`tidy my wip`** | Cleanup + focus triage |
 
 **The rhythm**
 - Daily: `my wip` → `track this` → work → `update wip` (as you go) → done for now? `park it — <next step>`
 - Resuming: `my wip` (spot it) → `pick up <name>` (fresh session)
+- Not on the board? `/pick-up <topic>` — searches sessions, branches, PRs and Linear for it
 - Weekly: `tidy my wip`
 
 **The two that matter most:** `my wip` (morning) and `park it — …` (before you close a window).
