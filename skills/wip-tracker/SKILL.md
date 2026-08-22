@@ -1,6 +1,6 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "update wip"/"sync my wip" (full mid-work sync of this session), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage), "wip cheatsheet" (print the daily-prompts card).
+description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions that this board already tracks. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "update wip"/"sync my wip" (full mid-work sync of this session), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage), "wip cheatsheet" (print the daily-prompts card). Resuming work that is NOT on the board — never registered, registered on another machine, or named only by topic ("pick up our work on observability tooling", "we lost that session") — is the pick-up skill's job, not this one's: it searches sessions/branches/PRs/Linear for the work, then hands it back here to register.
 ---
 
 # WIP Tracker
@@ -139,7 +139,16 @@ the SSO login work", "pick up ‹slug› here", "resume the preview work in this
 session"). Do this:
 
 1. **Resolve the slug** from the name (run `wip.sh list`; match the user's words to
-   a record). Then run:
+   a record).
+
+   **No record matches?** Then this board never tracked that work — stop and use
+   the **`pick-up`** skill instead. It searches the durable evidence (past AI
+   sessions, MemPalace/memory, branches, worktrees, local-only commits, org-wide
+   PR search, Linear, scratch artifacts), confirms the thread with the user, and
+   registers it back here when it's done. Don't guess a slug, and don't
+   `register` a fresh empty record as if the history didn't exist.
+
+   With a match, run:
 
    ```bash
    bash .../wip.sh handoff <slug>      # aliases: resume, continue
