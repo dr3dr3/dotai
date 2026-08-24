@@ -36,6 +36,22 @@ Ticket: https://linear.app/rock-of-eye/issue/ENG-2410
 Over to you — the list, or a name, by Friday.
 ```
 
+Founder — same ask, same facts, one pass to read:
+
+```
+Need the Q3 fabric supplier list — it's the last thing blocking the pricing review.
+
+• Four of six suppliers missing
+• Review is Sept 12
+
+Can you send it, or give me a name? If I don't hear by Friday I'll go with the four we have.
+
+Ticket: https://linear.app/rock-of-eye/issue/ENG-2410
+```
+
+The verdict is absent because the ask line already is it. That is the section 2 rule about
+not saying the same thing twice, and it bites most often in this register.
+
 Technical:
 
 ```
