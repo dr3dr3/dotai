@@ -187,28 +187,47 @@ if [ -d "$HOOKS_SRC_DIR" ] && command -v python3 &>/dev/null; then
         echo "✓ $(basename "$hook_src")"
     done
 
-    if [ -f "$HOME_HOOKS_DIR/guard-instance-docker.sh" ]; then
-        python3 - "$HOME_SETTINGS" "$HOME_HOOKS_DIR/guard-instance-docker.sh" <<'PY'
+    # Registration table: script | hook event | tool matcher.
+    # Add a row here when you add a hook to hooks/ — the copy loop above is
+    # generic; only registration needs to know the event and matcher.
+    python3 - "$HOME_SETTINGS" "$HOME_HOOKS_DIR" <<'REGPY'
 import json, os, sys
-path, cmd = sys.argv[1], sys.argv[2]
+
+settings, hooks_dir = sys.argv[1], sys.argv[2]
+
+REGISTRY = [
+    # (script name, hook event, tool matcher)
+    ("guard-instance-docker.sh", "PreToolUse",  "Bash"),
+    ("memory-index-budget.sh",   "PostToolUse", "Write|Edit|MultiEdit|NotebookEdit"),
+]
+
 data = {}
-if os.path.exists(path):
-    with open(path) as f:
+if os.path.exists(settings):
+    with open(settings) as f:
         try: data = json.load(f)
         except Exception: data = {}
-pre = data.setdefault("hooks", {}).setdefault("PreToolUse", [])
-exists = any(h.get("command") == cmd for blk in pre if isinstance(blk, dict)
-             for h in blk.get("hooks", []) if isinstance(h, dict))
-if not exists:
-    pre.append({"matcher": "Bash", "hooks": [{"type": "command", "command": cmd}]})
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
+
+changed = False
+for script, event, matcher in REGISTRY:
+    cmd = os.path.join(hooks_dir, script)
+    if not os.path.isfile(cmd):
+        print("\u26a0 %s not installed \u2014 skipped registration" % script)
+        continue
+    bucket = data.setdefault("hooks", {}).setdefault(event, [])
+    exists = any(h.get("command") == cmd for blk in bucket if isinstance(blk, dict)
+                 for h in blk.get("hooks", []) if isinstance(h, dict))
+    if exists:
+        print("\u2713 %s already registered (%s)" % (script, event))
+        continue
+    bucket.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
+    changed = True
+    print("\u2713 registered %s in ~/.claude/settings.json (%s)" % (script, event))
+
+if changed:
+    os.makedirs(os.path.dirname(settings), exist_ok=True)
+    with open(settings, "w") as f:
         json.dump(data, f, indent=2); f.write("\n")
-    print("✓ registered guard-instance-docker.sh in ~/.claude/settings.json")
-else:
-    print("✓ guard-instance-docker.sh already registered (~/.claude)")
-PY
-    fi
+REGPY
 fi
 
 # -----------------------------------------------------------------------------

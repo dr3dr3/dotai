@@ -3,13 +3,24 @@
 # Back up (and restore) Claude's memory dir — the highest-signal corpus we own
 # =============================================================================
 # ~/.claude/projects/-workspace/memory/ holds the hand-distilled memories: the
-# MEMORY.md index plus ~290 one-fact files. Two facts make this urgent:
+# MEMORY.md index plus ~290 one-fact files. Two facts explain why it exists:
 #
-#   1. It lives on the CONTAINER OVERLAY (`df` says `overlay /`), NOT the
-#      /workspace host bind — so a devcontainer rebuild deletes every file.
-#   2. Until today its only off-container copy was MemPalace, which had been
-#      frozen since 2026-06-28. A rebuild in that window would have lost seven
-#      weeks of distilled memory with nothing to restore from.
+#   1. It USED TO live on the CONTAINER OVERLAY, NOT the /workspace host bind,
+#      so a devcontainer rebuild deleted every file. NO LONGER TRUE as of
+#      local-dev-env bc8cef3 (2026-08-19): ~/.claude is now a symlink to
+#      ~/.ai/claude on the persisted `roe-devcontainer-ai` volume, so the live
+#      dir survives a rebuild on its own. This backup is therefore a SECOND
+#      line of defence rather than the only one — keep it anyway: that volume
+#      is still one local Docker object, and `docker compose down -v` or
+#      `make clean-all` will delete it without ceremony.
+#   2. Until 2026-08-18 its only off-container copy was MemPalace, which had
+#      been frozen since 2026-06-28. A rebuild in that window would have lost
+#      seven weeks of distilled memory with nothing to restore from.
+#
+# Proven in anger on 2026-08-19: a Docker Desktop VM restart forced a
+# devcontainer recreate minutes BEFORE the AI volume existed. The live memory
+# dir came back empty and `--restore` rebuilt all 292 files from state/.
+# MemPalace could NOT have covered it — its newest mined content was ~6h stale.
 #
 # So: a plain file copy into the gitignored mempalace/state/ (host bind,
 # survives rebuilds). Deliberately independent of MemPalace — it must work when
