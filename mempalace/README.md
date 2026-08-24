@@ -268,3 +268,19 @@ without it, on `MEMORY.md` alone, unnoticed.
 So the trial continues on changed terms — **deliberate capture** (`USAGE.md`) rather
 than passive mining, with the staleness guard making a second silent death visible.
 Re-assess after a fortnight of the checkpoint habit.
+
+### 2026-08-24 — the checkpoint habit was half-exercised, not absent
+
+Audited the live palace instead of assuming the 2026-08-19 protocol was working:
+wing `curated` had **zero drawers** and the knowledge graph had **zero
+entities/triples** — despite `mempalace_checkpoint` firing constantly (529 diary
+entries). Root cause: the checkpoint tool's `diary` param and `items` param are
+independent; only `diary` was ever being populated, so "checkpoint this" was
+writing a raw journal line, never filing the durable fact into `curated`. See the
+gotcha in `USAGE.md`.
+
+Fixed by filing two real backfilled decisions (ssm-tunnel preview access,
+ENG-2371 prod-tag-no-longer-autodeploys) as worked examples with both `items`
+*and* two `kg_supersede` calls, and by adding "Does this reach future sessions
+automatically?" to `USAGE.md` — the write-is-automatic / read-is-never-automatic
+distinction wasn't written down anywhere before this.

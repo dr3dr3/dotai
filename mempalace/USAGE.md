@@ -23,6 +23,40 @@ with no successor).
 
 ---
 
+## Does this reach future sessions automatically?
+
+Two different questions, two different answers — worth keeping apart because
+they're easy to conflate:
+
+**Writing is mostly automatic.** Raw transcripts get mined into the palace in
+the background (the Stop hook, ~every 15 messages) with no action from you. The
+deliberate stuff — `checkpoint` / `remember` / `supersede` into wing `curated` +
+the KG — only happens when triggered, by the phrase or by the agent's own
+judgment (see below).
+
+**Reading is never automatic.** Nothing injects palace *content* into a
+session's context the way `MEMORY.md` does at session start. The SessionStart
+hook injects the **protocol** (identity.txt — "here's how to use MemPalace") on
+every session, but that's static instructions, not a live query. Actual content
+only surfaces when something calls a tool (`mempalace search`,
+`mempalace_kg_query`, …) *during* that session.
+
+So:
+- **"palace check `<topic>`"** is the deterministic trigger — say it and the
+  lookup happens, guaranteed.
+- It is not the *only* way in — a session that has the protocol loaded is
+  supposed to search before asserting a past decision, unprompted (identity.txt
+  rule 2). But that's a judgment call each time, not a guarantee. Treat the
+  phrase as the dependable lever; proactive checking is a bonus, not a promise.
+- **It's cross-session AND cross-machine** — the palace is one shared Postgres
+  backend (namespace `andre-shared`), not scoped to one conversation or one
+  devcontainer. Something filed here today is findable from a session on the
+  MacBook next month, as long as that session has the plugin + hook wired (see
+  Setup above) — a bare Claude Code session without this repo's setup has no
+  idea the palace exists, tools or protocol.
+
+---
+
 ## The loop, step by step
 
 ### 1. Session start — do nothing
@@ -109,6 +143,13 @@ bash mempalace/backup-memory.sh --restore  # additive; never overwrites newer fi
 
 ## Gotchas that will bite
 
+- ⚠️ **`mempalace_checkpoint`'s `diary` param firing does NOT mean the `items`
+  filed.** They're independent parts of one call — diary writes a raw AAAK
+  journal line every time it's given one; `items` is what actually lands in
+  `curated`. Audited 2026-08-24: diary had 529 entries, `curated` had **zero** —
+  the habit had only ever been half-exercised. Always pass both, and check
+  `mempalace_list_rooms(wing="curated")` occasionally to confirm items are
+  actually accumulating, not just diary noise.
 - ⚠️ **Never `mempalace sync --apply` on `claude-sessions`.** It prunes drawers whose
   source files are gone — and the June transcripts *are* gone. It would delete the
   only surviving copy of that period.
