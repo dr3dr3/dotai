@@ -1,6 +1,6 @@
 ---
 name: draft-post
-description: Draft a message for a human — Slack, Teams, WhatsApp, email, LinkedIn, or any chat app. Produces a paste-ready post in the chat with no markdown syntax, written BLUF, bulleted, plain English, no pleasantries. Use when the user asks to "draft a post", "write a message/update/announcement", "draft something for <person>", "write this up for the team", "how do I ask X for Y", "draft a reply to this", "put this in a Slack post", "message the team about", or wants an existing draft made shorter, clearer, less formal, or more/less technical. Defaults to an executive register; switches to a technical register when the user says technical, engineering, for the devs, or names an engineering audience. NOT for commit messages, PR descriptions, ADRs, docs, or code comments.
+description: Draft a message for a human — Slack, Teams, WhatsApp, email, LinkedIn, or any chat app. Produces a paste-ready post in the chat with no markdown syntax, written BLUF, bulleted, plain English, no pleasantries. Use when the user asks to "draft a post", "write a message/update/announcement", "draft something for <person>", "write this up for the team", "how do I ask X for Y", "draft a reply to this", "put this in a Slack post", "message the team about", or wants an existing draft made shorter, clearer, less formal, or more/less technical. Defaults to an executive register; switches to a technical register when the user says technical, engineering, for the devs, or names an engineering audience; switches to the founder register — headline, three bullets, one ask, nothing else — when the user says "for Mark", "for the founder", "founder mode", "founder register", or asks for the shortest/tightest possible version. NOT for commit messages, PR descriptions, ADRs, docs, or code comments.
 ---
 
 # Draft Post
@@ -105,18 +105,44 @@ No action needed.
 ## 3. Register — executive by default
 
 **Default to executive.** Switch to technical only when the user says so ("technical",
-"for the engineers", "for IT") or names an engineering audience. When an audience is
-mixed, use executive and put the technical detail in a single trailing bullet.
+"for the engineers", "for IT") or names an engineering audience. Switch to **founder** on
+"for Mark", "for the founder", "founder mode", or a request for the shortest possible
+version. When an audience is mixed, use executive and put the technical detail in a single
+trailing bullet.
 
-|  | Executive (default) | Technical (opt-in) |
-|---|---|---|
-| Ceiling | ~150 words, ≤6 bullets | ~250 words |
-| Detail | Decision, impact, cost, timing | System names, versions, error codes, PR/ticket refs, log lines |
-| Language | Plain English. Expand every acronym on first use. | House and platform terms fine — Client, Clothier, labour form, tenant, EB, SSM |
-| Answers | "What does this mean for the business, and what do you need from me?" | "What broke, where, and what's the fix?" |
+|  | Founder (opt-in) | Executive (default) | Technical (opt-in) |
+|---|---|---|---|
+| Ceiling | ~70 words, **exactly ≤3 bullets** | ~150 words, ≤6 bullets | ~250 words |
+| Detail | The decision and its consequence. Nothing else. | Decision, impact, cost, timing | System names, versions, error codes, PR/ticket refs, log lines |
+| Language | Plain English, no acronyms at all. | Plain English. Expand every acronym on first use. | House and platform terms fine — Client, Clothier, labour form, tenant, EB, SSM |
+| Answers | "What do you need from me, and what happens if I ignore this?" | "What does this mean for the business, and what do you need from me?" | "What broke, where, and what's the fix?" |
 
 Technical is a licence to be **specific**, not to be long or unstructured. Every other
-rule in this file applies identically to both.
+rule in this file applies identically to all three.
+
+### The founder register
+
+For a reader who is interrupted constantly and will decide in one pass or not at all.
+The structure in section 2 still holds — it just gets much harder ceilings.
+
+- **Headline, then at most three bullets, then one ask line.** Three is a ceiling, not a
+  target. Two is better. Zero is fine when the headline says everything.
+- **One ask per message.** If the draft contains two things you need from them, it is two
+  messages. Send the more urgent one and say the second is coming.
+- **The ask is answerable in one word** — yes, no, a name, or a date. Never "thoughts?".
+  For anything with options, state your recommendation and let them approve it:
+  "Going with B on Thursday unless you say otherwise."
+- **Give them a default so silence works.** Name what you will do if they do not reply, and
+  when. A founder not replying is the normal case, not a failure.
+- **Cut the reasoning, keep the consequence.** Not why the thing is true — what it costs
+  them if it is. Detail moves into the ticket, and the ticket link goes in the footer.
+- **Footer stays.** One or two links maximum, ordered by what they would open first, then
+  the action verdict. Trim references before you trim the ask.
+- **No preamble, no thanks, no recap of a prior thread.** One line of context only when
+  they genuinely will not remember the subject.
+
+Everything you cut is still available — offer it in the one-line footer below the draft
+("Longer version if you want it") rather than putting it in the message.
 
 **Two audiences, two drafts.** When the same news has to reach an executive and an
 engineer, do not compromise on one blended register — produce both, each labelled and
@@ -194,7 +220,8 @@ Getting straight to the point is not rude. Everyone already knows each other.
 - Is every bullet load-bearing? Delete any that only adds background.
 - Zero markdown syntax? No `**`, `##`, `|`, `[](…)`, `-` bullets. Backticks only in
   Slack/WhatsApp, and only around a literal token.
-- Within the word ceiling for the register?
+- Within the word ceiling for the register? In founder register: three bullets or fewer,
+  exactly one ask, and a stated default if they never reply?
 - No banned openers or closers?
 - Could the recipient reply in under sixty seconds without opening anything else?
 - Every uncertain fact marked `[NEED: …]` rather than guessed?
