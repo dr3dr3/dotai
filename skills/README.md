@@ -23,6 +23,11 @@ These skills help you write, refactor, and fix code.
 - **setup-pre-commit** — Set up Husky pre-commit hooks with lint-staged, Prettier, type checking, and tests.
 - **git-guardrails-claude-code** — Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, etc.) before they execute.
 
+## Session Awareness
+
+- **debrief** — Mid-session zoom-out: a plain-English executive summary of the current session's goals (and drift), verified progress, blockers, decisions/dead ends, and a recommended next move. Grounded in `git`/`gh` at debrief time, hard-capped at ~50 lines.
+- **wip-tracker** — Track work-in-progress across multiple concurrent AI coding sessions. Per-session index of PRs with live status; handoff notes ("park it") and fresh-session pickup.
+
 ## Communication
 
 - **agent-email** — Send and receive email *as the agent* via AgentMail (`agent@rockofeye.net`). Human-in-the-loop only: draft → review → `--confirm` send, hard recipient allowlist, secret redaction, audit trail. Personal to André.
