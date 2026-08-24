@@ -1,7 +1,17 @@
 {
-  "_comment": "HARD allowlist — the agent may ONLY email these addresses (applies to To, Cc, and replies). Empty array = block all sends (safe default).",
+  "_comment": "HARD allowlist \u2014 the agent may ONLY email these addresses (applies to To, Cc, and replies). Empty array = block all sends (safe default).",
   "recipients": [
-    { "name": "André Dreyer", "email": "andre.dreyer@rockofeye.ai" },
-    { "name": "Mark Ferguson", "email": "mark.ferguson@rockofeye.ai" }
+    {
+      "name": "Andr\u00e9 Dreyer",
+      "email": "andre.dreyer@rockofeye.ai"
+    },
+    {
+      "name": "Mark Ferguson",
+      "email": "mark.ferguson@rockofeye.ai"
+    },
+    {
+      "name": "Jimmy Chan",
+      "email": "jimmy.chan@rockofeye.ai"
+    }
   ]
 }
