@@ -34,4 +34,5 @@ These skills help you write, refactor, and fix code.
 
 ## Writing Skills
 
+- **research-a-post** — Research a blog post idea against the work environment and produce a brain-dump: verified evidence (git, PRs, Linear, Sentry, CI, pinned versions) with a re-runnable source on every fact, artefacts captured verbatim, and an interview for the half only a human has. Output is one file to carry into the blog repo. Personal to André.
 - **write-a-skill** — Create new skills with proper structure, progressive disclosure, and bundled resources.
