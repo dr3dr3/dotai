@@ -130,11 +130,14 @@ with open(settings_path) as f:
 with open(template_path) as f:
     template = json.load(f)
 
-# Merge permissions: union of allow/deny lists, preserving existing entries
+# Merge permissions: union of allow/ask/deny lists, preserving existing entries.
+# `ask` MUST be in this tuple. It was omitted until 2026-08-25, which silently
+# dropped the whole prompt-me tier on every run — the template's rules were
+# never installed and `deny` was doing all the gating on its own.
 tpl_perms = template.get("permissions", {})
 cur_perms = settings.get("permissions", {})
 
-for key in ("allow", "deny"):
+for key in ("allow", "ask", "deny"):
     existing = set(cur_perms.get(key, []))
     incoming = set(tpl_perms.get(key, []))
     merged = sorted(existing | incoming)
