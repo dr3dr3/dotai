@@ -300,12 +300,23 @@ fi
 # Authenticate the Linear CLI with that key. --plaintext writes to ~/.config/linear
 # (on the persisted volume, survives rebuilds); the headless container has no keyring.
 if [ -n "${LINEAR_ACCESS_TOKEN:-}" ] && command -v linear &>/dev/null; then
-  if linear auth token &>/dev/null; then
-    echo "  ✓ Linear CLI already authenticated"
-  elif linear auth login --plaintext --key "$LINEAR_ACCESS_TOKEN" &>/dev/null; then
+  # `linear auth token` reads LINEAR_API_KEY from the ENVIRONMENT — which this
+  # script exported ~15 lines above — so the old "already authenticated?" guard
+  # ALWAYS passed and the login branch was unreachable. The CLI was therefore
+  # never persistently authenticated by setup, and a rotated key never reached
+  # ~/.config/linear/credentials.toml. Just write the key every run; login is
+  # idempotent and this is what makes a rotation actually land.
+  if linear auth login --plaintext --key "$LINEAR_ACCESS_TOKEN" &>/dev/null; then
     echo "  ✓ Linear CLI authenticated (key from 1Password)"
   else
     echo "  ⚠ Linear CLI login failed"
+  fi
+  # Prove it PERSISTED, with the env vars stripped — otherwise this reports the
+  # environment back to itself, which is the bug above.
+  if env -u LINEAR_API_KEY -u LINEAR_ACCESS_TOKEN linear auth token &>/dev/null; then
+    echo "  ✓ Linear CLI auth persisted (survives a fresh shell)"
+  else
+    echo "  ⚠ Linear CLI auth did NOT persist — works only while the env var is set"
   fi
 fi
 
