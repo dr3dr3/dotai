@@ -328,15 +328,30 @@ if [ -n "$CLAUDE_BIN" ]; then
   echo ""
   echo "→ Registering Claude Code plugins (using $CLAUDE_BIN)"
 
-  # Helper: register an MCP server scoped to the user; skips if already present
+  # Mask secret-looking env assignments in anything we print. `claude mcp add`
+  # echoes the full command back on success — including `-e LINEAR_ACCESS_TOKEN=
+  # lin_api_…` — which lands verbatim in any captured log or terminal scrollback.
+  # That leaked a live Linear key on 2026-08-30.
+  _mask_secrets() {
+    sed -E 's/([A-Za-z_]*(TOKEN|KEY|SECRET|PASSWORD|CREDENTIAL)[A-Za-z_]*=)[^[:space:]]*/\1***/g'
+  }
+
+  # Helper: register an MCP server scoped to the user; skips if already present.
+  # Never prints the subcommand's raw output — but DOES print it, masked, on
+  # failure: a diagnostic that hides the real error is how three unrelated
+  # 1Password failures stayed invisible behind one guessed cause (#17, #18).
   _mcp_add() {
     local name="$1"; shift
     if "$CLAUDE_BIN" mcp get "$name" &>/dev/null 2>&1; then
       echo "  → $name already registered — skipping"
     else
-      "$CLAUDE_BIN" mcp add --scope user "$name" -- "$@" \
-        && echo "  ✓ $name" \
-        || echo "  ✗ $name — registration failed (verify package name)"
+      local _out
+      if _out="$("$CLAUDE_BIN" mcp add --scope user "$name" -- "$@" 2>&1)"; then
+        echo "  ✓ $name"
+      else
+        echo "  ✗ $name — registration failed:"
+        printf '%s\n' "$_out" | _mask_secrets | sed 's/^/      /' | head -5
+      fi
     fi
   }
 
