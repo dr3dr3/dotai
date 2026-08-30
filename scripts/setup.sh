@@ -263,21 +263,34 @@ fi
 # the key-based `linear` MCP (registered below) come up authenticated without
 # pasting keys. Pinned to my personal account + "Rock of Eye" vault; the key is
 # the secure-note body (field notesPlain). Gracefully skips if op can't resolve
-# it (not signed in / no agent.sock in this context), so a run never hard-fails.
-LINEAR_OP_ACCOUNT="my.1password.com"
+# it, so a run never hard-fails.
+#
+# The account is whatever OP_ACCOUNT names, because the shorthand is per-machine:
+# the RoE devcontainer sets OP_ACCOUNT=rockofeyesoftware, and hardcoding
+# "my.1password.com" there made op fail with `found no accounts for filter` on
+# every run — while the message below blamed a missing agent.sock, which sent a
+# debugging session after the wrong thing entirely. Fall back to the old default
+# only when OP_ACCOUNT is unset.
+LINEAR_OP_ACCOUNT="${OP_ACCOUNT:-my.1password.com}"
 LINEAR_OP_REF="op://Rock of Eye/Linear API Key/notesPlain"
 if [ -z "${LINEAR_ACCESS_TOKEN:-}" ] && command -v op &>/dev/null; then
   echo ""
-  echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF)"
-  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>/dev/null)" \
+  echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF, account $LINEAR_OP_ACCOUNT)"
+  _linear_err="$(mktemp)"
+  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>"$_linear_err")" \
      && [ -n "$_linear_tok" ]; then
     export LINEAR_ACCESS_TOKEN="$_linear_tok"
     export LINEAR_API_KEY="${LINEAR_API_KEY:-$_linear_tok}"  # env name used by the CLI / skills
     unset _linear_tok
     echo "  ✓ Linear key resolved from 1Password"
   else
-    echo "  ⚠ Could not resolve Linear key from 1Password (op not signed in / no agent.sock?) — skipping"
+    # Print what op actually said. Guessing the cause here is how the account
+    # mismatch above stayed hidden.
+    echo "  ⚠ Could not resolve Linear key from 1Password — skipping. op said:"
+    sed 's/^/      /' "$_linear_err" | head -3
+    echo "      (check: op account list — the shorthand must match OP_ACCOUNT)"
   fi
+  rm -f "$_linear_err"
 fi
 
 # Authenticate the Linear CLI with that key. --plaintext writes to ~/.config/linear
