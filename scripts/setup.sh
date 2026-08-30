@@ -261,8 +261,12 @@ fi
 # ── Linear personal token from 1Password (personal dotai) ──────────────────────
 # Resolve my personal Linear API key from 1Password so BOTH the Linear CLI and
 # the key-based `linear` MCP (registered below) come up authenticated without
-# pasting keys. Pinned to my personal account + "Rock of Eye" vault; the key is
-# the secure-note body (field notesPlain). Gracefully skips if op can't resolve
+# pasting keys. The key lives in the personal "Employee" vault, item "Linear",
+# field "credential" — verified 2026-08-30 against `op item get`. All three parts
+# were previously wrong (vault "Rock of Eye", item "Linear API Key", field
+# "notesPlain", which is present on the item but EMPTY), so the resolution had
+# never once succeeded. Override with LINEAR_OP_REF on a machine that differs.
+# Gracefully skips if op can't resolve
 # it, so a run never hard-fails.
 #
 # The account is whatever OP_ACCOUNT names, because the shorthand is per-machine:
@@ -272,7 +276,7 @@ fi
 # debugging session after the wrong thing entirely. Fall back to the old default
 # only when OP_ACCOUNT is unset.
 LINEAR_OP_ACCOUNT="${OP_ACCOUNT:-my.1password.com}"
-LINEAR_OP_REF="op://Rock of Eye/Linear API Key/notesPlain"
+LINEAR_OP_REF="${LINEAR_OP_REF:-op://Employee/Linear/credential}"
 if [ -z "${LINEAR_ACCESS_TOKEN:-}" ] && command -v op &>/dev/null; then
   echo ""
   echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF, account $LINEAR_OP_ACCOUNT)"
