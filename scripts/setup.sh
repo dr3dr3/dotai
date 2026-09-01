@@ -357,7 +357,7 @@ if [ -n "$CLAUDE_BIN" ]; then
       echo "  → $name already registered — skipping"
     else
       local _out
-      if _out="$("$CLAUDE_BIN" mcp add --scope user "$name" -- "$@" 2>&1)"; then
+      if _out="$("$CLAUDE_BIN" mcp add --scope user "$name" "$@" 2>&1)"; then
         echo "  ✓ $name"
       else
         echo "  ✗ $name — registration failed:"
@@ -381,24 +381,28 @@ if [ -n "$CLAUDE_BIN" ]; then
   }
 
   # Superpowers — TDD, debugging, and collaboration workflow skills
-  _mcp_add superpowers          npx -y superpowers-mcp
+  _mcp_add superpowers          -- npx -y superpowers-mcp
 
   # Context7 — pulls up-to-date library docs into context
-  _mcp_add context7             npx -y @upstash/context7-mcp@latest
+  _mcp_add context7             -- npx -y @upstash/context7-mcp@latest
 
   # Code-reviewer — AI-powered code review via MCP
-  _mcp_add code-reviewer        npx -y code-review-mcp
+  _mcp_add code-reviewer        -- npx -y code-review-mcp
 
   # PR review toolkit — GraphQL-based GitHub PR review
-  _mcp_add pr-review-toolkit    npx -y pr-review-mcp
+  _mcp_add pr-review-toolkit    -- npx -y pr-review-mcp
 
-  # Linear — issue and project management via Linear API
-  # Requires LINEAR_ACCESS_TOKEN (Personal Access Token from linear.app/settings/api)
-  if [ -n "${LINEAR_ACCESS_TOKEN:-}" ]; then
-    _mcp_add linear             -e "LINEAR_ACCESS_TOKEN=$LINEAR_ACCESS_TOKEN" -- npx -y linear-mcp
-  else
-    echo "  ⚠ linear — skipped (set LINEAR_ACCESS_TOKEN and re-run to register)"
+  # Linear — OFFICIAL remote MCP (OAuth 2.1, dynamic client registration).
+  # Deliberately NOT the key-based stdio server: that put a Personal API key in
+  # ~/.claude.json in plaintext, made every client need the key distributed to
+  # it, and turned a key rotation into a five-consumer sweep. OAuth needs no key
+  # at all and authenticates each person as themselves.
+  # A pre-existing STDIO `linear` entry is stale — drop it so the http one lands.
+  if "$CLAUDE_BIN" mcp get linear 2>/dev/null | command grep -qi 'stdio'; then
+    echo "  → removing the stale stdio linear registration"
+    "$CLAUDE_BIN" mcp remove linear --scope user >/dev/null 2>&1 || true
   fi
+  _mcp_add_http linear          https://mcp.linear.app/mcp
 
   # Notion — official remote MCP (OAuth). AI read/write over Notion pages,
   # databases, and search. After registration, run /mcp in a Claude Code session
