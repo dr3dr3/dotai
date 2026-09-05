@@ -151,31 +151,22 @@ else
 fi
 rm -f "$DOTAI_BLOCK_BODY"
 
-# ── Global ~/.claude/settings.json — ccstatusline ────────────────────────────
+# ── Global ~/.claude/settings.json — ensure it exists ────────────────────────
+#
+# The permissions merge below json.load()s this file with no existence check,
+# so it must exist by the time we get there. Nothing else is written here:
+# statusLine is deliberately NOT configured. It previously installed
+# `npx -y ccstatusline@latest`, which re-resolved over the network and spawned
+# a process on EVERY statusline render; with no reaping init in the
+# devcontainer (PID 1 is `sleep infinity`) those accumulated as zombies.
 
 GLOBAL_SETTINGS="$CLAUDE_DIR/settings.json"
 
-echo ""
-echo "→ Configuring ccstatusline in ~/.claude/settings.json"
-
 if [ ! -f "$GLOBAL_SETTINGS" ]; then
-  printf '{\n  "statusLine": {\n    "type": "command",\n    "command": "npx -y ccstatusline@latest",\n    "padding": 0\n  }\n}\n' > "$GLOBAL_SETTINGS"
-  echo "  ✓ ~/.claude/settings.json created with ccstatusline statusLine"
-else
-  python3 - "$GLOBAL_SETTINGS" <<'PYEOF'
-import json, sys
-path = sys.argv[1]
-with open(path) as f:
-    data = json.load(f)
-if "statusLine" not in data:
-    data["statusLine"] = {"type": "command", "command": "npx -y ccstatusline@latest", "padding": 0}
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
-        f.write("\n")
-    print("  ✓ statusLine added to ~/.claude/settings.json")
-else:
-    print("  → statusLine already configured — leaving it unchanged")
-PYEOF
+  echo ""
+  echo "→ Creating ~/.claude/settings.json"
+  printf '{}\n' > "$GLOBAL_SETTINGS"
+  echo "  ✓ ~/.claude/settings.json created"
 fi
 
 # ── Repo CLAUDE.md ────────────────────────────────────────────────────────────
