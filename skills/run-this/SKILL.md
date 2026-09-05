@@ -41,13 +41,19 @@ tool call, every time.
 
 ## Step 2 — Build the block
 
-Two shapes. Pick by size.
+**He must be able to WATCH it run.** A block that redirects everything to a file
+leaves him staring at a dead cursor with no idea whether it is working, stuck,
+or waiting for input. Capture *and* mirror — always `tee`, never a bare `>`.
+This is not a preference; a silent block cost most of a session on 2026-09-04
+(see Step 3a).
 
-**One-off command** — inline, with a stamped log path:
+Three shapes. Pick by whether it is multi-step, and whether it prompts.
+
+**One-off command** — inline, stamped log path, visible while it runs:
 
 ```bash
 L=/workspace/tmp/<slug>-$(date -u +%Y%m%d%H%M%S).log
-{ <the command> ; } > "$L" 2>&1; echo "exit=$?" >> "$L"; echo "$L"
+{ <the command> ; } 2>&1 | tee "$L"; echo "exit=${PIPESTATUS[0]}" >> "$L"; echo "$L"
 ```
 
 **Anything multi-step** — write a script first (with the Write tool, into
@@ -55,8 +61,28 @@ L=/workspace/tmp/<slug>-$(date -u +%Y%m%d%H%M%S).log
 
 ```bash
 L=/workspace/tmp/<slug>-$(date -u +%Y%m%d%H%M%S).log
-bash /workspace/tmp/<slug>.sh > "$L" 2>&1; echo "exit=$?" >> "$L"; echo "$L"
+bash /workspace/tmp/<slug>.sh 2>&1 | tee "$L"; echo "exit=${PIPESTATUS[0]}" >> "$L"; echo "$L"
 ```
+
+**Anything that PROMPTS** (a `terraform apply` approval, a `gh` confirm, any
+`read`) — `tee` is not enough, because the tool sees a pipe instead of a
+terminal and may suppress or mangle the prompt. Use `script`, which keeps a real
+TTY and writes the transcript itself:
+
+```bash
+L=/workspace/tmp/<slug>-$(date -u +%Y%m%d%H%M%S).log
+script -q -e -c "bash /workspace/tmp/<slug>.sh" "$L"; echo "exit=$?" >> "$L"; echo "$L"
+```
+
+> 🔴 **Never append `>/dev/null` to the `script` form.** `script` writes the
+> transcript to `"$L"` *and* mirrors to stdout — the mirror is the half he
+> watches. Redirecting it away hides the prompt he is supposed to answer, and
+> the session simply hangs with a blank cursor while the tool waits for input he
+> cannot see. This exact mistake burned ~25 minutes on ENG-3093.
+
+`${PIPESTATUS[0]}` — not `$?` — is the command's exit code once you pipe to
+`tee`; `$?` would be tee's. The `script` form keeps plain `$?` because there is
+no pipe.
 
 Rules for the block:
 
@@ -64,6 +90,8 @@ Rules for the block:
   worse than no diagnostic.
 - **Never `|| true`.** It discards the exit code you are trying to learn.
 - **Record the exit code in the file.** You cannot see his terminal.
+- **Say what "working" looks like.** One line above the block naming the first
+  output he should expect, so a stall is distinguishable from slow progress.
 - **End with a completion marker** for anything long — `echo "=== DONE ==="` as
   the script's last line — so a truncated log is distinguishable from a
   still-running one.
@@ -73,6 +101,43 @@ Rules for the block:
   overwrite the evidence of the previous run.
 - Keep it to one block. Two blocks means two pastes and a chance to run them out
   of order.
+
+## Step 3a — A silent block is indistinguishable from a hung one
+
+The failure mode this skill must never cause: he pastes the block, sees nothing,
+and has no way to tell **working** from **stuck** from **waiting for input**.
+All three look like a blank cursor.
+
+- **Mirror the output** (Step 2). This is the whole fix for the common case.
+- **Name the first expected output** in the line above the block — "expect the
+  plan, then a `yes` prompt" — so silence is immediately diagnosable.
+- **If he reports "nothing is happening", do not guess.** Observe from outside:
+  the newest matching log's size and mtime, plus the system's own state
+  (`gh run list`, `describe-environments`, the provider's API). Three
+  independent read-only checks settle it in one round trip; speculation costs
+  another.
+- **A buffered log lags the terminal.** `script` flushes in blocks, so a log
+  sitting at exactly 4096/8192 bytes is a buffer boundary, not a stall — tell
+  him to trust his terminal over the file.
+
+## Step 3b — Aborting a remote-state tool leaves a lock behind
+
+`Ctrl-C` kills the local client. It does **not** clean up server-side state, and
+the next invocation queues silently behind the mess rather than reporting it.
+
+- **Terraform Cloud:** an aborted `terraform apply` leaves its run `planned` and
+  `confirmable`, holding the workspace lock forever — nothing will confirm it.
+  The next apply prints only `Waiting for 1 run(s) to finish before being
+  queued... (Nm elapsed)`, which names no run and no cause. Fix: discard the
+  stale run (`POST /api/v2/runs/<id>/actions/discard`), then the queued one
+  proceeds. **Before telling him to Ctrl-C such a tool, say what he will have to
+  clean up afterwards.**
+- Generalise it: EB environment updates, in-flight deploys, and DB migrations
+  are all mid-flight state that a client-side abort does not roll back. Prefer
+  letting a step finish over interrupting it.
+- **When a script enumerates "blocking" state, exclude the caller's own work.**
+  A checker that flags every non-terminal run will, one second later, tell him
+  to discard the very run he is waiting on.
 
 ## Step 3 — House gotchas that break captured output
 
@@ -101,7 +166,7 @@ result. Below it, nothing — the path is the last thing printed, ready to copy.
 
 ```bash
 L=/workspace/tmp/eng-2621-fk-impact-$(date -u +%Y%m%d%H%M%S).log
-bash /workspace/tmp/eng-2621-fk-impact.sh > "$L" 2>&1; echo "exit=$?" >> "$L"; echo "$L"
+bash /workspace/tmp/eng-2621-fk-impact.sh 2>&1 | tee "$L"; echo "exit=${PIPESTATUS[0]}" >> "$L"; echo "$L"
 ```
 
 Then stop and wait. When he replies with the path, `Read` it — and if it looks
