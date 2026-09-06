@@ -68,3 +68,17 @@ Keep concurrency at one real worker. Do not authorize routine crew work until:
 4. one different authenticated harness repeats the sequential path;
 5. the login/theme prompt classification gap is either fixed upstream or
    documented as a mandatory first-run preflight outside crew dispatch.
+
+## Decision
+
+Keep this as a bounded pilot:
+
+- do not expand local concurrency beyond one real worker;
+- do not add a distributed claim mechanism while v1 uses explicit captain
+  assignment and forbids in-flight plane migration;
+- do not authorize routine local dispatch until the five gates above pass;
+- allow the cloud control-plane PR to merge, but do not dispatch it until WIF
+  variables and the two bounded GitHub tokens are configured and a scout run
+  completes safely;
+- revisit upstream Firstmate prompt/blocker classification before broadening
+  local use.
