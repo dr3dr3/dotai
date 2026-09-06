@@ -36,6 +36,7 @@ dotai/
 │   ├── profiles/                  ← The harness contract (Claude Code / Codex / Pi, pluggable)
 │   ├── compose/ + deploy/         ← Run locally (Docker/OrbStack) or on AWS Fargate
 │   └── README.md                  ← Substrate overview + threat model
+├── skills/herdr/                  ← Agent instructions for controlling an existing Herdr session
 ├── setup.sh                       ← Install AI tools (Claude Code, Codex, varlock, GitHub CLI)
 └── README.md                      ← This file
 ```
@@ -137,6 +138,11 @@ Two setup scripts with distinct responsibilities:
   installed `--ignore-scripts` per vendor docs. No built-in permission system,
   so the container is its sandbox. Point it at host Ollama via `models.json`.
 - **GitHub CLI** (`gh`) for PR workflows
+
+Herdr itself is terminal tooling and is installed/configured by the personal
+[dotfiles](https://github.com/dr3dr3/dotfiles) repo. This repo keeps only the
+Herdr agent skill and registers installed agents for session restore when the
+`herdr` command is already available.
 
 > These agents run **inside the container** by design — the macOS host stays
 > agent-free and just boots the containers (see the host dotfiles repo). The
