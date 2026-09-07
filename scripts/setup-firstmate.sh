@@ -211,7 +211,9 @@ version_at_least "$herdr_version" "$HERDR_MIN_VERSION" \
 configure_firstmate_clone
 install_treehouse
 chmod 0755 "$TREEHOUSE_WRAPPER"
+mkdir -p "$HOME/.local/bin"
 ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
+ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
 install_firstmate_tools
 configure_git_credentials
 configure_pilot_backing_clone
@@ -222,4 +224,5 @@ printf '  upstream: %s @ %s\n' "$FIRSTMATE_DIR" "$FIRSTMATE_COMMIT"
 printf '  FM_HOME:  %s\n' "$FM_HOME"
 printf '  backend:  herdr %s\n' "$herdr_version"
 printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
-printf 'Run: %s/firstmate-local.sh --check\n' "$SCRIPT_DIR"
+printf '  fm:        %s\n' "$HOME/.local/bin/fm"
+printf 'Run: fm --check\n'

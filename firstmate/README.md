@@ -27,8 +27,13 @@ From the dotai checkout containing this directory:
 
 ```bash
 bash scripts/setup-firstmate.sh
-bash scripts/firstmate-local.sh --check
+fm --check
 ```
+
+Setup also installs a personal `fm` command at `~/.local/bin/fm` (a symlink to
+`scripts/firstmate-local.sh`). That directory is already on PATH when personal
+dotfiles are installed. It is not a bash alias, so Herdr panes can run it.
+Team `local-dev-env` is not modified.
 
 Setup installs the reviewed Treehouse binary, keeps the tracked `treehouse`
 command as a fail-closed wrapper, pins the clean Firstmate clone, installs
@@ -45,7 +50,7 @@ configuration files and refuses a dirty or unexpected upstream clone.
 Start or attach to Herdr from the local-dev-env devcontainer, then run:
 
 ```bash
-bash scripts/firstmate-local.sh --harness claude
+fm --harness claude
 ```
 
 Available pilot harness names are `claude`, `codex`, `cursor`, and `grok`.

@@ -23,7 +23,7 @@ Resolve this skill's dotai checkout and run:
 
 ```bash
 bash <dotai>/scripts/setup-firstmate.sh
-bash <dotai>/scripts/firstmate-local.sh --check
+fm --check
 ```
 
 Do not replace a dirty `/workspace/firstmate` clone. Do not remove or reset
@@ -35,7 +35,7 @@ The captain session must start inside a Herdr-managed pane:
 
 ```bash
 test "${HERDR_ENV:-}" = 1
-bash <dotai>/scripts/firstmate-local.sh --harness claude
+fm --harness claude
 ```
 
 Use `codex`, `cursor`, or `grok` only when requested and when the corresponding

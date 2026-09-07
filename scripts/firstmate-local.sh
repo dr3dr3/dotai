@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DOTAI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../firstmate/pins.env
 source "$DOTAI_DIR/firstmate/pins.env"
@@ -28,7 +28,8 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: firstmate-local.sh [--check] [--harness claude|codex|cursor|grok] [-- harness-args...]
+Usage: fm [--check] [--harness claude|codex|cursor|grok] [-- harness-args...]
+       firstmate-local.sh [...]
 
 Run --check outside Herdr to validate installation. Launching a captain requires
 HERDR_ENV=1 so the captain and crew remain visible in the current Herdr session.

@@ -457,6 +457,20 @@ if [ ! -f "$WINDSURF_RULES" ] && command -v windsurf &>/dev/null; then
   echo "  ✓ .windsurfrules linked (points to AGENT.md template)"
 fi
 
+# ── Personal Firstmate launcher ───────────────────────────────────────────────
+# A PATH command in ~/.local/bin (owned by this user, same pattern as the
+# Treehouse wrapper). Not a bash alias: Herdr panes and non-interactive shells
+# do not load aliases. Team local-dev-env is untouched.
+
+FM_LAUNCHER="$DEVEX_DIR/scripts/firstmate-local.sh"
+if [ -x "$FM_LAUNCHER" ]; then
+  echo ""
+  echo "→ Installing personal fm launcher"
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$FM_LAUNCHER" "$HOME/.local/bin/fm"
+  echo "  ✓ fm → $FM_LAUNCHER"
+fi
+
 # ── Done ──────────────────────────────────────────────────────────────────────
 
 echo ""
