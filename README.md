@@ -140,13 +140,18 @@ Two setup scripts with distinct responsibilities:
 
 > These agents run **inside the container** by design — the macOS host stays
 > agent-free and just boots the containers (see the host dotfiles repo). The
-> dotai devcontainer also bakes Codex + varlock into its image.
+> dotai devcontainer also bakes Codex + varlock into its image. In the RoE
+> local-dev-env container, `setup.sh` installs Codex the same way; then
+> `scripts/setup.sh` writes `~/.codex/`. Authenticate with `codex login`.
 
 ### `scripts/setup.sh` — wires commands
 
 1. **Copies** `commands/*.md` into `~/.claude/commands/` so they appear as `/command-name` slash commands in Claude Code
 2. **Writes** a `CLAUDE.md` in the current repo if one does not exist yet (uses the template as a base)
 3. **Writes** `.cursorrules` / `.windsurfrules` for Cursor/Windsurf if those tools are detected
+4. **Wires Codex:** `~/.codex/config.toml` (CLAUDE.md fallback + 256 KiB project-doc cap), splices personal context into `~/.codex/AGENTS.md`, and symlinks skills into `~/.agents/skills/`
+
+In a Rock of Eye `local-dev-env` checkout, **team** Codex context comes from `ai-devex` (`AGENTS.override.md` + `.agents/skills/` in each repo). This script is the personal layer on top of that.
 
 Each repo's own `CLAUDE.md` contains context relevant to that codebase. Context lives in the repo
 that owns it — not in a shared layer.
