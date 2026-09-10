@@ -1,0 +1,10 @@
+# Codex user config. Written by dotai/scripts/setup.sh when the file is missing.
+# Existing keys are left alone on re-run; only absent keys below are appended.
+#
+# Codex does not read CLAUDE.md unless it is listed as a fallback, and even
+# then only in directories that have no AGENTS.override.md / AGENTS.md.
+# RoE repos emit AGENTS.override.md from ai-devex (the same concat as CLAUDE.md).
+# Raise the byte cap: that concat is ~118 KB and the default 32 KiB truncates it.
+
+project_doc_fallback_filenames = ["CLAUDE.md"]
+project_doc_max_bytes = 262144
