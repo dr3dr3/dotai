@@ -128,8 +128,27 @@ regenerable.
 
 ## When not to use this
 
+- **A diagram that will be published, presented, or put in a training video** →
+  use **archify** (`tt-a1i/archify`) instead. It renders a self-contained interactive
+  HTML page with guided views, a legend, Present mode and PNG/WebM export — a finished
+  artifact rather than a canvas to tweak. The trade is that archify has **no layout
+  engine**: you place every component, and its validator then judges you hard (edge
+  crossings, label clearance, a 6px projected-font legibility floor). This tool is the
+  opposite — layout is solved, rendering is plain.
+  Published diagrams live in `roe-eng-dashboard:diagrams/<slug>.architecture.json`
+  plus the delivered `.html`, served at `https://eng.rockofeye.net/diagrams/<slug>`.
+  ⚠️ They must be served by a **route**, never from `site/public/`, which bypasses the
+  auth middleware entirely — see `diagrams/README.md` in that repo.
 - **A diagram inside a Markdown doc, PR, or Linear ticket** → write a Mermaid block.
   It renders in place and needs no file. This tool is for a file he will open and edit.
 - **A UI mockup or screen design** → that is the `impeccable` / `design` skills.
 - **"Where is X defined / what calls Y"** → Graphify (`make codegraph-explain`) answers
   it directly. Draw a diagram only if he wants a picture of the answer.
+
+## Getting the facts right
+
+Read the source, not the docs — ports from `docker-compose.yml`, commands from what a
+developer is actually told to type. ⚠️ For local-dev-env that is **`roe`, not `make`**:
+every make target still works, so `make` in a diagram is never *wrong* and nothing
+corrects it. A diagram shipped saying `make up · make fresh · make doctor` and needed a
+follow-up PR.
