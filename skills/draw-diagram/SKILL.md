@@ -10,7 +10,10 @@ before he ever opens it. The output is a starting point he can drag around — n
 finished picture he has to accept.
 
 The tool is on PATH as `diagram` (personal, not in any RoE repo — `diagram home` prints
-where it is installed). You write a
+where it is installed). ⚠️ **`diagram: command not found` after a devcontainer rebuild is
+expected, not broken** — the launcher lives in `~/.local/bin`, which a rebuild wipes, and
+nothing re-runs the installer. Fix it with
+`bash /workspace/dotfiles/tools/diagram/install.sh`. You write a
 small YAML spec; ELK does the layout; the generator emits native Excalidraw elements
 with real arrow bindings and grouping, so dragging a box drags its label and reroutes
 its arrows.
@@ -96,11 +99,17 @@ checking the real thing rather than your own idea of it:
 
 ```bash
 cd "$(diagram home)" && npm run build:render          # one-off, ~2 min
-diagram preview /workspace/tmp/diagrams/<name>.excalidraw &
-agent-browser open http://localhost:8765/ && agent-browser wait 5000
+PORT=8765   # pick a free one; a preview server outlives the session that started it
+diagram preview /workspace/tmp/diagrams/<name>.excalidraw --port $PORT &
+agent-browser open http://localhost:$PORT/ && agent-browser wait 5000
 agent-browser eval "String(window.__READY__)"          # must be "true"
 agent-browser screenshot /workspace/tmp/diagrams/<name>.png
 ```
+
+**Use the port you actually started.** Opening a hard-coded port that something else is
+already serving attaches you to *the previous diagram* — you then review the wrong picture
+and report on it confidently. `diagram preview` refuses a port already in use and tells you
+so; the trap is only in the browser step.
 
 Then read the screenshot. Look for: labels sitting on lines, a long arc sweeping the
 diagram, boxes whose text spills the stroke, anything you cannot follow in ten seconds.
