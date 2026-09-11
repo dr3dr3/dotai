@@ -73,6 +73,34 @@ Codex need their subscription APIs. Domain-filtered nono proxy mode requires
 does not have. Do not add that capability or broaden the profile silently;
 review network brokering as a separate hardening change.
 
+### Spawning is blocked inside the sandbox
+
+nono applies `deny_credentials` as a required group, so the git and `gh`
+credential stores are unreachable inside the sandbox and every `origin` fetch
+fails on principle rather than on a real network fault. A spawn hits two such
+fetches:
+
+1. `treehouse get`, while it prepares the pool slot. `treehouse-firstmate-guard.sh`
+   handles this one: it adds `--no-fetch` and warns on stderr naming the commit
+   and date the worktree is cut from, so a stale base is a reported fact. Set
+   `ROE_FIRSTMATE_TREEHOUSE_FETCH=1` where credentials do exist.
+2. `freshen_spawn_worktree_base` in Firstmate's own `bin/fm-spawn.sh`, called
+   *after* the slot has been handed out. At the reviewed pin this fetches
+   unconditionally and refuses the launch with "refusing to launch from a
+   potentially stale base". It has no opt-out, and adding one means changing
+   upstream Firstmate, which this pilot does not fork.
+
+So spawn remains blocked with the sandbox on until (2) is resolved upstream.
+`fm --check` does not exercise either path and passes regardless.
+
+Do not grant `$HOME/.config/gh` to a captain profile to work around it. That
+credential is push-capable across all six repos, `deny_credentials` cannot be
+dropped by a profile, and Landlock cannot express deny-within-allow on Linux, so
+the allow would override the guardrail rather than narrow it.
+
+Until fetching is brokered outside the sandbox, spawn with `fm-sandbox off` and
+accept the full bypass for that session.
+
 ### Temporarily disabling nono
 
 The secure default is on. While tuning profile grants, use the explicit local

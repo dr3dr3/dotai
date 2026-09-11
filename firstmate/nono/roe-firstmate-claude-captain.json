@@ -19,6 +19,9 @@
       "/workspace/.firstmate-home",
       "/workspace/repos/rock-of-eye-api/.treehouse/firstmate-backing/rock-of-eye-api"
     ],
+    "read": [
+      "$HOME/.config/herdr"
+    ],
     "allow_file": [
       "$HOME/.claude.json"
     ]

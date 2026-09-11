@@ -15,7 +15,8 @@
   },
   "filesystem": {
     "allow": [
-      "$HOME/.cache/roe-firstmate/tmp"
+      "$HOME/.cache/roe-firstmate/tmp",
+      "/tmp"
     ],
     "read": [
       "/usr/local/share/nvm",

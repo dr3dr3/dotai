@@ -83,14 +83,33 @@ guard_get() {
   done < <(jq -r '.[].path' <<<"$status")
 }
 
+ARGS=("$@")
+
 if [[ "${1:-}" == get ]]; then
   capability_probe=0
+  explicit_fetch_choice=0
   for arg in "$@"; do
     case "$arg" in
       -h|--help) capability_probe=1 ;;
+      --no-fetch) explicit_fetch_choice=1 ;;
     esac
   done
-  (( capability_probe == 1 )) || guard_get
+  if (( capability_probe == 0 )); then
+    guard_get
+
+    # Git credentials are deliberately outside this sandbox, so `treehouse get`
+    # can never complete its origin fetch here and refuses the local base rather
+    # than guess. Choose the local base explicitly and say so, naming the commit
+    # the worktree is cut from, so a stale base is a reported fact rather than a
+    # silent one. Set ROE_FIRSTMATE_TREEHOUSE_FETCH=1 where credentials exist.
+    if (( explicit_fetch_choice == 0 )) && [[ "${ROE_FIRSTMATE_TREEHOUSE_FETCH:-0}" != 1 ]]; then
+      base_ref="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+      base_date="$(git log -1 --format=%ci 2>/dev/null || echo unknown)"
+      printf 'treehouse-firstmate-guard: origin fetch skipped (no credentials in sandbox); cutting the worktree from local %s (%s), which may be behind origin.\n' \
+        "$base_ref" "$base_date" >&2
+      ARGS+=(--no-fetch)
+    fi
+  fi
 fi
 
-exec "$REAL_TREEHOUSE" "$@"
+exec "$REAL_TREEHOUSE" "${ARGS[@]}"
