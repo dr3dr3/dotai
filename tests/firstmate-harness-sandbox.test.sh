@@ -34,6 +34,7 @@ ln -s "$WRAPPER" "$TMP/bin/codex"
 export ROE_FIRSTMATE_NONO="$TMP/fake-nono"
 export ROE_FIRSTMATE_REAL_HARNESS_DIR="$TMP/real"
 export ROE_FIRSTMATE_NONO_PROFILE_DIR="$TMP/profiles"
+export ROE_FIRSTMATE_SANDBOX_MODE_FILE="$TMP/sandbox-mode"
 export FAKE_NONO_CALL="$TMP/nono-call"
 export FAKE_REAL_CALL="$TMP/real-call"
 
@@ -78,6 +79,17 @@ git -C "$TMP" worktree add -qb sandbox-test "$SLOT"
 
 assert_fails_with "refuses the Treehouse backing primary checkout" \
   bash -c "cd '$TMP' && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 '$TMP/bin/codex' refused"
+
+printf 'off\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
+touch "$SLOT/.env"
+(
+  cd "$SLOT"
+  ROE_FIRSTMATE_NONO="$TMP/missing-nono" "$TMP/bin/codex" unsandboxed-worker
+) 2>"$TMP/off-warning"
+[[ "$(cat "$FAKE_REAL_CALL")" == "real:unsandboxed-worker" ]]
+grep -F "Firstmate nono sandbox is OFF" "$TMP/off-warning" >/dev/null
+rm "$SLOT/.env"
+printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
 
 assert_fails_with "pinned nono binary missing" \
   bash -c "cd '$SLOT' && ROE_FIRSTMATE_NONO='$TMP/missing-nono' '$TMP/bin/codex' refused"

@@ -9,6 +9,8 @@ DOTAI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$DOTAI_DIR/firstmate/pins.env"
 # shellcheck source=firstmate-harness.sh
 source "$SCRIPT_DIR/firstmate-harness.sh"
+# shellcheck source=firstmate-sandbox-mode.sh
+source "$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-/workspace/firstmate}"
 export FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
@@ -87,11 +89,17 @@ done
   || die "Treehouse is not at the reviewed pin $TREEHOUSE_VERSION"
 [[ "$(readlink -f "$HOME/.local/bin/treehouse")" == "$(readlink -f "$SCRIPT_DIR/treehouse-firstmate-guard.sh")" ]] \
   || die "treehouse on PATH is not the RoE fail-closed wrapper"
-[[ -x "$NONO" ]] || die "pinned nono binary is missing"
-[[ "$("$NONO" --version 2>/dev/null)" == "nono $NONO_VERSION" ]] \
-  || die "nono is not at the reviewed pin $NONO_VERSION"
-"$NONO" setup --check-only >/dev/null \
-  || die "Landlock is unavailable; refusing unsandboxed Firstmate launch"
+SANDBOX_MODE="$(fm_sandbox_mode)" \
+  || die "invalid sandbox mode in $FM_SANDBOX_MODE_FILE; run fm-sandbox on or off"
+if [[ "$SANDBOX_MODE" == on ]]; then
+  [[ -x "$NONO" ]] || die "pinned nono binary is missing"
+  [[ "$("$NONO" --version 2>/dev/null)" == "nono $NONO_VERSION" ]] \
+    || die "nono is not at the reviewed pin $NONO_VERSION"
+  "$NONO" setup --check-only >/dev/null \
+    || die "Landlock is unavailable; refusing unsandboxed Firstmate launch"
+else
+  printf '\nWARNING: Firstmate nono sandbox is OFF; captain and workers have full devcontainer access.\n\n' >&2
+fi
 
 for tool in git gh jq node no-mistakes gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi herdr; do
   command -v "$tool" >/dev/null 2>&1 || die "required tool is missing: $tool"
@@ -159,16 +167,19 @@ esac
   || die "$HARNESS on PATH is not the RoE nono launcher"
 [[ -x "$REAL_HARNESS_DIR/$HARNESS" ]] \
   || die "real $HARNESS executable is missing behind the nono launcher"
-for role in captain worker; do
-  [[ -f "$NONO_PROFILE_DIR/roe-firstmate-${HARNESS}-${role}.json" ]] \
-    || die "nono profile is missing for $HARNESS $role"
-done
+if [[ "$SANDBOX_MODE" == on ]]; then
+  for role in captain worker; do
+    [[ -f "$NONO_PROFILE_DIR/roe-firstmate-${HARNESS}-${role}.json" ]] \
+      || die "nono profile is missing for $HARNESS $role"
+  done
+fi
 
 printf 'Firstmate local pilot preflight passed.\n'
 printf '  pin:      %s\n' "$FIRSTMATE_COMMIT"
 printf '  FM_HOME:  %s\n' "$FM_HOME"
 printf '  backend:  herdr\n'
 printf '  harness:  %s\n' "$HARNESS"
+printf '  sandbox:  %s\n' "${SANDBOX_MODE^^}"
 printf '  projects: %s\n' "$project_count"
 printf '  active:   %s/%s\n' "$active_meta" "$ROE_FIRSTMATE_MAX_ACTIVE_TASKS"
 

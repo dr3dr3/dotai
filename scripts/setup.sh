@@ -469,6 +469,11 @@ if [ -x "$FM_LAUNCHER" ]; then
   mkdir -p "$HOME/.local/bin"
   ln -sfn "$FM_LAUNCHER" "$HOME/.local/bin/fm"
   echo "  ✓ fm → $FM_LAUNCHER"
+  FM_SANDBOX="$DEVEX_DIR/scripts/firstmate-sandbox-mode.sh"
+  if [ -x "$FM_SANDBOX" ]; then
+    ln -sfn "$FM_SANDBOX" "$HOME/.local/bin/fm-sandbox"
+    echo "  ✓ fm-sandbox → $FM_SANDBOX"
+  fi
 fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────

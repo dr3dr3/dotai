@@ -73,6 +73,23 @@ Codex need their subscription APIs. Domain-filtered nono proxy mode requires
 does not have. Do not add that capability or broaden the profile silently;
 review network brokering as a separate hardening change.
 
+### Temporarily disabling nono
+
+The secure default is on. While tuning profile grants, use the explicit local
+switch:
+
+```bash
+fm-sandbox status
+fm-sandbox off
+fm-sandbox on
+```
+
+The setting persists in `~/.config/roe-firstmate/sandbox-mode`; a missing file
+means on. When off, both `fm --check` and every Firstmate captain/worker launch
+print a warning, and the harness runs with full devcontainer access. Invalid
+values fail closed. Ordinary Claude/Codex sessions outside Firstmate remain
+unaffected in either mode.
+
 The setup is idempotent. It does not overwrite existing local Firstmate
 configuration files and refuses a dirty or unexpected upstream clone.
 

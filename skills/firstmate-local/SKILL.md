@@ -59,6 +59,12 @@ Outbound networking remains open for subscription API access. Do not claim
 domain-filtered egress: nono proxy mode requires `CAP_SYS_PTRACE`, which the
 non-root devcontainer does not have. Treat that as a separate reviewed change.
 
+While tuning grants, the human may explicitly run `fm-sandbox off`. Confirm
+with `fm-sandbox status` and restore the secure default with `fm-sandbox on`.
+Off mode persists locally and prints a warning on every Firstmate preflight and
+harness launch. Never change this mode on the user's behalf unless they ask.
+An absent mode file means on; malformed values fail closed.
+
 ## Worktree responsibilities
 
 Treehouse allocates isolated crew editing slots. It does not choose what the

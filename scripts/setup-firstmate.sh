@@ -22,6 +22,7 @@ NONO="$REAL_TREEHOUSE_DIR/nono"
 NONO_PROFILE_SOURCE="$DOTAI_DIR/firstmate/nono"
 NONO_PROFILE_DIR="${NONO_CONFIG_HOME:-$HOME/.config/nono}/profiles"
 HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
+SANDBOX_MODE_SCRIPT="$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
 INSTALL_FIRSTMATE_TOOLS="${INSTALL_FIRSTMATE_TOOLS:-1}"
 CHOSEN_HARNESS=""
@@ -302,10 +303,11 @@ configure_firstmate_clone
 install_treehouse
 install_nono
 configure_nono_profiles
-chmod 0755 "$TREEHOUSE_WRAPPER"
+chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT"
 mkdir -p "$HOME/.local/bin"
 ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
 ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
+ln -sfn "$SANDBOX_MODE_SCRIPT" "$HOME/.local/bin/fm-sandbox"
 install_firstmate_tools
 configure_harness_sandbox
 configure_git_credentials
@@ -320,4 +322,5 @@ printf '  harness:  %s (captain + crew)\n' "${CHOSEN_HARNESS:-unknown}"
 printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
 printf '  nono:     %s (Landlock required)\n' "$("$NONO" --version)"
 printf '  fm:        %s\n' "$HOME/.local/bin/fm"
+printf '  toggle:    %s on|off|status\n' "$HOME/.local/bin/fm-sandbox"
 printf 'Run: fm --check\n'

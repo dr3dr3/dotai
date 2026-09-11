@@ -6,6 +6,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 # shellcheck source=../firstmate/pins.env
 source "$SCRIPT_DIR/../firstmate/pins.env"
+# shellcheck source=firstmate-sandbox-mode.sh
+source "$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 
 HARNESS="$(basename "$0")"
 NONO="${ROE_FIRSTMATE_NONO:-$HOME/.local/lib/roe-firstmate/nono}"
@@ -37,6 +39,23 @@ elif [[ "$(pwd -P)/" == /workspace/repos/*/.treehouse/*/ ]]; then
     || die "worker sandbox must start inside a Treehouse Git checkout"
   [[ -f "$REPO_ROOT/.git" ]] \
     || die "worker sandbox refuses the Treehouse backing primary checkout"
+  ROLE=worker
+elif [[ "${ROE_FIRSTMATE_SANDBOX_REQUIRED:-0}" == 1 ]]; then
+  die "sandbox-required launch is outside a recognized captain or Treehouse path"
+else
+  exec "$REAL_HARNESS" "$@"
+fi
+
+SANDBOX_MODE="$(fm_sandbox_mode)" \
+  || die "invalid sandbox mode in $FM_SANDBOX_MODE_FILE; run fm-sandbox on or off"
+if [[ "$SANDBOX_MODE" == off ]]; then
+  printf '\nWARNING: Firstmate nono sandbox is OFF; running %s %s unsandboxed.\n\n' \
+    "$HARNESS" "$ROLE" >&2
+  unset ROE_FIRSTMATE_CAPTAIN ROE_FIRSTMATE_SANDBOX_REQUIRED
+  exec "$REAL_HARNESS" "$@"
+fi
+
+if [[ "$ROLE" == worker ]]; then
   while IFS= read -r secret_path; do
     if git -C "$REPO_ROOT" ls-files --error-unmatch \
       "${secret_path#"$REPO_ROOT"/}" >/dev/null 2>&1; then
@@ -47,11 +66,6 @@ elif [[ "$(pwd -P)/" == /workspace/repos/*/.treehouse/*/ ]]; then
       *) die "worker checkout contains a local environment file: $secret_path" ;;
     esac
   done < <(find "$REPO_ROOT" -type f \( -name '.env' -o -name '.env.*' \) -print)
-  ROLE=worker
-elif [[ "${ROE_FIRSTMATE_SANDBOX_REQUIRED:-0}" == 1 ]]; then
-  die "sandbox-required launch is outside a recognized captain or Treehouse path"
-else
-  exec "$REAL_HARNESS" "$@"
 fi
 
 [[ -x "$NONO" ]] || die "pinned nono binary missing; run setup-firstmate.sh"
