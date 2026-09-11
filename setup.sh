@@ -19,8 +19,8 @@
 
 set -euo pipefail
 
-# Personal shortcuts are enabled only inside devcontainers.
-python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/setup-agent-aliases.py"
+# Personal state belongs to dotai; local-dev-env only supplies the volume.
+python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/persist-codex.py"
 
 # -----------------------------------------------------------------------------
 # 1.  Claude Code CLI

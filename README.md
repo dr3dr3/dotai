@@ -361,53 +361,20 @@ A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are
 4. At least one reviewer required
 
 
-### Personal devcontainer agent shortcuts
+### Codex persistence in a devcontainer
 
-`setup.sh` runs `scripts/setup-agent-aliases.py` to source
-`shell/devcontainer-agents.sh` from Bash and Zsh startup files, and install the Fish version into
-`$XDG_CONFIG_HOME/fish/conf.d/` (default `~/.config/fish/conf.d/`). Both installation
-and shell startup require `DEVCONTAINER=1`; host shells get no aliases.
-Plain `codex` and `claude` keep their existing defaults, including Firstmate launches.
+`setup.sh` runs `scripts/persist-codex.py` before installing tools. When `~/.ai`
+is a mounted volume, it backs `~/.codex` with `~/.ai/codex`. Outside that
+container layout it leaves normal Codex storage unchanged. Custom `CODEX_HOME`
+is respected; custom symlinks and conflicting histories require manual review.
 
-| Shortcut | Command |
-|---|---|
-| `cx` | `codex --sandbox danger-full-access --ask-for-approval on-request` |
-| `cc` | `claude --permission-mode default --settings '{"sandbox":{"enabled":false}}'` |
+On an existing container, exit all Codex clients/app servers and run
+`python3 /workspace/.ai/dotai/scripts/persist-codex.py` **before rebuilding**.
+It keeps the original as `~/.codex.pre-persistence`; it never merges independent
+state directories. A fresh container simply links to the saved volume directory.
+`--snapshot` makes an online backup under `~/.ai/backups/` without relocating
+live state. The database backup uses SQLite's backup API, including committed
+WAL changes; other live files are not an atomic snapshot of the whole session.
 
-`cx` disables Codex command isolation: commands use the container user's file,
-network, and Docker access. Codex can ask for approval when it judges that necessary;
-it does not ask for every command. This is broader access than `workspace-write`.
-
-`cc` disables Claude's sandbox for that session while retaining its normal
-permission checks and existing allow/ask/deny rules. Claude's permission model is
-not identical to Codex's on-request mode; it can prompt more often. It does not use
-`--dangerously-skip-permissions`. Managed policy may still enforce restrictions.
-See [Claude CLI options](https://code.claude.com/docs/en/cli-reference) and
-[sandbox settings](https://code.claude.com/docs/en/sandboxing).
-
-To install only the shortcuts in an existing devcontainer:
-
-```bash
-python3 /workspace/.ai/dotai/scripts/setup-agent-aliases.py
-```
-
-Then open a new terminal, or load the shortcuts in your current shell:
-
-```fish
-# Fish
-source /workspace/.ai/dotai/shell/devcontainer-agents.fish
-```
-
-```bash
-# Bash / Zsh
-source /workspace/.ai/dotai/shell/devcontainer-agents.sh
-```
-
-The tools must already be installed and on `PATH`. Extra arguments work normally,
-for example `cx resume` or `cc --continue`. In an interactive shell `cc` shadows the
-C compiler shortcut; use `command cc` for the compiler. Aliases do not change an
-already-running agent's permissions. To remove them from the current shell, use
-`unalias cx cc` in Bash/Zsh or `functions -e cx cc` in Fish. Remove the
-marked startup lines and Fish `conf.d/dotai-agent-aliases.fish` to stop loading them.
-
-Validate with `python3 tests/test_setup_agent_aliases.py`.
+Validate with `python3 tests/test_persist_codex.py`. All history, credentials,
+databases and backups stay outside this git repository.
