@@ -30,6 +30,13 @@ bash scripts/setup-firstmate.sh
 fm --check
 ```
 
+Setup asks whether the captain session and crew workers should use Claude Code
+or Codex. On a TTY the default is the existing pin, or Claude if none is set.
+Non-interactive runs keep an existing pin, default to Claude when unset, or
+take `FIRSTMATE_HARNESS=claude|codex` when that is set (which overwrites the
+pin). The choice is written to `config/captain-harness`, `config/crew-harness`,
+and `config/secondmate-harness` under `FM_HOME`.
+
 Setup also installs a personal `fm` command at `~/.local/bin/fm` (a symlink to
 `scripts/firstmate-local.sh`). That directory is already on PATH when personal
 dotfiles are installed. It is not a bash alias, so Herdr panes can run it.
@@ -50,12 +57,12 @@ configuration files and refuses a dirty or unexpected upstream clone.
 Start or attach to Herdr from the local-dev-env devcontainer, then run:
 
 ```bash
-fm --harness claude
+fm
 ```
 
-Available pilot harness names are `claude`, `codex`, `cursor`, and `grok`.
-The launcher refuses unavailable CLIs rather than substituting another
-harness.
+That launches the pinned captain harness. Override for one session with
+`fm --harness claude|codex|cursor|grok`. The launcher refuses unavailable CLIs
+rather than substituting another harness.
 
 ## Validation
 

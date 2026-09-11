@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DOTAI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../firstmate/pins.env
 source "$DOTAI_DIR/firstmate/pins.env"
+# shellcheck source=firstmate-harness.sh
+source "$SCRIPT_DIR/firstmate-harness.sh"
 
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-/workspace/firstmate}"
 FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
@@ -17,6 +19,7 @@ REAL_TREEHOUSE_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
 REAL_TREEHOUSE="$REAL_TREEHOUSE_DIR/treehouse"
 TREEHOUSE_WRAPPER="$SCRIPT_DIR/treehouse-firstmate-guard.sh"
 INSTALL_FIRSTMATE_TOOLS="${INSTALL_FIRSTMATE_TOOLS:-1}"
+CHOSEN_HARNESS=""
 
 die() {
   printf 'setup-firstmate: %s\n' "$*" >&2
@@ -175,9 +178,10 @@ configure_home() {
   install -d -m 0700 "$FM_HOME" "$FM_HOME/config" "$FM_HOME/data" "$FM_HOME/state" "$FM_HOME/projects"
 
   write_default "$FM_HOME/config/backend" "herdr"
-  write_default "$FM_HOME/config/crew-harness" "claude"
   write_default "$FM_HOME/config/herdr-presentation-spaces" "on"
   write_default "$FM_HOME/config/backlog-backend" "manual"
+  CHOSEN_HARNESS="$(fm_harness_choose "$FM_HOME")" \
+    || die "could not choose Firstmate harness (claude or codex)"
 
   if [[ -L "$FM_HOME/projects/$PILOT_PROJECT_NAME" ]] \
     && [[ "$(readlink -f "$FM_HOME/projects/$PILOT_PROJECT_NAME")" == "$(readlink -f "$PILOT_SOURCE_PATH")" ]] \
@@ -223,6 +227,7 @@ printf 'Firstmate pilot configured.\n'
 printf '  upstream: %s @ %s\n' "$FIRSTMATE_DIR" "$FIRSTMATE_COMMIT"
 printf '  FM_HOME:  %s\n' "$FM_HOME"
 printf '  backend:  herdr %s\n' "$herdr_version"
+printf '  harness:  %s (captain + crew)\n' "${CHOSEN_HARNESS:-unknown}"
 printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
 printf '  fm:        %s\n' "$HOME/.local/bin/fm"
 printf 'Run: fm --check\n'

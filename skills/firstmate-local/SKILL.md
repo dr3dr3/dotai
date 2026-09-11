@@ -26,6 +26,10 @@ bash <dotai>/scripts/setup-firstmate.sh
 fm --check
 ```
 
+On a TTY, setup asks Claude vs Codex for both the captain session and crew
+workers. Non-interactive setup uses `FIRSTMATE_HARNESS=claude|codex` when set,
+otherwise the existing pin, otherwise Claude.
+
 Do not replace a dirty `/workspace/firstmate` clone. Do not remove or reset
 `/workspace/.firstmate-home` to solve a preflight failure.
 
@@ -35,11 +39,12 @@ The captain session must start inside a Herdr-managed pane:
 
 ```bash
 test "${HERDR_ENV:-}" = 1
-fm --harness claude
+fm
 ```
 
-Use `codex`, `cursor`, or `grok` only when requested and when the corresponding
-CLI is installed. The launcher fails closed when a requested harness is absent.
+That uses the harness pin from setup. Pass `--harness claude|codex|cursor|grok`
+only to override it for one launch. The launcher fails closed when a requested
+harness is absent.
 
 ## Worktree responsibilities
 

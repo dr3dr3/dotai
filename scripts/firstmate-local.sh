@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DOTAI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=../firstmate/pins.env
 source "$DOTAI_DIR/firstmate/pins.env"
+# shellcheck source=firstmate-harness.sh
+source "$SCRIPT_DIR/firstmate-harness.sh"
 
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-/workspace/firstmate}"
 export FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
@@ -17,7 +19,7 @@ export ROE_FIRSTMATE_MAX_ACTIVE_TASKS
 export ROE_TREEHOUSE_REAL="${ROE_TREEHOUSE_REAL:-$HOME/.local/lib/roe-firstmate/treehouse}"
 export PATH="$HOME/.local/bin:$PATH"
 
-HARNESS=claude
+HARNESS=""
 CHECK_ONLY=0
 PASSTHROUGH=()
 
@@ -31,6 +33,8 @@ usage() {
 Usage: fm [--check] [--harness claude|codex|cursor|grok] [-- harness-args...]
        firstmate-local.sh [...]
 
+Default harness is the pin written by setup-firstmate.sh (captain-harness, then
+crew-harness). Override with --harness or FIRSTMATE_HARNESS=claude|codex.
 Run --check outside Herdr to validate installation. Launching a captain requires
 HERDR_ENV=1 so the captain and crew remain visible in the current Herdr session.
 EOF
@@ -106,6 +110,17 @@ for project_link in "$FM_HOME"/projects/*; do
 done
 shopt -u nullglob
 (( project_count > 0 )) || die "FM_HOME has no registered pilot project"
+
+if [[ -z "$HARNESS" ]]; then
+  if [[ -n "${FIRSTMATE_HARNESS:-}" ]]; then
+    HARNESS="$(fm_harness_normalize "$FIRSTMATE_HARNESS")" \
+      || die "FIRSTMATE_HARNESS must be claude or codex"
+  elif current="$(fm_harness_current "$FM_HOME")"; then
+    HARNESS="$current"
+  else
+    HARNESS=claude
+  fi
+fi
 
 case "$HARNESS" in
   claude)
