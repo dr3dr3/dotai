@@ -360,3 +360,21 @@ A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are
 3. Open a PR with a clear description of what changed and why
 4. At least one reviewer required
 
+
+### Codex persistence in a devcontainer
+
+`setup.sh` runs `scripts/persist-codex.py` before installing tools. When `~/.ai`
+is a mounted volume, it backs `~/.codex` with `~/.ai/codex`. Outside that
+container layout it leaves normal Codex storage unchanged. Custom `CODEX_HOME`
+is respected; custom symlinks and conflicting histories require manual review.
+
+On an existing container, exit all Codex clients/app servers and run
+`python3 /workspace/.ai/dotai/scripts/persist-codex.py` **before rebuilding**.
+It keeps the original as `~/.codex.pre-persistence`; it never merges independent
+state directories. A fresh container simply links to the saved volume directory.
+`--snapshot` makes an online backup under `~/.ai/backups/` without relocating
+live state. The database backup uses SQLite's backup API, including committed
+WAL changes; other live files are not an atomic snapshot of the whole session.
+
+Validate with `python3 tests/test_persist_codex.py`. All history, credentials,
+databases and backups stay outside this git repository.
