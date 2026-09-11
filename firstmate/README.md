@@ -9,6 +9,8 @@ does not vendor or fork Firstmate.
   `pins.env`.
 - Private operational home: `/workspace/.firstmate-home`.
 - Session backend: Herdr 0.8 or newer.
+- Process sandbox: pinned nono with Landlock V6, applied to captains and every
+  Claude/Codex process started in a Treehouse slot.
 - Pilot backing clone: inside the API repository volume under
   `.treehouse/firstmate-backing/`; it is separate from the checkout mounted at
   `/app`.
@@ -49,6 +51,28 @@ with `rock-of-eye-api` as the single pilot project. It creates a clean backing
 clone on the same Docker volume so Firstmate fleet synchronization never
 switches or fast-forwards the shared `/app` checkout.
 
+Setup also installs the reviewed nono binary and RoE profiles, then places
+scoped `claude` and `codex` launchers on the personal PATH. Outside Firstmate
+they pass through to the real CLI unchanged. A Firstmate captain or a process
+started under `.treehouse/` is instead run through nono. The captain can read
+the upstream Firstmate source and write its private operational home and
+backing clone (required for Treehouse allocation); a worker can write only its
+current Treehouse checkout and harness state. Neither receives the shared
+`/app` checkout.
+Ambient API keys, GitHub tokens, cloud credentials, and Linear/1Password
+variables are stripped. Local untracked `.env*` files make a worker launch fail
+closed.
+
+`fm --check` executes nono's kernel probe and refuses to launch unless Landlock
+is enforceable. This environment currently reports Landlock V6 with filesystem,
+TCP, signal, abstract-socket, and device-ioctl support.
+
+The first profile version leaves outbound networking enabled because Claude and
+Codex need their subscription APIs. Domain-filtered nono proxy mode requires
+`CAP_SYS_PTRACE` inside Docker, which this non-root devcontainer deliberately
+does not have. Do not add that capability or broaden the profile silently;
+review network brokering as a separate hardening change.
+
 The setup is idempotent. It does not overwrite existing local Firstmate
 configuration files and refuses a dirty or unexpected upstream clone.
 
@@ -61,8 +85,8 @@ fm
 ```
 
 That launches the pinned captain harness. Override for one session with
-`fm --harness claude|codex|cursor|grok`. The launcher refuses unavailable CLIs
-rather than substituting another harness.
+`fm --harness claude|codex`. Cursor and Grok are refused until they have
+reviewed RoE nono profiles.
 
 ## Validation
 
@@ -90,5 +114,7 @@ Stop the pilot instead of bypassing a refusal if:
 - dirty or unlanded work would be reset;
 - the staging lock belongs to another task;
 - a required guard would need a local Firstmate source patch;
+- Landlock or a pinned nono profile is unavailable;
+- a Treehouse checkout contains an untracked local `.env*` file;
 - a worker requests merge, deploy, migration, production-data, or destructive
   authority.

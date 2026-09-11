@@ -82,3 +82,21 @@ Keep this as a bounded pilot:
   completes safely;
 - revisit upstream Firstmate prompt/blocker classification before broadening
   local use.
+
+## Nono hardening addendum — 2026-09-11
+
+- Pinned nono `0.76.0`; release archives are checksum-verified per platform.
+- The local-dev-env devcontainer is native `aarch64`. An initial `x86_64`
+  probe produced a false negative under architecture translation; the corrected
+  native binary reports and enforces Landlock V6.
+- Live probes proved a sandboxed process can write its granted worktree while
+  reads and writes in a sibling directory fail.
+- Environment probes proved `FM_*` coordination state is retained while
+  ambient `GH_TOKEN` is removed.
+- Both a Codex worker path and the Codex captain path start through nono; an
+  ordinary Codex invocation outside Firstmate still passes through unchanged.
+- `fm --check --harness codex` passes with the nono kernel probe enabled.
+- Nono domain-proxy mode fails closed because this non-root container lacks
+  `CAP_SYS_PTRACE`. The first profile therefore leaves outbound networking open
+  for subscription API access; filtered egress remains a separate hardening
+  decision.

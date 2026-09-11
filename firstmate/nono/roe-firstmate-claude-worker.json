@@ -1,0 +1,24 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-claude-worker",
+    "version": "1.0.0",
+    "description": "Claude worker confined to one Firstmate Treehouse worktree"
+  },
+  "groups": {
+    "include": [
+      "claude_code_linux"
+    ]
+  },
+  "workdir": {
+    "access": "readwrite"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/claude"
+    ],
+    "allow_file": [
+      "$HOME/.claude.json"
+    ]
+  }
+}

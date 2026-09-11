@@ -18,6 +18,11 @@ PILOT_PROJECT_PATH="${PILOT_PROJECT_PATH:-$PILOT_SOURCE_PATH/.treehouse/firstmat
 REAL_TREEHOUSE_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
 REAL_TREEHOUSE="$REAL_TREEHOUSE_DIR/treehouse"
 TREEHOUSE_WRAPPER="$SCRIPT_DIR/treehouse-firstmate-guard.sh"
+NONO="$REAL_TREEHOUSE_DIR/nono"
+NONO_PROFILE_SOURCE="$DOTAI_DIR/firstmate/nono"
+NONO_PROFILE_DIR="${NONO_CONFIG_HOME:-$HOME/.config/nono}/profiles"
+HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
+REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
 INSTALL_FIRSTMATE_TOOLS="${INSTALL_FIRSTMATE_TOOLS:-1}"
 CHOSEN_HARNESS=""
 
@@ -98,6 +103,87 @@ install_treehouse() {
   install -m 0755 "$tmp/treehouse" "$REAL_TREEHOUSE"
   rm -rf "$tmp"
   trap - RETURN
+}
+
+install_nono() {
+  local os arch target asset checksum tmp actual
+  os="$(uname -s)"
+  arch="$(uname -m)"
+  case "$os-$arch" in
+    Linux-x86_64)
+      target=x86_64-unknown-linux-gnu
+      checksum="$NONO_SHA256_LINUX_AMD64"
+      ;;
+    Linux-aarch64|Linux-arm64)
+      target=aarch64-unknown-linux-gnu
+      checksum="$NONO_SHA256_LINUX_ARM64"
+      ;;
+    Darwin-x86_64)
+      target=x86_64-apple-darwin
+      checksum="$NONO_SHA256_DARWIN_AMD64"
+      ;;
+    Darwin-arm64)
+      target=aarch64-apple-darwin
+      checksum="$NONO_SHA256_DARWIN_ARM64"
+      ;;
+    *)
+      die "unsupported nono platform: $os-$arch"
+      ;;
+  esac
+  asset="nono-v${NONO_VERSION}-${target}.tar.gz"
+
+  if [[ -x "$NONO" ]] && [[ "$("$NONO" --version 2>/dev/null)" == "nono $NONO_VERSION" ]]; then
+    return
+  fi
+
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' RETURN
+  curl -fsSL --max-filesize 20000000 \
+    "https://github.com/nolabs-ai/nono/releases/download/v${NONO_VERSION}/${asset}" \
+    -o "$tmp/$asset"
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual="$(sha256sum "$tmp/$asset" | awk '{print $1}')"
+  else
+    actual="$(shasum -a 256 "$tmp/$asset" | awk '{print $1}')"
+  fi
+  [[ "$actual" == "$checksum" ]] || die "nono checksum mismatch for $asset"
+
+  tar -xzf "$tmp/$asset" -C "$tmp"
+  [[ -f "$tmp/nono" ]] || die "nono archive did not contain the expected binary"
+  mkdir -p "$REAL_TREEHOUSE_DIR"
+  install -m 0755 "$tmp/nono" "$NONO"
+  rm -rf "$tmp"
+  trap - RETURN
+}
+
+configure_nono_profiles() {
+  local profile
+  [[ -d "$NONO_PROFILE_SOURCE" ]] || die "nono profile source is missing"
+  install -d -m 0700 "$NONO_PROFILE_DIR"
+  for profile in "$NONO_PROFILE_SOURCE"/*.json; do
+    install -m 0600 "$profile" "$NONO_PROFILE_DIR/$(basename "$profile")"
+  done
+  for profile in "$NONO_PROFILE_DIR"/roe-firstmate-*.json; do
+    "$NONO" profile validate "$profile" >/dev/null \
+      || die "invalid nono profile: $profile"
+  done
+}
+
+configure_harness_sandbox() {
+  local harness current real
+  chmod 0755 "$HARNESS_SANDBOX"
+  install -d -m 0755 "$REAL_HARNESS_DIR" "$HOME/.local/bin"
+
+  for harness in claude codex; do
+    real="$REAL_HARNESS_DIR/$harness"
+    current="$(command -v "$harness" 2>/dev/null || true)"
+    if [[ -n "$current" ]] \
+      && [[ "$(readlink -f "$current")" != "$(readlink -f "$HARNESS_SANDBOX")" ]]; then
+      ln -sfn "$(readlink -f "$current")" "$real"
+    fi
+    [[ -x "$real" ]] || continue
+    ln -sfn "$HARNESS_SANDBOX" "$HOME/.local/bin/$harness"
+  done
 }
 
 configure_firstmate_clone() {
@@ -214,11 +300,14 @@ version_at_least "$herdr_version" "$HERDR_MIN_VERSION" \
 
 configure_firstmate_clone
 install_treehouse
+install_nono
+configure_nono_profiles
 chmod 0755 "$TREEHOUSE_WRAPPER"
 mkdir -p "$HOME/.local/bin"
 ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
 ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
 install_firstmate_tools
+configure_harness_sandbox
 configure_git_credentials
 configure_pilot_backing_clone
 configure_home
@@ -229,5 +318,6 @@ printf '  FM_HOME:  %s\n' "$FM_HOME"
 printf '  backend:  herdr %s\n' "$herdr_version"
 printf '  harness:  %s (captain + crew)\n' "${CHOSEN_HARNESS:-unknown}"
 printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
+printf '  nono:     %s (Landlock required)\n' "$("$NONO" --version)"
 printf '  fm:        %s\n' "$HOME/.local/bin/fm"
 printf 'Run: fm --check\n'

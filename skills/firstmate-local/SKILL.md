@@ -13,6 +13,7 @@ preflight, and launch.
 
 - Run inside the local-dev-env devcontainer.
 - Herdr is installed by personal dotfiles.
+- Landlock must pass the pinned nono kernel probe. Never bypass a failed probe.
 - GitHub CLI authentication belongs to the human operator.
 - Never export or copy a subscription OAuth token to a child process. Harnesses
   use their existing interactive credential stores.
@@ -42,9 +43,21 @@ test "${HERDR_ENV:-}" = 1
 fm
 ```
 
-That uses the harness pin from setup. Pass `--harness claude|codex|cursor|grok`
-only to override it for one launch. The launcher fails closed when a requested
-harness is absent.
+That uses the harness pin from setup. Pass `--harness claude|codex` only to
+override it for one launch. Cursor and Grok are refused until reviewed RoE
+nono profiles exist.
+
+The `claude` and `codex` PATH launchers pass through unchanged outside
+Firstmate. For the captain and any process started under a `.treehouse/` path,
+they apply the matching nono profile. The captain receives read-only Firstmate
+source plus writable private state and the operational backing clone needed by
+Treehouse; a worker receives only its current worktree plus harness state.
+Neither receives `/app`. The launcher strips ambient credential variables and
+refuses a worker checkout containing an untracked `.env*` file.
+
+Outbound networking remains open for subscription API access. Do not claim
+domain-filtered egress: nono proxy mode requires `CAP_SYS_PTRACE`, which the
+non-root devcontainer does not have. Treat that as a separate reviewed change.
 
 ## Worktree responsibilities
 

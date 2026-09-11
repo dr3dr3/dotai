@@ -18,6 +18,15 @@ export ROE_FIRSTMATE_MAX_SLOTS
 export ROE_FIRSTMATE_MAX_ACTIVE_TASKS
 export ROE_TREEHOUSE_REAL="${ROE_TREEHOUSE_REAL:-$HOME/.local/lib/roe-firstmate/treehouse}"
 export PATH="$HOME/.local/bin:$PATH"
+# Firstmate's bounded-run helper creates its status files with mktemp, which
+# opens O_RDWR. The sandbox leaves /tmp write-only, so mktemp fails there and
+# every bounded call returns 124 (reported as a spurious startup timeout).
+export TMPDIR="${TMPDIR:-$HOME/.cache/roe-firstmate/tmp}"
+mkdir -p "$TMPDIR"
+NONO="${ROE_FIRSTMATE_NONO:-$HOME/.local/lib/roe-firstmate/nono}"
+NONO_PROFILE_DIR="${ROE_FIRSTMATE_NONO_PROFILE_DIR:-$HOME/.config/nono/profiles}"
+HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
+REAL_HARNESS_DIR="${ROE_FIRSTMATE_REAL_HARNESS_DIR:-$HOME/.local/lib/roe-firstmate/harnesses}"
 
 HARNESS=""
 CHECK_ONLY=0
@@ -30,7 +39,7 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: fm [--check] [--harness claude|codex|cursor|grok] [-- harness-args...]
+Usage: fm [--check] [--harness claude|codex] [-- harness-args...]
        firstmate-local.sh [...]
 
 Default harness is the pin written by setup-firstmate.sh (captain-harness, then
@@ -78,6 +87,11 @@ done
   || die "Treehouse is not at the reviewed pin $TREEHOUSE_VERSION"
 [[ "$(readlink -f "$HOME/.local/bin/treehouse")" == "$(readlink -f "$SCRIPT_DIR/treehouse-firstmate-guard.sh")" ]] \
   || die "treehouse on PATH is not the RoE fail-closed wrapper"
+[[ -x "$NONO" ]] || die "pinned nono binary is missing"
+[[ "$("$NONO" --version 2>/dev/null)" == "nono $NONO_VERSION" ]] \
+  || die "nono is not at the reviewed pin $NONO_VERSION"
+"$NONO" setup --check-only >/dev/null \
+  || die "Landlock is unavailable; refusing unsandboxed Firstmate launch"
 
 for tool in git gh jq node no-mistakes gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi herdr; do
   command -v "$tool" >/dev/null 2>&1 || die "required tool is missing: $tool"
@@ -132,17 +146,23 @@ case "$HARNESS" in
     launch=(codex)
     ;;
   cursor)
-    command -v cursor-agent >/dev/null 2>&1 || die "Cursor Agent CLI is not installed"
-    launch=(cursor-agent --trust)
+    die "Cursor Agent has no reviewed RoE nono profile; use claude or codex"
     ;;
   grok)
-    command -v grok >/dev/null 2>&1 || die "Grok CLI is not installed"
-    launch=(grok --trust)
+    die "Grok CLI has no reviewed RoE nono profile; use claude or codex"
     ;;
   *)
     die "unsupported pilot harness: $HARNESS"
     ;;
 esac
+[[ "$(readlink -f "$(command -v "$HARNESS")")" == "$(readlink -f "$HARNESS_SANDBOX")" ]] \
+  || die "$HARNESS on PATH is not the RoE nono launcher"
+[[ -x "$REAL_HARNESS_DIR/$HARNESS" ]] \
+  || die "real $HARNESS executable is missing behind the nono launcher"
+for role in captain worker; do
+  [[ -f "$NONO_PROFILE_DIR/roe-firstmate-${HARNESS}-${role}.json" ]] \
+    || die "nono profile is missing for $HARNESS $role"
+done
 
 printf 'Firstmate local pilot preflight passed.\n'
 printf '  pin:      %s\n' "$FIRSTMATE_COMMIT"
@@ -157,4 +177,6 @@ printf '  active:   %s/%s\n' "$active_meta" "$ROE_FIRSTMATE_MAX_ACTIVE_TASKS"
   || die "launch from a Herdr-managed pane (HERDR_ENV=1); use --check for installation validation"
 
 cd "$FIRSTMATE_DIR"
+export ROE_FIRSTMATE_CAPTAIN=1
+export ROE_FIRSTMATE_SANDBOX_REQUIRED=1
 exec "${launch[@]}" "${PASSTHROUGH[@]}"
