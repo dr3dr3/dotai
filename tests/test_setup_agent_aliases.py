@@ -32,6 +32,18 @@ class AliasTest(unittest.TestCase):
         self.assertTrue(first.startswith('# Existing settings\n'))
         self.assertIn('devcontainer-agents.sh', (self.home / '.zshrc').read_text())
 
+    def test_unmanaged_fish_refusal_leaves_all_shells_unchanged(self):
+        rc = self.home / '.bashrc'
+        rc.write_text('# Existing Bash settings\n')
+        fish = self.home / '.config/fish/conf.d/dotai-agent-aliases.fish'
+        fish.parent.mkdir(parents=True)
+        fish.write_text('# Personal Fish settings\n')
+        with self.assertRaisesRegex(SystemExit, 'unmanaged Fish config'):
+            aliases.configure()
+        self.assertEqual(rc.read_text(), '# Existing Bash settings\n')
+        self.assertEqual(fish.read_text(), '# Personal Fish settings\n')
+        self.assertFalse((self.home / '.zshrc').exists())
+
     def test_fish_install_and_xdg(self):
         with patch.dict(os.environ, {'XDG_CONFIG_HOME': str(self.home / 'xdg')}):
             aliases.configure()
