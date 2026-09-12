@@ -36,6 +36,7 @@ dotai/
 │   ├── profiles/                  ← The harness contract (Claude Code / Codex / Pi, pluggable)
 │   ├── compose/ + deploy/         ← Run locally (Docker/OrbStack) or on AWS Fargate
 │   └── README.md                  ← Substrate overview + threat model
+├── skills/herdr/                  ← Agent instructions for controlling an existing Herdr session
 ├── setup.sh                       ← Install AI tools (Claude Code, Codex, varlock, GitHub CLI)
 └── README.md                      ← This file
 ```
@@ -137,6 +138,11 @@ Two setup scripts with distinct responsibilities:
   installed `--ignore-scripts` per vendor docs. No built-in permission system,
   so the container is its sandbox. Point it at host Ollama via `models.json`.
 - **GitHub CLI** (`gh`) for PR workflows
+
+Herdr itself is terminal tooling and is installed/configured by the personal
+[dotfiles](https://github.com/dr3dr3/dotfiles) repo. This repo keeps only the
+Herdr agent skill and registers installed agents for session restore when the
+`herdr` command is already available.
 
 > These agents run **inside the container** by design — the macOS host stays
 > agent-free and just boots the containers (see the host dotfiles repo). The
@@ -354,3 +360,21 @@ A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are
 3. Open a PR with a clear description of what changed and why
 4. At least one reviewer required
 
+
+### Codex persistence in a devcontainer
+
+`setup.sh` runs `scripts/persist-codex.py` before installing tools. When `~/.ai`
+is a mounted volume, it backs `~/.codex` with `~/.ai/codex`. Outside that
+container layout it leaves normal Codex storage unchanged. Custom `CODEX_HOME`
+is respected; custom symlinks and conflicting histories require manual review.
+
+On an existing container, exit all Codex clients/app servers and run
+`python3 /workspace/.ai/dotai/scripts/persist-codex.py` **before rebuilding**.
+It keeps the original as `~/.codex.pre-persistence`; it never merges independent
+state directories. A fresh container simply links to the saved volume directory.
+`--snapshot` makes an online backup under `~/.ai/backups/` without relocating
+live state. The database backup uses SQLite's backup API, including committed
+WAL changes; other live files are not an atomic snapshot of the whole session.
+
+Validate with `python3 tests/test_persist_codex.py`. All history, credentials,
+databases and backups stay outside this git repository.

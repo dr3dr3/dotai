@@ -19,6 +19,9 @@
 
 set -euo pipefail
 
+# Personal state belongs to dotai; local-dev-env only supplies the volume.
+python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/persist-codex.py"
+
 # -----------------------------------------------------------------------------
 # 1.  Claude Code CLI
 #     Official install: https://code.claude.com/docs/en/overview

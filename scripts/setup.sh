@@ -52,6 +52,28 @@ for d in "$DEVEX_DIR/skills/"*/; do
   echo "  ✓ $name"
 done
 
+# ── Cursor skills ────────────────────────────────────────────────────────────
+# Cursor reads the repo-level .claude/skills/, not ~/.claude/skills/, so the
+# links above are invisible to it. Link into the repo too. An existing entry
+# pointing somewhere else (an ai-devex skill of the same name) is left alone.
+
+REPO_SKILLS_DIR="$REPO_DIR/.claude/skills"
+mkdir -p "$REPO_SKILLS_DIR"
+
+echo ""
+echo "→ Linking skills into $REPO_SKILLS_DIR/ (read by Cursor)"
+for d in "$DEVEX_DIR/skills/"*/; do
+  [ -f "${d}SKILL.md" ] || continue
+  name="$(basename "$d")"
+  if [ -e "$REPO_SKILLS_DIR/$name" ] \
+     && [ "$(readlink -f "$REPO_SKILLS_DIR/$name")" != "$(readlink -f "${d%/}")" ]; then
+    echo "  → $name already provided by $(readlink -f "$REPO_SKILLS_DIR/$name") — skipped"
+    continue
+  fi
+  ln -sfn "${d%/}" "$REPO_SKILLS_DIR/$name"
+  echo "  ✓ $name"
+done
+
 # ── Global ~/.claude/CLAUDE.md ───────────────────────────────────────────────
 #
 # Claude Code loads ~/.claude/CLAUDE.md IN ADDITION to a repo's own CLAUDE.md,
@@ -436,6 +458,28 @@ else
   echo ""
   echo "⚠ Claude Code not found — skipping plugin registration"
   echo "  Install Claude Code (~/.local/bin/claude) and re-run this script to register plugins"
+fi
+
+# ── Herdr agent integrations (binary/config are owned by dotfiles) ───────────
+# dotai owns the AI side only: the agent skill above and session-resume hooks.
+# If personal dotfiles are not installed, this remains a no-op.
+if command -v herdr &>/dev/null; then
+  echo ""
+  echo "→ Registering installed agents with Herdr"
+
+  _herdr_integration() {
+    local kind="$1"
+    local log="/tmp/herdr-integration-$kind.log"
+    if herdr integration install "$kind" >"$log" 2>&1; then
+      echo "  ✓ $kind"
+    else
+      echo "  ⚠ $kind integration skipped — see $log"
+    fi
+  }
+
+  [ -d "$HOME/.claude" ] && _herdr_integration claude
+  command -v codex &>/dev/null && [ -d "$HOME/.codex" ] && _herdr_integration codex
+  command -v pi &>/dev/null && [ -d "$HOME/.pi" ] && _herdr_integration pi
 fi
 
 # ── Cursor / Windsurf ────────────────────────────────────────────────────────
