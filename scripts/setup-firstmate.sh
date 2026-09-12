@@ -58,9 +58,9 @@ write_default() {
   fi
 }
 
-append_default_line() {
-  local path="$1" value="$2"
-  if ! grep -Fxq "$value" "$path" 2>/dev/null; then
+append_project_default() {
+  local path="$1" project="$2" value="$3"
+  if ! grep -Fq -- "- $project [" "$path" 2>/dev/null; then
     umask 077
     printf '%s\n' "$value" >>"$path"
   fi
@@ -317,7 +317,7 @@ configure_home() {
 
   write_default "$FM_HOME/data/projects.md" \
     "- $PILOT_PROJECT_NAME [direct-PR] - RoE API pilot; validate committed branches through local-dev-env stage-worktree (added 2026-09-06)"
-  append_default_line "$FM_HOME/data/projects.md" \
+  append_project_default "$FM_HOME/data/projects.md" infrastructure \
     "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
   write_default "$FM_HOME/data/backlog.md" $'## In flight\n\n## Queued\n\n## Done'
   write_default "$FM_HOME/data/captain.md" \
