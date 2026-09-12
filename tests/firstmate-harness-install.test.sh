@@ -17,6 +17,8 @@ for path in \
 done
 
 ln -s "$TMP/old/scripts/firstmate-harness-sandbox.sh" "$TMP/home/.local/bin/codex"
+ln -s "$TMP/old/scripts/firstmate-harness-sandbox.sh" "$TMP/home/.local/bin/claude"
+ln -s "$TMP/old/scripts/firstmate-harness-sandbox.sh" "$TMP/real/claude"
 
 # shellcheck source=../scripts/setup-firstmate.sh
 source "$ROOT/scripts/setup-firstmate.sh"
@@ -30,5 +32,7 @@ configure_harness_sandbox
 
 [[ "$(readlink -f "$REAL_HARNESS_DIR/codex")" == "$TMP/system/bin/codex" ]]
 [[ "$(readlink -f "$HOME/.local/bin/codex")" == "$HARNESS_SANDBOX" ]]
+[[ ! -e "$REAL_HARNESS_DIR/claude" ]]
+[[ ! -e "$HOME/.local/bin/claude" ]]
 
-printf 'ok - setup skips old Firstmate wrappers when resolving real harnesses\n'
+printf 'ok - setup recovers real harnesses and removes stale optional launchers\n'
