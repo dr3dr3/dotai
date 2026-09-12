@@ -7,13 +7,16 @@ WRAPPER="$ROOT/scripts/firstmate-harness-sandbox.sh"
 TMP="$(mktemp -d /workspace/repos/rock-of-eye-api/.treehouse/.firstmate-nono-wrapper-test.XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
 
-mkdir -p "$TMP/bin" "$TMP/real" "$TMP/profiles"
+mkdir -p "$TMP/bin" "$TMP/real" "$TMP/profiles" "$TMP/worker-guard-bin"
 touch "$TMP/profiles/roe-firstmate-codex-captain.json"
 touch "$TMP/profiles/roe-firstmate-codex-worker.json"
+touch "$TMP/worker-guard-bin/terraform" "$TMP/worker-guard-bin/tofu"
+chmod 0755 "$TMP/worker-guard-bin/terraform" "$TMP/worker-guard-bin/tofu"
 
 cat >"$TMP/real/codex" <<'SH'
 #!/usr/bin/env bash
 printf 'real:%s\n' "$*" >"$FAKE_REAL_CALL"
+printf 'role=%s path=%s\n' "${ROE_FIRSTMATE_ROLE-unset}" "$PATH" >"$FAKE_REAL_ENV"
 SH
 chmod 0755 "$TMP/real/codex"
 
@@ -28,6 +31,7 @@ printf 'captain=%s required=%s role=%s\n' \
   "${ROE_FIRSTMATE_CAPTAIN-unset}" \
   "${ROE_FIRSTMATE_SANDBOX_REQUIRED-unset}" \
   "${ROE_FIRSTMATE_ROLE-unset}" >>"$FAKE_NONO_CALL"
+printf 'path=%s\n' "$PATH" >>"$FAKE_NONO_CALL"
 SH
 chmod 0755 "$TMP/fake-nono"
 ln -s "$WRAPPER" "$TMP/bin/codex"
@@ -36,8 +40,10 @@ export ROE_FIRSTMATE_NONO="$TMP/fake-nono"
 export ROE_FIRSTMATE_REAL_HARNESS_DIR="$TMP/real"
 export ROE_FIRSTMATE_NONO_PROFILE_DIR="$TMP/profiles"
 export ROE_FIRSTMATE_SANDBOX_MODE_FILE="$TMP/sandbox-mode"
+export ROE_FIRSTMATE_WORKER_GUARD_BIN="$TMP/worker-guard-bin"
 export FAKE_NONO_CALL="$TMP/nono-call"
 export FAKE_REAL_CALL="$TMP/real-call"
+export FAKE_REAL_ENV="$TMP/real-env"
 
 assert_fails_with() {
   local expected="$1"
@@ -88,6 +94,7 @@ touch "$SLOT/.env"
   ROE_FIRSTMATE_NONO="$TMP/missing-nono" "$TMP/bin/codex" unsandboxed-worker
 ) 2>"$TMP/off-warning"
 [[ "$(cat "$FAKE_REAL_CALL")" == "real:--profile fm-worker --sandbox danger-full-access unsandboxed-worker" ]]
+grep -F "role=worker path=$TMP/worker-guard-bin:" "$FAKE_REAL_ENV" >/dev/null
 grep -F "Firstmate nono sandbox is OFF" "$TMP/off-warning" >/dev/null
 rm "$SLOT/.env"
 printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
@@ -107,6 +114,7 @@ touch "$SLOT/.env.example"
 grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=worker" "$FAKE_NONO_CALL" >/dev/null
+grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
 
 (
   cd /workspace/firstmate

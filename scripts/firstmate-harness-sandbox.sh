@@ -14,6 +14,7 @@ NONO="${ROE_FIRSTMATE_NONO:-$HOME/.local/lib/roe-firstmate/nono}"
 REAL_DIR="${ROE_FIRSTMATE_REAL_HARNESS_DIR:-$HOME/.local/lib/roe-firstmate/harnesses}"
 REAL_HARNESS="$REAL_DIR/$HARNESS"
 PROFILE_DIR="${ROE_FIRSTMATE_NONO_PROFILE_DIR:-$HOME/.config/nono/profiles}"
+WORKER_GUARD_BIN="${ROE_FIRSTMATE_WORKER_GUARD_BIN:-$HOME/.local/lib/roe-firstmate/worker-guard-bin}"
 ROLE=""
 
 die() {
@@ -52,6 +53,11 @@ SANDBOX_MODE="$(fm_sandbox_mode)" \
 # This is provenance for permission-need records, not an authorization signal.
 # The nono profile remains the enforceable role boundary.
 export ROE_FIRSTMATE_ROLE="$ROLE"
+if [[ "$ROLE" == worker ]]; then
+  [[ -x "$WORKER_GUARD_BIN/terraform" && -x "$WORKER_GUARD_BIN/tofu" ]] \
+    || die "worker Terraform guards are missing; run setup-firstmate.sh"
+  export PATH="$WORKER_GUARD_BIN:$PATH"
+fi
 
 # Codex's default workspace-write sandbox starts bubblewrap, but this
 # devcontainer cannot create the required unprivileged namespace. Select

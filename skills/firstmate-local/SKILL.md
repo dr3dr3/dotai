@@ -113,6 +113,13 @@ repository plan guard, and summarize resource actions. Apply requires a fresh
 post-merge plan and separate human approval through the established Terraform
 Cloud or GitHub environment gate.
 
+Do not plan from `/workspace/repos/infrastructure` or a worker Treehouse slot.
+For a CLI-driven stack, fetch the exact committed SHA into a clean detached
+worktree on the canonical `/workspace/infrastructure` volume and use its
+infrastructure devcontainer/toolchain. Do not switch the canonical checkout's
+active branch. VCS/GitHub-driven stacks use their established pinned-SHA
+workflow instead.
+
 ## Authority
 
 Workers may investigate, commit scoped changes, validate, and open pull
