@@ -21,6 +21,7 @@
     "read": [
       "/usr/local/share/nvm",
       "$HOME/.local/lib/roe-firstmate/treehouse",
+      "$HOME/.local/lib/roe-firstmate/permission-note",
       "$HOME/.no-mistakes/bin/no-mistakes",
       "/workspace/.ai/dotai/.worktrees/feat/firstmate-local-pilot/scripts/treehouse-firstmate-guard.sh"
     ]
