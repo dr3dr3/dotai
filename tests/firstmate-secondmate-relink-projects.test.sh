@@ -28,7 +28,8 @@ APP_PROJECTS=(
 )
 SHARED_PROJECTS=(ai-context infrastructure local-dev-env)
 
-mkdir -p "$PROJECT_ROOT" "$PRIMARY_HOME/projects" "$SECOND_MATE/projects" "$ORIGINS"
+mkdir -p "$PROJECT_ROOT" "$PRIMARY_HOME/projects" "$PRIMARY_HOME/data" \
+  "$SECOND_MATE/projects" "$ORIGINS"
 printf 'otel\n' >"$SECOND_MATE/.fm-secondmate-home"
 
 git_quiet() { git -C "$1" -c user.email=test@example.invalid -c user.name=relink "${@:2}"; }
@@ -99,7 +100,7 @@ assert_fails_with() {
 
 # A dry run reports every clone and changes nothing.
 dry_output="$("$RELINK" "$SECOND_MATE" --dry-run)"
-[[ "$dry_output" == *"dry run: 11 to relink, 0 already linked"* ]]
+[[ "$dry_output" == *"dry run: 11 to relink, 0 already linked, 0 to add"* ]]
 [[ ! -L "$SECOND_MATE/projects/rock-of-eye-production-core" ]]
 
 # The real run relinks all eleven onto the project root and preserves the clones.
@@ -119,9 +120,59 @@ done
 
 # Idempotent: a second run relinks nothing and leaves the links alone.
 again="$("$RELINK" "$SECOND_MATE")"
-[[ "$again" == *"relinked 0, already linked 11"* ]]
+[[ "$again" == *"relinked 0, already linked 11, added 0"* ]]
 [[ "$(readlink -f "$SECOND_MATE/projects/rock-of-eye-production-portal")" \
   == "$PROJECT_ROOT/rock-of-eye-production-portal/.treehouse/firstmate-backing/rock-of-eye-production-portal" ]]
+
+# Widening scope registers the link, the registry line, and the charter entry as
+# one set. A narrowly seeded second mate is the real case: only three projects.
+NARROW="$TMP/narrow/firstmate"
+mkdir -p "$NARROW/projects" "$NARROW/data"
+printf 'narrow\n' >"$NARROW/.fm-secondmate-home"
+for name in ai-context rock-of-eye-api rock-of-eye-sso; do
+  ln -s "$(readlink -f "$PRIMARY_HOME/projects/$name")" "$NARROW/projects/$name"
+  printf -- '- %s [direct-PR] - seeded\n' "$name" >>"$NARROW/data/projects.md"
+done
+printf '# Charter\nOwn something.\n\n# Project clones\n- ai-context\n- rock-of-eye-api\n- rock-of-eye-sso\n\n# Operating model\nWork alone.\n' \
+  >"$NARROW/data/charter.md"
+printf -- '- rock-of-eye-production-core [direct-PR] - RoE production-house backend\n' \
+  >>"$PRIMARY_HOME/data/projects.md"
+
+add_dry="$("$RELINK" "$NARROW" --add rock-of-eye-production-core --dry-run)"
+[[ "$add_dry" == *"would add rock-of-eye-production-core"* ]]
+[[ ! -e "$NARROW/projects/rock-of-eye-production-core" ]]
+
+"$RELINK" "$NARROW" --add rock-of-eye-production-core >/dev/null
+[[ "$(readlink -f "$NARROW/projects/rock-of-eye-production-core")" \
+  == "$PROJECT_ROOT/rock-of-eye-production-core/.treehouse/firstmate-backing/rock-of-eye-production-core" ]]
+# The description is mirrored from the primary registry, not invented.
+grep -Fq -- "- rock-of-eye-production-core [direct-PR] - RoE production-house backend" \
+  "$NARROW/data/projects.md"
+# The charter entry lands inside the section, after its last bullet.
+[[ "$(awk '/^# Project clones/{i=1;next} i&&/^#/{exit} i&&/^- /{print}' "$NARROW/data/charter.md" | tail -1)" \
+  == "- rock-of-eye-production-core" ]]
+
+# --add-all takes everything the primary carries that this home lacks, and both
+# forms are idempotent.
+"$RELINK" "$NARROW" --add-all >/dev/null
+for name in "${APP_PROJECTS[@]}" "${SHARED_PROJECTS[@]}"; do
+  [[ -L "$NARROW/projects/$name" ]] \
+    || { printf '%s was not added by --add-all\n' "$name" >&2; exit 1; }
+done
+settled="$("$RELINK" "$NARROW" --add-all)"
+[[ "$settled" == *"relinked 0, already linked 11, added 0"* ]]
+[[ "$(grep -c -- '^- rock-of-eye-production-core ' "$NARROW/data/projects.md")" == 1 ]]
+[[ "$(grep -c -- '^- rock-of-eye-production-core$' "$NARROW/data/charter.md")" == 1 ]]
+
+# A project-less charter is a contract; widening it refuses.
+LESS="$TMP/projectless/firstmate"
+mkdir -p "$LESS/projects" "$LESS/data"
+printf 'projectless\n' >"$LESS/.fm-secondmate-home"
+ln -s "$(readlink -f "$PRIMARY_HOME/projects/ai-context")" "$LESS/projects/ai-context"
+printf '# Project clones\nNone. This is a project-less domain.\n\n# Operating model\n' \
+  >"$LESS/data/charter.md"
+assert_fails_with "charter declares a project-less domain" \
+  "$RELINK" "$LESS" --add rock-of-eye-api
 
 # A link that resolves off the repository volumes is a refusal, not a rewrite.
 STRAY="$TMP/stray-home/firstmate"

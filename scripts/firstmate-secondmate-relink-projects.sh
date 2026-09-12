@@ -11,10 +11,17 @@
 # registers, which is the backing-clone arrangement the guard already permits.
 # It is idempotent: an entry already linked inside the project root is left alone.
 #
+# It can also widen a second mate's scope: --add registers a project the primary
+# home already carries, and --add-all registers every one the second mate lacks.
+# The link, the data/projects.md entry, and the charter's "Project clones" list
+# are updated together, because a second mate that cannot see all three as the
+# same set will brief crew against projects it has no copy of.
+#
 # Usage:
 #   firstmate-secondmate-relink-projects.sh <secondmate-home> [--dry-run]
 #                                           [--primary-home <path>]
 #                                           [--backup-dir <path>]
+#                                           [--add <project>]... [--add-all]
 #
 # A clone is only replaced when it can be proven to hold no unique work: clean
 # worktree, no stashes, and every local branch tracking an upstream it is not
@@ -29,6 +36,8 @@ SUB_HOME_MARKER=".fm-secondmate-home"
 DRY_RUN=0
 BACKUP_DIR=""
 SECOND_MATE_HOME=""
+ADD_ALL=0
+ADD_PROJECTS=()
 
 die() {
   printf 'firstmate-secondmate-relink: %s\n' "$1" >&2
@@ -48,8 +57,12 @@ while (( $# )); do
     --backup-dir)
       shift; [[ $# -gt 0 ]] || die "--backup-dir requires a value"; BACKUP_DIR="$1" ;;
     --backup-dir=*) BACKUP_DIR="${1#*=}" ;;
+    --add)
+      shift; [[ $# -gt 0 ]] || die "--add requires a project name"; ADD_PROJECTS+=("$1") ;;
+    --add=*) ADD_PROJECTS+=("${1#*=}") ;;
+    --add-all) ADD_ALL=1 ;;
     -h|--help)
-      sed -n '3,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      sed -n '3,29p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     -*) die "unknown option: $1" ;;
     *)
@@ -110,6 +123,68 @@ assert_clone_is_disposable() {
   done < <(git -C "$path" for-each-ref --format='%(refname:short)' refs/heads)
 }
 
+CHARTER="$SECOND_MATE_HOME/data/charter.md"
+
+# Mirror the primary home's description so the two registries read the same, and
+# fall back to a neutral line when the primary has none.
+registry_line_for() {
+  local name="$1" line=""
+  if [[ -f "$PRIMARY_HOME/data/projects.md" ]]; then
+    line="$(grep -m1 -F -- "- $name [" "$PRIMARY_HOME/data/projects.md")" || line=""
+  fi
+  if [[ -z "$line" ]]; then
+    line="- $name [direct-PR] - registered from the primary home on $(date +%Y-%m-%d)"
+  fi
+  printf '%s\n' "$line"
+}
+
+register_in_registry() {
+  local name="$1" registry="$SECOND_MATE_HOME/data/projects.md"
+  install -d -m 0700 "$SECOND_MATE_HOME/data"
+  if [[ -f "$registry" ]] && grep -Fq -- "- $name [" "$registry"; then
+    return 0
+  fi
+  umask 077
+  registry_line_for "$name" >>"$registry"
+}
+
+# A charter that says the domain has no projects is a contract, not a stale list.
+charter_declares_project_less_domain() {
+  [[ -f "$CHARTER" ]] || return 1
+  awk '
+    /^# Project clones/ { inside = 1; next }
+    inside && /^#/ { exit }
+    inside && /None\. This is a project-less domain/ { found = 1 }
+    END { exit(found ? 0 : 1) }
+  ' "$CHARTER"
+}
+
+# Insert after the section's last bullet, not before the next heading: the blank
+# line between them would otherwise separate the new entry from the list.
+charter_add_project() {
+  local name="$1" tmp
+  [[ -f "$CHARTER" ]] || return 0
+  if ! grep -q '^# Project clones' "$CHARTER"; then
+    return 0
+  fi
+  if grep -Fxq -- "- $name" "$CHARTER"; then
+    return 0
+  fi
+  tmp="$(mktemp)"
+  awk -v entry="- $name" '
+    NR == FNR {
+      if ($0 ~ /^# Project clones/) { heading = FNR; inside = 1; next }
+      if (inside && $0 ~ /^#/) { inside = 0 }
+      if (inside && $0 ~ /^- /) { last = FNR }
+      next
+    }
+    { print }
+    FNR == (last ? last : heading) { print entry }
+  ' "$CHARTER" "$CHARTER" >"$tmp"
+  cat "$tmp" >"$CHARTER"
+  rm -f "$tmp"
+}
+
 backup_dir_for() {
   if [[ -n "$BACKUP_DIR" ]]; then
     printf '%s\n' "$BACKUP_DIR"
@@ -163,10 +238,43 @@ for entry in "${entries[@]}"; do
   (( relinked += 1 ))
 done
 
+if (( ADD_ALL == 1 )); then
+  shopt -s nullglob
+  for primary_link in "$PRIMARY_HOME"/projects/*; do
+    candidate="$(basename "$primary_link")"
+    [[ -e "$SECOND_MATE_PROJECTS/$candidate" ]] || ADD_PROJECTS+=("$candidate")
+  done
+  shopt -u nullglob
+fi
+
+added=0
+for name in ${ADD_PROJECTS+"${ADD_PROJECTS[@]}"}; do
+  if [[ -e "$SECOND_MATE_PROJECTS/$name" ]]; then
+    note "$name already registered"
+    continue
+  fi
+  target="$(resolved_target "$name")"
+  if charter_declares_project_less_domain; then
+    die "charter declares a project-less domain; re-scaffold it before adding $name"
+  fi
+
+  if (( DRY_RUN == 1 )); then
+    note "would add $name -> $target"
+    (( added += 1 ))
+    continue
+  fi
+
+  ln -s "$target" "$SECOND_MATE_PROJECTS/$name"
+  register_in_registry "$name"
+  charter_add_project "$name"
+  note "added $name -> $target"
+  (( added += 1 ))
+done
+
 if (( DRY_RUN == 1 )); then
-  printf 'dry run: %s to relink, %s already linked\n' "$relinked" "$skipped"
+  printf 'dry run: %s to relink, %s already linked, %s to add\n' "$relinked" "$skipped" "$added"
   exit 0
 fi
 
-printf 'relinked %s, already linked %s\n' "$relinked" "$skipped"
+printf 'relinked %s, already linked %s, added %s\n' "$relinked" "$skipped" "$added"
 [[ -z "$backup_root" ]] || printf 'replaced clones moved to %s\n' "$backup_root"
