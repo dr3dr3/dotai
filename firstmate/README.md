@@ -113,7 +113,24 @@ clones the primary home uses:
 bash scripts/firstmate-secondmate-relink-projects.sh <secondmate-home>
 ```
 
-Run it after every seed, and after adding a project to an existing second mate.
+Run it after every seed. The same script widens a second mate's scope, because a
+project has to appear in three places to be usable — the link, the
+`data/projects.md` entry, and the charter's "Project clones" list — and a second
+mate that sees different sets will brief crew against projects it has no copy of:
+
+```bash
+# one project the primary home already carries
+bash scripts/firstmate-secondmate-relink-projects.sh <secondmate-home> \
+  --add rock-of-eye-production-core
+
+# every project the second mate lacks
+bash scripts/firstmate-secondmate-relink-projects.sh <secondmate-home> --add-all
+```
+
+Descriptions are mirrored from the primary registry rather than invented, and a
+charter declaring a project-less domain refuses the widening instead of being
+edited — that list is a contract, not a stale cache.
+
 It is idempotent, and `--dry-run` reports what it would change. A clone is only
 replaced when it can be proven to hold no unique work — clean worktree, no
 stashes, every local branch tracking an upstream it is not ahead of — and
