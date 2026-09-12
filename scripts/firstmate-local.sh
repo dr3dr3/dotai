@@ -28,6 +28,9 @@ mkdir -p "$TMPDIR"
 NONO="${ROE_FIRSTMATE_NONO:-$HOME/.local/lib/roe-firstmate/nono}"
 NONO_PROFILE_DIR="${ROE_FIRSTMATE_NONO_PROFILE_DIR:-$HOME/.config/nono/profiles}"
 HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
+OPERATIONAL_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
+TREEHOUSE_GUARD="$OPERATIONAL_DIR/treehouse-guard"
+WORKER_GUARD_BIN="$OPERATIONAL_DIR/worker-guard-bin"
 REAL_HARNESS_DIR="${ROE_FIRSTMATE_REAL_HARNESS_DIR:-$HOME/.local/lib/roe-firstmate/harnesses}"
 
 HARNESS=""
@@ -87,8 +90,12 @@ done
 [[ -x "$ROE_TREEHOUSE_REAL" ]] || die "verified Treehouse binary is missing"
 [[ "$("$ROE_TREEHOUSE_REAL" --version 2>/dev/null | tr -cd '0-9.')" == "$TREEHOUSE_VERSION" ]] \
   || die "Treehouse is not at the reviewed pin $TREEHOUSE_VERSION"
-[[ "$(readlink -f "$HOME/.local/bin/treehouse")" == "$(readlink -f "$SCRIPT_DIR/treehouse-firstmate-guard.sh")" ]] \
+[[ "$(readlink -f "$HOME/.local/bin/treehouse")" == "$(readlink -f "$TREEHOUSE_GUARD")" ]] \
   || die "treehouse on PATH is not the RoE fail-closed wrapper"
+cmp -s "$TREEHOUSE_GUARD" "$SCRIPT_DIR/treehouse-firstmate-guard.sh" \
+  || die "installed Treehouse guard is stale; run setup-firstmate.sh"
+[[ -x "$WORKER_GUARD_BIN/terraform" && -x "$WORKER_GUARD_BIN/tofu" ]] \
+  || die "worker Terraform guards are missing; run setup-firstmate.sh"
 SANDBOX_MODE="$(fm_sandbox_mode)" \
   || die "invalid sandbox mode in $FM_SANDBOX_MODE_FILE; run fm-sandbox on or off"
 if [[ "$SANDBOX_MODE" == on ]]; then
