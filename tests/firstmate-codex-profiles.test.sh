@@ -30,6 +30,17 @@ PY
 grep -F 'configure_codex_profiles' "$ROOT/scripts/setup-firstmate.sh" >/dev/null
 grep -F -- "--profile \"fm-\$ROLE\"" "$ROOT/scripts/firstmate-harness-sandbox.sh" >/dev/null
 grep -F 'INFRASTRUCTURE_PROJECT_PATH' "$ROOT/scripts/setup-firstmate.sh" >/dev/null
-grep -F "\"\$FM_HOME/projects/infrastructure\"" "$ROOT/scripts/setup-firstmate.sh" >/dev/null
+
+# The Codex profiles trust /workspace/repos/infrastructure, which is only
+# coherent while setup registers infrastructure as the checkout itself rather
+# than through a backing clone. Assert the list, not the registration source
+# line, so the check survives a refactor of how links are written.
+direct_projects="$(
+  # shellcheck disable=SC1090
+  source <(sed -n '/^DIRECT_PROJECTS=(/,/)$/p' "$ROOT/scripts/setup-firstmate.sh")
+  # shellcheck disable=SC2153
+  printf '%s\n' "${DIRECT_PROJECTS[@]}"
+)"
+printf '%s\n' "$direct_projects" | grep -Fxq infrastructure
 
 printf 'ok - Firstmate Codex profiles are quiet and role-specific\n'

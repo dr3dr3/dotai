@@ -16,6 +16,25 @@ PILOT_PROJECT_NAME="${PILOT_PROJECT_NAME:-rock-of-eye-api}"
 PILOT_SOURCE_PATH="${PILOT_SOURCE_PATH:-/workspace/repos/rock-of-eye-api}"
 PILOT_PROJECT_PATH="${PILOT_PROJECT_PATH:-$PILOT_SOURCE_PATH/.treehouse/firstmate-backing/$PILOT_PROJECT_NAME}"
 INFRASTRUCTURE_PROJECT_PATH="${INFRASTRUCTURE_PROJECT_PATH:-/workspace/repos/infrastructure}"
+PROJECT_ROOT="${ROE_FIRSTMATE_PROJECT_ROOT:-/workspace/repos}"
+# Every RoE application repository is served to a container at /app, so each one
+# registers through a protected backing clone that Firstmate may fast-forward
+# without moving the branch the shared checkout serves. Keep this list in step
+# with the captain nono profiles; tests/firstmate-nono-enforcement.test.sh
+# asserts the profiles allow exactly these eight backing clones.
+APP_PROJECTS=(
+  rock-of-eye-all-in-one-portal
+  rock-of-eye-api
+  rock-of-eye-client-portal
+  rock-of-eye-partner-portal
+  rock-of-eye-pms-core
+  rock-of-eye-production-core
+  rock-of-eye-production-portal
+  rock-of-eye-sso
+)
+# No container serves these, so they register as the checkout itself.
+DIRECT_PROJECTS=(ai-context infrastructure local-dev-env)
+SKIPPED_PROJECTS=()
 REAL_TREEHOUSE_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
 REAL_TREEHOUSE="$REAL_TREEHOUSE_DIR/treehouse"
 TREEHOUSE_WRAPPER="$SCRIPT_DIR/treehouse-firstmate-guard.sh"
@@ -335,40 +354,125 @@ configure_git_credentials() {
   gh auth setup-git
 }
 
-configure_pilot_backing_clone() {
-  [[ -d "$PILOT_SOURCE_PATH/.git" ]] || die "pilot source is not a Git checkout: $PILOT_SOURCE_PATH"
+project_source_path() {
+  case "$1" in
+    "$PILOT_PROJECT_NAME") printf '%s\n' "$PILOT_SOURCE_PATH" ;;
+    infrastructure) printf '%s\n' "$INFRASTRUCTURE_PROJECT_PATH" ;;
+    *) printf '%s\n' "$PROJECT_ROOT/$1" ;;
+  esac
+}
 
-  local source_origin backing_origin
-  source_origin="$(git -C "$PILOT_SOURCE_PATH" remote get-url origin)"
-  mkdir -p "$(dirname "$PILOT_PROJECT_PATH")"
+project_backing_path() {
+  if [[ "$1" == "$PILOT_PROJECT_NAME" ]]; then
+    printf '%s\n' "$PILOT_PROJECT_PATH"
+    return
+  fi
+  printf '%s/.treehouse/firstmate-backing/%s\n' "$(project_source_path "$1")" "$1"
+}
 
-  # Keep the backing clone invisible to the shared checkout without changing a
-  # tracked .gitignore. Firstmate may fast-forward this clone; it must never
-  # move the branch served at /app.
-  if ! grep -Fxq '.treehouse/' "$PILOT_SOURCE_PATH/.git/info/exclude" 2>/dev/null; then
-    printf '%s\n' '.treehouse/' >>"$PILOT_SOURCE_PATH/.git/info/exclude"
+project_is_skipped() {
+  local name="$1" skipped
+  for skipped in ${SKIPPED_PROJECTS+"${SKIPPED_PROJECTS[@]}"}; do
+    [[ "$skipped" == "$name" ]] && return 0
+  done
+  return 1
+}
+
+# Keep the backing clone invisible to its host checkout without changing a
+# tracked .gitignore.
+exclude_treehouse() {
+  local repo="$1"
+  if ! grep -Fxq '.treehouse/' "$repo/.git/info/exclude" 2>/dev/null; then
+    printf '%s\n' '.treehouse/' >>"$repo/.git/info/exclude"
+  fi
+}
+
+# The fleet is not uniform - the platform repos are on master, the shared repos
+# on main - so read the default branch from origin instead of assuming either.
+default_branch_of() {
+  local repo="$1" branch=""
+  branch="$(git -C "$repo" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>&1)" || branch=""
+  if [[ -z "$branch" ]]; then
+    git -C "$repo" remote set-head origin --auto >/dev/null
+    branch="$(git -C "$repo" symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>&1)" || branch=""
+  fi
+  [[ -n "$branch" ]] || return 1
+  printf '%s\n' "${branch#origin/}"
+}
+
+configure_backing_clone() {
+  local name="$1" source backing source_origin backing_origin branch
+  source="$(project_source_path "$name")"
+  backing="$(project_backing_path "$name")"
+
+  # A devcontainer need not hold every repo. Record the omission and carry on
+  # rather than failing setup, but never register a project without a checkout.
+  if [[ ! -d "$source/.git" ]]; then
+    SKIPPED_PROJECTS+=("$name")
+    printf 'skipping %s: no checkout at %s\n' "$name" "$source"
+    return
   fi
 
-  if [[ ! -d "$PILOT_PROJECT_PATH/.git" ]]; then
-    git clone "$source_origin" "$PILOT_PROJECT_PATH"
+  source_origin="$(git -C "$source" remote get-url origin)"
+  mkdir -p "$(dirname "$backing")"
+  # Firstmate may fast-forward the backing clone; it must never move the branch
+  # served at /app.
+  exclude_treehouse "$source"
+
+  if [[ ! -d "$backing/.git" ]]; then
+    git clone "$source_origin" "$backing"
   fi
-  backing_origin="$(git -C "$PILOT_PROJECT_PATH" remote get-url origin)"
+  backing_origin="$(git -C "$backing" remote get-url origin)"
   [[ "$backing_origin" == "$source_origin" ]] \
-    || die "pilot backing clone has unexpected origin: $backing_origin"
-  if ! grep -Fxq '.treehouse/' "$PILOT_PROJECT_PATH/.git/info/exclude" 2>/dev/null; then
-    printf '%s\n' '.treehouse/' >>"$PILOT_PROJECT_PATH/.git/info/exclude"
+    || die "$name backing clone has unexpected origin: $backing_origin"
+  exclude_treehouse "$backing"
+  [[ -z "$(git -C "$backing" status --porcelain)" ]] \
+    || die "$name backing clone is dirty: $backing"
+  git -C "$backing" fetch --quiet origin
+  branch="$(default_branch_of "$backing")" \
+    || die "cannot determine the default branch for $name: $backing"
+  git -C "$backing" switch --quiet "$branch"
+  git -C "$backing" merge --quiet --ff-only "origin/$branch"
+}
+
+configure_backing_clones() {
+  local name
+  for name in "${APP_PROJECTS[@]}"; do
+    configure_backing_clone "$name"
+  done
+}
+
+# An earlier setup registered an application project as the shared checkout
+# itself. Repointing it at the backing clone is only safe while no task metadata
+# can still name the old path, so refuse rather than move it under a live task.
+relink_project_to_backing() {
+  local name="$1" source backing
+  local -a existing_meta
+  source="$(project_source_path "$name")"
+  backing="$(project_backing_path "$name")"
+  [[ -L "$FM_HOME/projects/$name" ]] || return 0
+  [[ "$(readlink -f "$FM_HOME/projects/$name")" == "$(readlink -f "$source")" ]] || return 0
+  [[ "$(readlink -f "$backing")" != "$(readlink -f "$source")" ]] || return 0
+
+  shopt -s nullglob
+  existing_meta=("$FM_HOME"/state/*.meta)
+  shopt -u nullglob
+  (( ${#existing_meta[@]} == 0 )) \
+    || die "cannot migrate the $name project link while task metadata exists"
+  rm "$FM_HOME/projects/$name"
+}
+
+register_project_link() {
+  local name="$1" target="$2"
+  if [[ ! -e "$FM_HOME/projects/$name" ]]; then
+    ln -s "$target" "$FM_HOME/projects/$name"
   fi
-  [[ -z "$(git -C "$PILOT_PROJECT_PATH" status --porcelain)" ]] \
-    || die "pilot backing clone is dirty: $PILOT_PROJECT_PATH"
-  git -C "$PILOT_PROJECT_PATH" fetch --quiet origin
-  git -C "$PILOT_PROJECT_PATH" switch --quiet master
-  git -C "$PILOT_PROJECT_PATH" merge --quiet --ff-only origin/master
+  [[ "$(readlink -f "$FM_HOME/projects/$name")" == "$(readlink -f "$target")" ]] \
+    || die "$name project link points somewhere unexpected"
 }
 
 configure_home() {
-  [[ -d "$PILOT_PROJECT_PATH/.git" ]] || die "pilot project is not a Git checkout: $PILOT_PROJECT_PATH"
-  [[ -d "$INFRASTRUCTURE_PROJECT_PATH/.git" ]] \
-    || die "infrastructure project is not a Git checkout: $INFRASTRUCTURE_PROJECT_PATH"
+  local name source backing
   install -d -m 0700 "$FM_HOME" "$FM_HOME/config" "$FM_HOME/data" "$FM_HOME/state" "$FM_HOME/projects"
 
   write_default "$FM_HOME/config/backend" "herdr"
@@ -377,31 +481,34 @@ configure_home() {
   CHOSEN_HARNESS="$(fm_harness_choose "$FM_HOME")" \
     || die "could not choose Firstmate harness (claude or codex)"
 
-  if [[ -L "$FM_HOME/projects/$PILOT_PROJECT_NAME" ]] \
-    && [[ "$(readlink -f "$FM_HOME/projects/$PILOT_PROJECT_NAME")" == "$(readlink -f "$PILOT_SOURCE_PATH")" ]] \
-    && [[ "$(readlink -f "$PILOT_PROJECT_PATH")" != "$(readlink -f "$PILOT_SOURCE_PATH")" ]]; then
-    shopt -s nullglob
-    existing_meta=("$FM_HOME"/state/*.meta)
-    shopt -u nullglob
-    (( ${#existing_meta[@]} == 0 )) \
-      || die "cannot migrate the pilot project link while task metadata exists"
-    rm "$FM_HOME/projects/$PILOT_PROJECT_NAME"
-  fi
-  if [[ ! -e "$FM_HOME/projects/$PILOT_PROJECT_NAME" ]]; then
-    ln -s "$PILOT_PROJECT_PATH" "$FM_HOME/projects/$PILOT_PROJECT_NAME"
-  fi
-  [[ "$(readlink -f "$FM_HOME/projects/$PILOT_PROJECT_NAME")" == "$(readlink -f "$PILOT_PROJECT_PATH")" ]] \
-    || die "pilot project link points somewhere unexpected"
-  if [[ ! -e "$FM_HOME/projects/infrastructure" ]]; then
-    ln -s "$INFRASTRUCTURE_PROJECT_PATH" "$FM_HOME/projects/infrastructure"
-  fi
-  [[ "$(readlink -f "$FM_HOME/projects/infrastructure")" == "$(readlink -f "$INFRASTRUCTURE_PROJECT_PATH")" ]] \
-    || die "infrastructure project link points somewhere unexpected"
+  touch_default "$FM_HOME/data/projects.md"
 
-  write_default "$FM_HOME/data/projects.md" \
-    "- $PILOT_PROJECT_NAME [direct-PR] - RoE API pilot; validate committed branches through local-dev-env stage-worktree (added 2026-09-06)"
+  for name in "${APP_PROJECTS[@]}"; do
+    project_is_skipped "$name" && continue
+    backing="$(project_backing_path "$name")"
+    [[ -d "$backing/.git" ]] || die "$name project is not a Git checkout: $backing"
+    relink_project_to_backing "$name"
+    register_project_link "$name" "$backing"
+    append_project_default "$FM_HOME/data/projects.md" "$name" \
+      "- $name [direct-PR] - RoE application repository; validate committed branches through local-dev-env stage-worktree"
+  done
+
+  for name in "${DIRECT_PROJECTS[@]}"; do
+    source="$(project_source_path "$name")"
+    if [[ ! -d "$source/.git" ]]; then
+      SKIPPED_PROJECTS+=("$name")
+      printf 'skipping %s: no checkout at %s\n' "$name" "$source"
+      continue
+    fi
+    register_project_link "$name" "$source"
+  done
+
+  append_project_default "$FM_HOME/data/projects.md" ai-context \
+    "- ai-context [direct-PR] - shared RoE conventions, references, and architecture decision records"
   append_project_default "$FM_HOME/data/projects.md" infrastructure \
     "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
+  append_project_default "$FM_HOME/data/projects.md" local-dev-env \
+    "- local-dev-env [direct-PR] - Docker Compose orchestration and validation entry points for the local stack"
   write_default "$FM_HOME/data/backlog.md" $'## In flight\n\n## Queued\n\n## Done'
   touch_default "$FM_HOME/data/permission-needs.jsonl"
   write_default "$FM_HOME/data/captain.md" \
@@ -440,7 +547,7 @@ main() {
   install_firstmate_tools
   configure_harness_sandbox
   configure_git_credentials
-  configure_pilot_backing_clone
+  configure_backing_clones
   configure_home
 
   printf 'Firstmate pilot configured.\n'
@@ -453,6 +560,10 @@ main() {
   printf '  fm:        %s\n' "$HOME/.local/bin/fm"
   printf '  toggle:    %s on|off|status\n' "$HOME/.local/bin/fm-sandbox"
   printf '  ledger:    %s\n' "$FM_HOME/data/permission-needs.jsonl"
+  printf '  projects:  %s\n' "$(find "$FM_HOME/projects" -mindepth 1 -maxdepth 1 | wc -l | tr -d ' ')"
+  if (( ${#SKIPPED_PROJECTS[@]} )); then
+    printf '  skipped:   %s (no checkout under %s)\n' "${SKIPPED_PROJECTS[*]}" "$PROJECT_ROOT"
+  fi
   printf 'Run: fm --check\n'
 }
 

@@ -47,11 +47,23 @@ Team `local-dev-env` is not modified.
 Setup installs the reviewed Treehouse binary, keeps the tracked `treehouse`
 command as a fail-closed wrapper, pins the clean Firstmate clone, installs
 Firstmate's universal CLI dependencies, and initializes a private `FM_HOME`.
-The API uses a clean backing clone on the same Docker volume so Firstmate fleet
-synchronization never switches or fast-forwards the shared `/app` checkout.
-The separate `/workspace/repos/infrastructure` clone is also registered for
-Terraform, alarm, dashboard, and OTel scouting without moving the Tier 3
-`/workspace/infrastructure` checkout used by its own devcontainer.
+All eight RoE application repositories are registered, each through a clean
+backing clone on its own Docker volume, so Firstmate fleet synchronization never
+switches or fast-forwards the checkout a container serves at `/app`. The default
+branch is read from `origin` per repository rather than assumed, because the
+platform repos are on `master` and the shared repos on `main`. A repository with
+no checkout under `/workspace/repos` is skipped and named in the setup summary
+instead of failing the run, and a project is never registered without one.
+
+`ai-context`, `infrastructure`, and `local-dev-env` are registered as the
+checkout itself, since no container serves them. That covers Terraform, alarm,
+dashboard, and OTel scouting without moving the Tier 3 `/workspace/infrastructure`
+checkout used by its own devcontainer.
+
+Keep `APP_PROJECTS` in `scripts/setup-firstmate.sh` and the captain nono profiles
+in step. `tests/firstmate-nono-enforcement.test.sh` reads the setup list and
+asserts the profiles allow exactly those eight backing clones, so adding a repo
+to one place without the other fails the suite.
 
 Setup also installs the reviewed nono binary and RoE profiles, then places
 scoped `claude` and `codex` launchers on the personal PATH. Outside Firstmate
@@ -83,6 +95,32 @@ Codex need their subscription APIs. Domain-filtered nono proxy mode requires
 does not have. Do not add that capability or broaden the profile silently;
 review network brokering as a separate hardening change.
 
+### Second-mate homes need their projects relinked
+
+`fm-home-seed.sh` provisions a second mate's projects as independent clones
+*inside* the second-mate home, cloned from `origin`. Those paths are off the
+`/workspace/repos` volumes, so the Treehouse guard refuses `treehouse get`
+there with "project is off the RoE repository volumes". The worker pane never
+leaves the project directory and `fm-spawn.sh` then refuses the launch with
+"treehouse get did not enter an isolated worktree within 60s" — a timeout that
+reports the symptom, not the immediate refusal underneath it.
+
+Worker copies also have to live on the per-repo volumes to be servable at `/app`
+by `make stage-worktree`, so the fix is to register the same protected backing
+clones the primary home uses:
+
+```bash
+bash scripts/firstmate-secondmate-relink-projects.sh <secondmate-home>
+```
+
+Run it after every seed, and after adding a project to an existing second mate.
+It is idempotent, and `--dry-run` reports what it would change. A clone is only
+replaced when it can be proven to hold no unique work — clean worktree, no
+stashes, every local branch tracking an upstream it is not ahead of — and
+replaced clones are moved to a backup directory it names on exit, never deleted.
+It refuses any home without a `.fm-secondmate-home` marker, so it cannot strip
+the primary home's registrations.
+
 ### Spawning is blocked inside the sandbox
 
 nono applies `deny_credentials` as a required group, so the git and `gh`
@@ -107,7 +145,7 @@ So spawn remains blocked with the sandbox on until (2) is resolved upstream.
 `fm --check` does not exercise either path and passes regardless.
 
 Do not grant `$HOME/.config/gh` to a captain profile to work around it. That
-credential is push-capable across all six repos, `deny_credentials` cannot be
+credential is push-capable across every registered repository, `deny_credentials` cannot be
 dropped by a profile, and Landlock cannot express deny-within-allow on Linux, so
 the allow would override the guardrail rather than narrow it.
 
