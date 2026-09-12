@@ -86,7 +86,7 @@ touch "$SLOT/.env"
   cd "$SLOT"
   ROE_FIRSTMATE_NONO="$TMP/missing-nono" "$TMP/bin/codex" unsandboxed-worker
 ) 2>"$TMP/off-warning"
-[[ "$(cat "$FAKE_REAL_CALL")" == "real:unsandboxed-worker" ]]
+[[ "$(cat "$FAKE_REAL_CALL")" == "real:--sandbox danger-full-access unsandboxed-worker" ]]
 grep -F "Firstmate nono sandbox is OFF" "$TMP/off-warning" >/dev/null
 rm "$SLOT/.env"
 printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"

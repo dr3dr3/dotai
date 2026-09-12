@@ -48,11 +48,23 @@ fi
 
 SANDBOX_MODE="$(fm_sandbox_mode)" \
   || die "invalid sandbox mode in $FM_SANDBOX_MODE_FILE; run fm-sandbox on or off"
+
+# Codex's default workspace-write sandbox starts bubblewrap, but this
+# devcontainer cannot create the required unprivileged namespace. Select
+# Codex's no-inner-sandbox mode for every recognized Firstmate process. When
+# nono is on it remains the outer boundary; when nono is off this is the
+# explicitly requested unsandboxed pilot mode. Codex's approval policy remains
+# unchanged in both cases.
+HARNESS_ARGS=()
+if [[ "$HARNESS" == codex ]]; then
+  HARNESS_ARGS=(--sandbox danger-full-access)
+fi
+
 if [[ "$SANDBOX_MODE" == off ]]; then
   printf '\nWARNING: Firstmate nono sandbox is OFF; running %s %s unsandboxed.\n\n' \
     "$HARNESS" "$ROLE" >&2
   unset ROE_FIRSTMATE_CAPTAIN ROE_FIRSTMATE_SANDBOX_REQUIRED
-  exec "$REAL_HARNESS" "$@"
+  exec "$REAL_HARNESS" "${HARNESS_ARGS[@]}" "$@"
 fi
 
 if [[ "$ROLE" == worker ]]; then
@@ -78,16 +90,6 @@ PROFILE="roe-firstmate-${HARNESS}-${ROLE}"
 
 unset ROE_FIRSTMATE_CAPTAIN ROE_FIRSTMATE_SANDBOX_REQUIRED
 export NONO_NO_MIGRATE=1
-
-# nono is the reviewed outer filesystem/process boundary. Codex's default
-# workspace-write sandbox starts bubblewrap, but an unprivileged namespace
-# cannot be created from inside this devcontainer+nono nesting. Select Codex's
-# no-inner-sandbox mode while retaining its normal approval policy; nono still
-# confines both captain and worker processes.
-HARNESS_ARGS=()
-if [[ "$HARNESS" == codex ]]; then
-  HARNESS_ARGS=(--sandbox danger-full-access)
-fi
 
 exec "$NONO" run --profile "$PROFILE" --allow-cwd -- \
   "$REAL_HARNESS" "${HARNESS_ARGS[@]}" "$@"
