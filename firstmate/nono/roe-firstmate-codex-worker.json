@@ -1,0 +1,16 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-codex-worker",
+    "version": "1.0.0",
+    "description": "Codex worker confined to one Firstmate Treehouse worktree"
+  },
+  "workdir": {
+    "access": "readwrite"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/codex"
+    ]
+  }
+}

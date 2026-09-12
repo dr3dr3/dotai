@@ -1,0 +1,72 @@
+{
+  "meta": {
+    "name": "roe-firstmate-base",
+    "version": "1.0.0",
+    "description": "Shared fail-closed filesystem boundary for RoE Firstmate sessions"
+  },
+  "groups": {
+    "include": [
+      "git_config",
+      "node_runtime"
+    ]
+  },
+  "workdir": {
+    "access": "none"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.cache/roe-firstmate/tmp",
+      "/tmp"
+    ],
+    "read": [
+      "/usr/local/share/nvm",
+      "$HOME/.local/lib/roe-firstmate/treehouse",
+      "$HOME/.no-mistakes/bin/no-mistakes",
+      "/workspace/.ai/dotai/.worktrees/feat/firstmate-local-pilot/scripts/treehouse-firstmate-guard.sh"
+    ]
+  },
+  "security": {
+    "signal_mode": "isolated",
+    "process_info_mode": "isolated",
+    "ipc_mode": "shared_memory_only"
+  },
+  "network": {
+    "block": false
+  },
+  "environment": {
+    "allow_vars": [
+      "PATH",
+      "HOME",
+      "USER",
+      "LOGNAME",
+      "SHELL",
+      "TERM",
+      "COLORTERM",
+      "LANG",
+      "LANGUAGE",
+      "LC_*",
+      "TZ",
+      "TMPDIR",
+      "XDG_*",
+      "FM_*",
+      "HERDR_*",
+      "TREEHOUSE_ROOT",
+      "ROE_FIRSTMATE_*",
+      "ROE_TREEHOUSE_REAL",
+      "NO_COLOR",
+      "FORCE_COLOR"
+    ],
+    "deny_vars": [
+      "*_API_KEY",
+      "*_TOKEN",
+      "*_SECRET",
+      "AWS_*",
+      "AZURE_*",
+      "GOOGLE_*",
+      "GH_*",
+      "GITHUB_*",
+      "LINEAR_*",
+      "OP_*"
+    ]
+  }
+}

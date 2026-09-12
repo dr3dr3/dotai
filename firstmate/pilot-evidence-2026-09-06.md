@@ -1,0 +1,102 @@
+# Local Pilot Evidence — 2026-09-06
+
+## Environment
+
+- Firstmate: `51d2e8c902bb8785093969f8ba738c7355a283e0`
+- Treehouse: `2.3.0`
+- Herdr client/server: `0.8.2`, protocol `20`
+- Pilot project: `rock-of-eye-api`
+- Backing clone: API Docker volume, separate from `/app`
+
+## Passed
+
+- Clean upstream Firstmate clone remained unmodified at the reviewed pin.
+- `FM_HOME` was created separately at `/workspace/.firstmate-home`.
+- Firstmate's universal bootstrap toolchain passed after installing its current
+  axi dependencies.
+- Herdr created a named pilot session and a Firstmate worker endpoint.
+- Treehouse allocated a worktree beneath the backing clone's in-project pool,
+  not the backing primary and not the shared `/app` checkout.
+- The wrapper's automated tests rejected:
+  - two occupied/unavailable slots;
+  - a pool entry with primary-checkout filesystem identity;
+  - an off-pool worktree;
+  - a shared `vendor` symlink.
+- Closing the worker pane left task metadata and an untracked worktree marker
+  intact.
+- Normal teardown refused the dirty worktree and named the preservation
+  reason.
+- After deliberate removal of the test marker, teardown returned the slot and
+  removed the task record.
+- `stage-worktree` staged a committed branch SHA into `/app`.
+- A second branch was refused while the first staging lock was held.
+- `make exec-api ARGS="php artisan --version"` succeeded against the staged
+  checkout.
+- `make unstage` restored the prior checkout and released the lock.
+- The named pilot Herdr session and test-only validation branches/worktrees
+  were removed after verification.
+
+## Blocked acceptance cases
+
+Claude Code and Codex are installed but not authenticated in this
+devcontainer. Cursor Agent CLI and Grok CLI are not installed. Therefore:
+
+- no subscription-funded worker could complete a normal task;
+- two sequential workers using different real harnesses could not be proven;
+- branch creation and PR delivery by a real crew worker remain unproven.
+
+The unauthenticated Claude worker was still useful as a blocker test. It
+reached the subscription/API login selector in the Herdr pane, and the pane was
+recoverable. Herdr reported that selector as `idle`, while Firstmate reported
+the task as `working`; neither classified it as blocked. The earlier first-run
+theme selector had the same problem. This is a material supervision gap for a
+fresh or signed-out harness.
+
+Cleanup also warned that `lsof` was unavailable, so Firstmate could not use its
+process-group fallback during teardown. Cleanup still completed after the
+exact Herdr endpoint had already been removed, but `lsof` should be installed
+before another live pilot.
+
+## Rollout decision input
+
+Keep concurrency at one real worker. Do not authorize routine crew work until:
+
+1. the chosen local harness is authenticated interactively by the human;
+2. `lsof` is installed;
+3. one normal Claude task completes from branch creation through preserved
+   commit and serialized `/app` validation;
+4. one different authenticated harness repeats the sequential path;
+5. the login/theme prompt classification gap is either fixed upstream or
+   documented as a mandatory first-run preflight outside crew dispatch.
+
+## Decision
+
+Keep this as a bounded pilot:
+
+- do not expand local concurrency beyond one real worker;
+- do not add a distributed claim mechanism while v1 uses explicit captain
+  assignment and forbids in-flight plane migration;
+- do not authorize routine local dispatch until the five gates above pass;
+- allow the cloud control-plane PR to merge, but do not dispatch it until WIF
+  variables and the two bounded GitHub tokens are configured and a scout run
+  completes safely;
+- revisit upstream Firstmate prompt/blocker classification before broadening
+  local use.
+
+## Nono hardening addendum — 2026-09-11
+
+- Pinned nono `0.76.0`; release archives are checksum-verified per platform.
+- The local-dev-env devcontainer is native `aarch64`. An initial `x86_64`
+  probe produced a false negative under architecture translation; the corrected
+  native binary reports and enforces Landlock V6.
+- Live probes proved a sandboxed process can write its granted worktree while
+  reads and writes in a sibling directory fail.
+- Environment probes proved `FM_*` coordination state is retained while
+  ambient `GH_TOKEN` is removed.
+- Both a Codex worker path and the Codex captain path start through nono; an
+  ordinary Codex invocation outside Firstmate still passes through unchanged.
+- `fm --check --harness codex` passes with the nono kernel probe enabled.
+- Nono domain-proxy mode fails closed because this non-root container lacks
+  `CAP_SYS_PTRACE`. The first profile therefore leaves outbound networking open
+  for subscription API access; filtered egress remains a separate hardening
+  decision.

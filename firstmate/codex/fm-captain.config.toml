@@ -1,0 +1,15 @@
+hide_agent_reasoning = true
+model_reasoning_summary = "none"
+model_reasoning_effort = "low"
+model_verbosity = "low"
+personality = "pragmatic"
+file_opener = "cursor"
+
+[projects."/workspace/repos/infrastructure"]
+trust_level = "trusted"
+
+[tui]
+animations = false
+notifications = ["agent-turn-complete", "approval-requested"]
+notification_condition = "unfocused"
+alternate_screen = "never"

@@ -1,0 +1,29 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-codex-captain",
+    "version": "1.0.0",
+    "description": "Codex captain with read-only Firstmate source and private operational state"
+  },
+  "workdir": {
+    "access": "read"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/codex",
+      "/workspace/.firstmate-home",
+      "/workspace/repos/ai-context",
+      "/workspace/repos/infrastructure",
+      "/workspace/repos/local-dev-env",
+      "/workspace/repos/rock-of-eye-api/.treehouse/firstmate-backing/rock-of-eye-api",
+      "/workspace/repos/rock-of-eye-sso/.treehouse/firstmate-backing/rock-of-eye-sso",
+      "/workspace/repos/rock-of-eye-pms-core/.treehouse/firstmate-backing/rock-of-eye-pms-core",
+      "/workspace/repos/rock-of-eye-all-in-one-portal/.treehouse/firstmate-backing/rock-of-eye-all-in-one-portal",
+      "/workspace/repos/rock-of-eye-client-portal/.treehouse/firstmate-backing/rock-of-eye-client-portal",
+      "/workspace/repos/rock-of-eye-partner-portal/.treehouse/firstmate-backing/rock-of-eye-partner-portal"
+    ],
+    "read": [
+      "$HOME/.config/herdr"
+    ]
+  }
+}

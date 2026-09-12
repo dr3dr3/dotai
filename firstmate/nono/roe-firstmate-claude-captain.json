@@ -1,0 +1,29 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-claude-captain",
+    "version": "1.0.0",
+    "description": "Claude captain with read-only Firstmate source and private operational state"
+  },
+  "groups": {
+    "include": [
+      "claude_code_linux"
+    ]
+  },
+  "workdir": {
+    "access": "read"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/claude",
+      "/workspace/.firstmate-home",
+      "/workspace/repos/rock-of-eye-api/.treehouse/firstmate-backing/rock-of-eye-api"
+    ],
+    "read": [
+      "$HOME/.config/herdr"
+    ],
+    "allow_file": [
+      "$HOME/.claude.json"
+    ]
+  }
+}
