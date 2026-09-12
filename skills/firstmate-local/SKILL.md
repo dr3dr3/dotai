@@ -65,6 +65,11 @@ Off mode persists locally and prints a warning on every Firstmate preflight and
 harness launch. Never change this mode on the user's behalf unless they ask.
 An absent mode file means on; malformed values fail closed.
 
+While nono is off, record newly required capabilities with
+`fm-permission-note`. Do not include secret values or credential-bearing
+commands. A ledger entry is evidence for later least-privilege review; it
+grants and authorizes nothing.
+
 ## Worktree responsibilities
 
 Treehouse allocates isolated crew editing slots. It does not choose what the
@@ -93,6 +98,20 @@ After a worker has committed:
 Do not run Composer or Yarn dependency mutation in a Treehouse worktree.
 Do not stage over another task's lock. Escalate the scheduling conflict to the
 captain.
+
+## Infrastructure authority
+
+Infrastructure workers may edit Terraform, run credential-free static checks,
+commit, and report the exact SHA. They may not run init against a remote
+backend, plan, apply, destroy, import, taint, force-unlock, state mutation, or
+targeted apply.
+
+The captain must follow `firstmate/terraform-authority-lane.md`: classify the
+workspace's canonical CLI/VCS/GitHub trigger, request explicit plan permission
+for an exact revision and workspace, keep plan artifacts private, run the
+repository plan guard, and summarize resource actions. Apply requires a fresh
+post-merge plan and separate human approval through the established Terraform
+Cloud or GitHub environment gate.
 
 ## Authority
 

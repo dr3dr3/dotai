@@ -26,6 +26,8 @@ CODEX_PROFILE_SOURCE="$DOTAI_DIR/firstmate/codex"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
 SANDBOX_MODE_SCRIPT="$SCRIPT_DIR/firstmate-sandbox-mode.sh"
+PERMISSION_NOTE_SCRIPT="$SCRIPT_DIR/firstmate-permission-note.sh"
+PERMISSION_NOTE="$REAL_TREEHOUSE_DIR/permission-note"
 REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
 INSTALL_FIRSTMATE_TOOLS="${INSTALL_FIRSTMATE_TOOLS:-1}"
 CHOSEN_HARNESS=""
@@ -58,9 +60,25 @@ write_default() {
   fi
 }
 
+touch_default() {
+  local path="$1"
+  if [[ ! -e "$path" ]]; then
+    umask 077
+    : >"$path"
+  fi
+}
+
 append_project_default() {
   local path="$1" project="$2" value="$3"
   if ! grep -Fq -- "- $project [" "$path" 2>/dev/null; then
+    umask 077
+    printf '%s\n' "$value" >>"$path"
+  fi
+}
+
+append_default() {
+  local path="$1" value="$2"
+  if ! grep -Fqx -- "$value" "$path" 2>/dev/null; then
     umask 077
     printf '%s\n' "$value" >>"$path"
   fi
@@ -342,8 +360,15 @@ configure_home() {
   append_project_default "$FM_HOME/data/projects.md" infrastructure \
     "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
   write_default "$FM_HOME/data/backlog.md" $'## In flight\n\n## Queued\n\n## Done'
+  touch_default "$FM_HOME/data/permission-needs.jsonl"
   write_default "$FM_HOME/data/captain.md" \
-    $'- This is a bounded RoE pilot: no merge, deploy, release, migration, production-data, payment-state, or destructive authority.\n- Use Treehouse only for editing. Commit before asking the captain to serialize validation through local-dev-env stage-worktree.\n- Never run Composer or Yarn dependency mutation inside a Treehouse worktree.\n- Dispatch at most two local workers; stop on any worktree or staging invariant failure.'
+    $'- This is a bounded RoE pilot: no unapproved merge, deploy, release, migration, production-data, payment-state, or destructive authority.\n- Use Treehouse only for editing. Commit before asking the captain to serialize validation through local-dev-env stage-worktree.\n- Never run Composer or Yarn dependency mutation inside a Treehouse worktree.\n- Dispatch at most two local workers; stop on any worktree or staging invariant failure.'
+  append_default "$FM_HOME/data/captain.md" \
+    "- While nono is off, capture needed capabilities with fm-permission-note; a ledger entry grants and authorizes nothing."
+  append_default "$FM_HOME/data/captain.md" \
+    "- Infrastructure workers may edit, statically check, and commit Terraform, but never plan, apply, destroy, import, or mutate state."
+  append_default "$FM_HOME/data/captain.md" \
+    "- Terraform plan/apply must follow dotai's terraform-authority-lane.md: exact revision and workspace, explicit plan permission, fresh post-merge plan, then a separate human-approved apply through the repository's established gate."
 }
 
 main() {
@@ -359,11 +384,13 @@ main() {
   install_nono
   configure_nono_profiles
   configure_codex_profiles
-  chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT"
-  mkdir -p "$HOME/.local/bin"
+  chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT" "$PERMISSION_NOTE_SCRIPT"
+  mkdir -p "$REAL_TREEHOUSE_DIR" "$HOME/.local/bin"
+  install -m 0755 "$PERMISSION_NOTE_SCRIPT" "$PERMISSION_NOTE"
   ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
   ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
   ln -sfn "$SANDBOX_MODE_SCRIPT" "$HOME/.local/bin/fm-sandbox"
+  ln -sfn "$PERMISSION_NOTE" "$HOME/.local/bin/fm-permission-note"
   install_firstmate_tools
   configure_harness_sandbox
   configure_git_credentials
@@ -379,6 +406,7 @@ main() {
   printf '  nono:     %s (Landlock required)\n' "$("$NONO" --version)"
   printf '  fm:        %s\n' "$HOME/.local/bin/fm"
   printf '  toggle:    %s on|off|status\n' "$HOME/.local/bin/fm-sandbox"
+  printf '  ledger:    %s\n' "$FM_HOME/data/permission-needs.jsonl"
   printf 'Run: fm --check\n'
 }
 

@@ -24,9 +24,10 @@ if [[ "${1:-}" == --version ]]; then
   exit 0
 fi
 printf 'nono:%s\n' "$*" >"$FAKE_NONO_CALL"
-printf 'captain=%s required=%s\n' \
+printf 'captain=%s required=%s role=%s\n' \
   "${ROE_FIRSTMATE_CAPTAIN-unset}" \
-  "${ROE_FIRSTMATE_SANDBOX_REQUIRED-unset}" >>"$FAKE_NONO_CALL"
+  "${ROE_FIRSTMATE_SANDBOX_REQUIRED-unset}" \
+  "${ROE_FIRSTMATE_ROLE-unset}" >>"$FAKE_NONO_CALL"
 SH
 chmod 0755 "$TMP/fake-nono"
 ln -s "$WRAPPER" "$TMP/bin/codex"
@@ -105,7 +106,7 @@ touch "$SLOT/.env.example"
 )
 grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
-grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
+grep -F "captain=unset required=unset role=worker" "$FAKE_NONO_CALL" >/dev/null
 
 (
   cd /workspace/firstmate
@@ -114,6 +115,6 @@ grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
 )
 grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
-grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
+grep -F "captain=unset required=unset role=captain" "$FAKE_NONO_CALL" >/dev/null
 
 printf 'ok - Firstmate harness launches fail closed through nono\n'

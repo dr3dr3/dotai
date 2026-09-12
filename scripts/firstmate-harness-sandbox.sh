@@ -49,6 +49,10 @@ fi
 SANDBOX_MODE="$(fm_sandbox_mode)" \
   || die "invalid sandbox mode in $FM_SANDBOX_MODE_FILE; run fm-sandbox on or off"
 
+# This is provenance for permission-need records, not an authorization signal.
+# The nono profile remains the enforceable role boundary.
+export ROE_FIRSTMATE_ROLE="$ROLE"
+
 # Codex's default workspace-write sandbox starts bubblewrap, but this
 # devcontainer cannot create the required unprivileged namespace. Select
 # Codex's no-inner-sandbox mode for every recognized Firstmate process. Keep

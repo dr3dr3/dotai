@@ -128,6 +128,13 @@ print a warning, and the harness runs with full devcontainer access. Invalid
 values fail closed. Ordinary Claude/Codex sessions outside Firstmate remain
 unaffected in either mode.
 
+Use off-mode sessions to discover real permission needs, not to pre-authorize
+them. Record each logical capability with `fm-permission-note`; entries go to
+the private `FM_HOME/data/permission-needs.jsonl` ledger and grant nothing.
+Review related entries as a complete workflow before changing a nono profile,
+then add both an intended-operation test and an adjacent-denial test. See
+[`permissions.md`](permissions.md).
+
 The setup is idempotent. It does not overwrite existing local Firstmate
 configuration files and refuses a dirty or unexpected upstream clone.
 
@@ -160,6 +167,14 @@ make unstage REPO=rock-of-eye-api
 Only one branch per repository per local-dev-env instance can be staged. A
 second concurrently running branch requires the second local-dev-env instance.
 
+For infrastructure, workers edit, statically check, and commit in Treehouse but
+never receive plan/apply authority or cloud credentials. The captain classifies
+the workspace's canonical CLI/VCS/GitHub trigger, requests explicit permission
+for a plan of an exact commit, and summarizes the guarded result. Apply requires
+a fresh plan for the merged revision and a separate human approval through the
+existing Terraform Cloud or GitHub environment gate. See
+[`terraform-authority-lane.md`](terraform-authority-lane.md).
+
 ## Stop conditions
 
 Stop the pilot instead of bypassing a refusal if:
@@ -171,5 +186,5 @@ Stop the pilot instead of bypassing a refusal if:
 - a required guard would need a local Firstmate source patch;
 - Landlock or a pinned nono profile is unavailable;
 - a Treehouse checkout contains an untracked local `.env*` file;
-- a worker requests merge, deploy, migration, production-data, or destructive
-  authority.
+- a worker requests Terraform plan/apply, merge, deploy, migration,
+  production-data, or destructive authority.
