@@ -19,6 +19,9 @@
 
 set -euo pipefail
 
+# Personal shortcuts are enabled only inside devcontainers.
+python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/setup-agent-aliases.py"
+
 # -----------------------------------------------------------------------------
 # 1.  Claude Code CLI
 #     Official install: https://code.claude.com/docs/en/overview

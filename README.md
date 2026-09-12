@@ -354,3 +354,54 @@ A Skill is a Markdown file stored in `.claude/` or `.github/skills/`. Skills are
 3. Open a PR with a clear description of what changed and why
 4. At least one reviewer required
 
+
+### Personal devcontainer agent shortcuts
+
+`setup.sh` runs `scripts/setup-agent-aliases.py` to source
+`shell/devcontainer-agents.sh` from Bash and Zsh startup files, and install the Fish version into
+`$XDG_CONFIG_HOME/fish/conf.d/` (default `~/.config/fish/conf.d/`). Both installation
+and shell startup require `DEVCONTAINER=1`; host shells get no aliases.
+Plain `codex` and `claude` keep their existing defaults, including Firstmate launches.
+
+| Shortcut | Command |
+|---|---|
+| `cx` | `codex --sandbox danger-full-access --ask-for-approval on-request` |
+| `cc` | `claude --permission-mode default --settings '{"sandbox":{"enabled":false}}'` |
+
+`cx` disables Codex command isolation: commands use the container user's file,
+network, and Docker access. Codex can ask for approval when it judges that necessary;
+it does not ask for every command. This is broader access than `workspace-write`.
+
+`cc` disables Claude's sandbox for that session while retaining its normal
+permission checks and existing allow/ask/deny rules. Claude's permission model is
+not identical to Codex's on-request mode; it can prompt more often. It does not use
+`--dangerously-skip-permissions`. Managed policy may still enforce restrictions.
+See [Claude CLI options](https://code.claude.com/docs/en/cli-reference) and
+[sandbox settings](https://code.claude.com/docs/en/sandboxing).
+
+To install only the shortcuts in an existing devcontainer:
+
+```bash
+python3 /workspace/.ai/dotai/scripts/setup-agent-aliases.py
+```
+
+Then open a new terminal, or load the shortcuts in your current shell:
+
+```fish
+# Fish
+source /workspace/.ai/dotai/shell/devcontainer-agents.fish
+```
+
+```bash
+# Bash / Zsh
+source /workspace/.ai/dotai/shell/devcontainer-agents.sh
+```
+
+The tools must already be installed and on `PATH`. Extra arguments work normally,
+for example `cx resume` or `cc --continue`. In an interactive shell `cc` shadows the
+C compiler shortcut; use `command cc` for the compiler. Aliases do not change an
+already-running agent's permissions. To remove them from the current shell, use
+`unalias cx cc` in Bash/Zsh or `functions -e cx cc` in Fish. Remove the
+marked startup lines and Fish `conf.d/dotai-agent-aliases.fish` to stop loading them.
+
+Validate with `python3 tests/test_setup_agent_aliases.py`.
