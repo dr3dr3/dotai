@@ -46,10 +46,12 @@ Team `local-dev-env` is not modified.
 
 Setup installs the reviewed Treehouse binary, keeps the tracked `treehouse`
 command as a fail-closed wrapper, pins the clean Firstmate clone, installs
-Firstmate's universal CLI dependencies, and initializes a private `FM_HOME`
-with `rock-of-eye-api` as the single pilot project. It creates a clean backing
-clone on the same Docker volume so Firstmate fleet synchronization never
-switches or fast-forwards the shared `/app` checkout.
+Firstmate's universal CLI dependencies, and initializes a private `FM_HOME`.
+The API uses a clean backing clone on the same Docker volume so Firstmate fleet
+synchronization never switches or fast-forwards the shared `/app` checkout.
+The separate `/workspace/repos/infrastructure` clone is also registered for
+Terraform, alarm, dashboard, and OTel scouting without moving the Tier 3
+`/workspace/infrastructure` checkout used by its own devcontainer.
 
 Setup also installs the reviewed nono binary and RoE profiles, then places
 scoped `claude` and `codex` launchers on the personal PATH. Outside Firstmate
@@ -62,6 +64,14 @@ current Treehouse checkout and harness state. Neither receives the shared
 Ambient API keys, GitHub tokens, cloud credentials, and Linear/1Password
 variables are stripped. Local untracked `.env*` files make a worker launch fail
 closed.
+
+For Codex, setup installs role-specific `fm-captain` and `fm-worker` profiles.
+Both suppress reasoning presentation noise, use concise output, preserve
+scrollback, and notify on completed turns or approval requests only while the
+terminal is unfocused. The captain uses low reasoning effort for supervision;
+workers retain high reasoning effort for repository investigation and changes.
+The infrastructure project is explicitly trusted so Codex can load any future
+project-local `.codex/` layer there.
 
 `fm --check` executes nono's kernel probe and refuses to launch unless Landlock
 is enforceable. This environment currently reports Landlock V6 with filesystem,

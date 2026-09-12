@@ -86,7 +86,7 @@ touch "$SLOT/.env"
   cd "$SLOT"
   ROE_FIRSTMATE_NONO="$TMP/missing-nono" "$TMP/bin/codex" unsandboxed-worker
 ) 2>"$TMP/off-warning"
-[[ "$(cat "$FAKE_REAL_CALL")" == "real:--sandbox danger-full-access unsandboxed-worker" ]]
+[[ "$(cat "$FAKE_REAL_CALL")" == "real:--profile fm-worker --sandbox danger-full-access unsandboxed-worker" ]]
 grep -F "Firstmate nono sandbox is OFF" "$TMP/off-warning" >/dev/null
 rm "$SLOT/.env"
 printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
@@ -103,7 +103,7 @@ touch "$SLOT/.env.example"
   cd "$SLOT"
   ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/codex" worker-brief
 )
-grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --sandbox danger-full-access worker-brief" \
+grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
 
@@ -112,7 +112,7 @@ grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
   ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 \
     "$TMP/bin/codex" captain-brief
 )
-grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --sandbox danger-full-access captain-brief" \
+grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset" "$FAKE_NONO_CALL" >/dev/null
 

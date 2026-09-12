@@ -51,13 +51,15 @@ SANDBOX_MODE="$(fm_sandbox_mode)" \
 
 # Codex's default workspace-write sandbox starts bubblewrap, but this
 # devcontainer cannot create the required unprivileged namespace. Select
-# Codex's no-inner-sandbox mode for every recognized Firstmate process. When
-# nono is on it remains the outer boundary; when nono is off this is the
+# Codex's no-inner-sandbox mode for every recognized Firstmate process. Keep
+# captain reasoning economical while workers retain high reasoning effort;
+# both profiles suppress presentation noise and notify only when unfocused.
+# When nono is on it remains the outer boundary; when nono is off this is the
 # explicitly requested unsandboxed pilot mode. Codex's approval policy remains
 # unchanged in both cases.
 HARNESS_ARGS=()
 if [[ "$HARNESS" == codex ]]; then
-  HARNESS_ARGS=(--sandbox danger-full-access)
+  HARNESS_ARGS=(--profile "fm-$ROLE" --sandbox danger-full-access)
 fi
 
 if [[ "$SANDBOX_MODE" == off ]]; then

@@ -59,6 +59,13 @@ printf '[]\n' >"$STATUS_FILE"
 (
   cd "$TMP"
   "$GUARD" get
+) 2>"$TMP/no-fetch-warning"
+[[ "$(cat "$FAKE_CALL_FILE")" == "get --no-fetch" ]]
+grep -F "origin fetch skipped" "$TMP/no-fetch-warning" >/dev/null
+
+(
+  cd "$TMP"
+  ROE_FIRSTMATE_TREEHOUSE_FETCH=1 "$GUARD" get
 )
 [[ "$(cat "$FAKE_CALL_FILE")" == get ]]
 

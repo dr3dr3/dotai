@@ -15,12 +15,15 @@ FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
 PILOT_PROJECT_NAME="${PILOT_PROJECT_NAME:-rock-of-eye-api}"
 PILOT_SOURCE_PATH="${PILOT_SOURCE_PATH:-/workspace/repos/rock-of-eye-api}"
 PILOT_PROJECT_PATH="${PILOT_PROJECT_PATH:-$PILOT_SOURCE_PATH/.treehouse/firstmate-backing/$PILOT_PROJECT_NAME}"
+INFRASTRUCTURE_PROJECT_PATH="${INFRASTRUCTURE_PROJECT_PATH:-/workspace/repos/infrastructure}"
 REAL_TREEHOUSE_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
 REAL_TREEHOUSE="$REAL_TREEHOUSE_DIR/treehouse"
 TREEHOUSE_WRAPPER="$SCRIPT_DIR/treehouse-firstmate-guard.sh"
 NONO="$REAL_TREEHOUSE_DIR/nono"
 NONO_PROFILE_SOURCE="$DOTAI_DIR/firstmate/nono"
 NONO_PROFILE_DIR="${NONO_CONFIG_HOME:-$HOME/.config/nono}/profiles"
+CODEX_PROFILE_SOURCE="$DOTAI_DIR/firstmate/codex"
+CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
 SANDBOX_MODE_SCRIPT="$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
@@ -52,6 +55,14 @@ write_default() {
   if [[ ! -e "$path" ]]; then
     umask 077
     printf '%s\n' "$value" >"$path"
+  fi
+}
+
+append_default_line() {
+  local path="$1" value="$2"
+  if ! grep -Fxq "$value" "$path" 2>/dev/null; then
+    umask 077
+    printf '%s\n' "$value" >>"$path"
   fi
 }
 
@@ -170,6 +181,17 @@ configure_nono_profiles() {
   done
 }
 
+configure_codex_profiles() {
+  local profile
+  [[ -d "$CODEX_PROFILE_SOURCE" ]] || die "Codex profile source is missing"
+  install -d -m 0700 "$CODEX_HOME"
+  for profile in "$CODEX_PROFILE_SOURCE"/*.config.toml; do
+    python3 -c 'import sys, tomllib; tomllib.load(open(sys.argv[1], "rb"))' "$profile" \
+      || die "invalid Codex profile: $profile"
+    install -m 0600 "$profile" "$CODEX_HOME/$(basename "$profile")"
+  done
+}
+
 configure_harness_sandbox() {
   local harness current real
   chmod 0755 "$HARNESS_SANDBOX"
@@ -262,6 +284,8 @@ configure_pilot_backing_clone() {
 
 configure_home() {
   [[ -d "$PILOT_PROJECT_PATH/.git" ]] || die "pilot project is not a Git checkout: $PILOT_PROJECT_PATH"
+  [[ -d "$INFRASTRUCTURE_PROJECT_PATH/.git" ]] \
+    || die "infrastructure project is not a Git checkout: $INFRASTRUCTURE_PROJECT_PATH"
   install -d -m 0700 "$FM_HOME" "$FM_HOME/config" "$FM_HOME/data" "$FM_HOME/state" "$FM_HOME/projects"
 
   write_default "$FM_HOME/config/backend" "herdr"
@@ -285,9 +309,16 @@ configure_home() {
   fi
   [[ "$(readlink -f "$FM_HOME/projects/$PILOT_PROJECT_NAME")" == "$(readlink -f "$PILOT_PROJECT_PATH")" ]] \
     || die "pilot project link points somewhere unexpected"
+  if [[ ! -e "$FM_HOME/projects/infrastructure" ]]; then
+    ln -s "$INFRASTRUCTURE_PROJECT_PATH" "$FM_HOME/projects/infrastructure"
+  fi
+  [[ "$(readlink -f "$FM_HOME/projects/infrastructure")" == "$(readlink -f "$INFRASTRUCTURE_PROJECT_PATH")" ]] \
+    || die "infrastructure project link points somewhere unexpected"
 
   write_default "$FM_HOME/data/projects.md" \
     "- $PILOT_PROJECT_NAME [direct-PR] - RoE API pilot; validate committed branches through local-dev-env stage-worktree (added 2026-09-06)"
+  append_default_line "$FM_HOME/data/projects.md" \
+    "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
   write_default "$FM_HOME/data/backlog.md" $'## In flight\n\n## Queued\n\n## Done'
   write_default "$FM_HOME/data/captain.md" \
     $'- This is a bounded RoE pilot: no merge, deploy, release, migration, production-data, payment-state, or destructive authority.\n- Use Treehouse only for editing. Commit before asking the captain to serialize validation through local-dev-env stage-worktree.\n- Never run Composer or Yarn dependency mutation inside a Treehouse worktree.\n- Dispatch at most two local workers; stop on any worktree or staging invariant failure.'
@@ -303,6 +334,7 @@ configure_firstmate_clone
 install_treehouse
 install_nono
 configure_nono_profiles
+configure_codex_profiles
 chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT"
 mkdir -p "$HOME/.local/bin"
 ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
