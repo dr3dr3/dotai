@@ -219,9 +219,14 @@ configure_harness_sandbox() {
     if [[ -n "$candidate" ]]; then
       ln -sfn "$candidate" "$real"
     fi
-    [[ -x "$real" ]] || continue
-    is_harness_sandbox_launcher "$real" \
-      && die "could not resolve the real $harness executable behind an existing sandbox launcher"
+    if [[ ! -x "$real" ]] || is_harness_sandbox_launcher "$real"; then
+      rm -f "$real"
+      if [[ -e "$HOME/.local/bin/$harness" ]] \
+        && is_harness_sandbox_launcher "$HOME/.local/bin/$harness"; then
+        rm -f "$HOME/.local/bin/$harness"
+      fi
+      continue
+    fi
     ln -sfn "$HARNESS_SANDBOX" "$HOME/.local/bin/$harness"
   done
 }
