@@ -21,9 +21,12 @@
     "read": [
       "/usr/local/share/nvm",
       "$HOME/.local/lib/roe-firstmate/treehouse",
+      "$HOME/.local/lib/roe-firstmate/treehouse-guard",
       "$HOME/.local/lib/roe-firstmate/permission-note",
-      "$HOME/.no-mistakes/bin/no-mistakes",
-      "/workspace/.ai/dotai/.worktrees/feat/firstmate-local-pilot/scripts/treehouse-firstmate-guard.sh"
+      "$HOME/.local/lib/roe-firstmate/worker-guard-bin",
+      "$HOME/.local/lib/roe-firstmate/worker-terraform-guard",
+      "$HOME/.local/lib/roe-firstmate/toolchains",
+      "$HOME/.no-mistakes/bin/no-mistakes"
     ]
   },
   "security": {

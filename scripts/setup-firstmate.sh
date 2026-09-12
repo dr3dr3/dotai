@@ -19,6 +19,7 @@ INFRASTRUCTURE_PROJECT_PATH="${INFRASTRUCTURE_PROJECT_PATH:-/workspace/repos/inf
 REAL_TREEHOUSE_DIR="${ROE_TREEHOUSE_REAL_DIR:-$HOME/.local/lib/roe-firstmate}"
 REAL_TREEHOUSE="$REAL_TREEHOUSE_DIR/treehouse"
 TREEHOUSE_WRAPPER="$SCRIPT_DIR/treehouse-firstmate-guard.sh"
+TREEHOUSE_GUARD="$REAL_TREEHOUSE_DIR/treehouse-guard"
 NONO="$REAL_TREEHOUSE_DIR/nono"
 NONO_PROFILE_SOURCE="$DOTAI_DIR/firstmate/nono"
 NONO_PROFILE_DIR="${NONO_CONFIG_HOME:-$HOME/.config/nono}/profiles"
@@ -28,6 +29,9 @@ HARNESS_SANDBOX="$SCRIPT_DIR/firstmate-harness-sandbox.sh"
 SANDBOX_MODE_SCRIPT="$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 PERMISSION_NOTE_SCRIPT="$SCRIPT_DIR/firstmate-permission-note.sh"
 PERMISSION_NOTE="$REAL_TREEHOUSE_DIR/permission-note"
+WORKER_TERRAFORM_GUARD_SCRIPT="$SCRIPT_DIR/firstmate-worker-terraform-guard.sh"
+WORKER_GUARD_BIN="$REAL_TREEHOUSE_DIR/worker-guard-bin"
+REAL_TOOLCHAIN_DIR="$REAL_TREEHOUSE_DIR/toolchains"
 REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
 INSTALL_FIRSTMATE_TOOLS="${INSTALL_FIRSTMATE_TOOLS:-1}"
 CHOSEN_HARNESS=""
@@ -215,6 +219,12 @@ is_harness_sandbox_launcher() {
   [[ "$(basename "$(readlink -f "$path")")" == "firstmate-harness-sandbox.sh" ]]
 }
 
+is_worker_terraform_launcher() {
+  local path="$1" base
+  base="$(basename "$(readlink -f "$path")")"
+  [[ "$base" == "firstmate-worker-terraform-guard.sh" || "$base" == "worker-terraform-guard" ]]
+}
+
 resolve_real_harness() {
   local harness="$1" candidate
   while IFS= read -r candidate; do
@@ -224,6 +234,39 @@ resolve_real_harness() {
     return 0
   done < <(type -aP "$harness" 2>/dev/null | awk '!seen[$0]++')
   return 1
+}
+
+resolve_real_tool() {
+  local tool="$1" candidate
+  while IFS= read -r candidate; do
+    [[ -x "$candidate" ]] || continue
+    is_worker_terraform_launcher "$candidate" && continue
+    readlink -f "$candidate"
+    return 0
+  done < <(type -aP "$tool" 2>/dev/null | awk '!seen[$0]++')
+  return 1
+}
+
+configure_operational_launchers() {
+  local tool candidate real
+
+  install -d -m 0755 "$REAL_TREEHOUSE_DIR" "$WORKER_GUARD_BIN" "$REAL_TOOLCHAIN_DIR" "$HOME/.local/bin"
+  install -m 0755 "$TREEHOUSE_WRAPPER" "$TREEHOUSE_GUARD"
+  install -m 0755 "$PERMISSION_NOTE_SCRIPT" "$PERMISSION_NOTE"
+  install -m 0755 "$WORKER_TERRAFORM_GUARD_SCRIPT" "$REAL_TREEHOUSE_DIR/worker-terraform-guard"
+
+  ln -sfn "$TREEHOUSE_GUARD" "$HOME/.local/bin/treehouse"
+  ln -sfn "$PERMISSION_NOTE" "$HOME/.local/bin/fm-permission-note"
+  for tool in terraform tofu; do
+    real="$REAL_TOOLCHAIN_DIR/$tool"
+    candidate="$(resolve_real_tool "$tool" || true)"
+    if [[ -n "$candidate" ]]; then
+      ln -sfn "$candidate" "$real"
+    elif [[ -L "$real" && ! -e "$real" ]]; then
+      rm -f "$real"
+    fi
+    ln -sfn "$REAL_TREEHOUSE_DIR/worker-terraform-guard" "$WORKER_GUARD_BIN/$tool"
+  done
 }
 
 configure_harness_sandbox() {
@@ -369,6 +412,8 @@ configure_home() {
     "- Infrastructure workers may edit, statically check, and commit Terraform, but never plan, apply, destroy, import, or mutate state."
   append_default "$FM_HOME/data/captain.md" \
     "- Terraform plan/apply must follow dotai's terraform-authority-lane.md: exact revision and workspace, explicit plan permission, fresh post-merge plan, then a separate human-approved apply through the repository's established gate."
+  append_default "$FM_HOME/data/captain.md" \
+    "- Never plan from a worker checkout; CLI plans use a clean exact-SHA worktree on canonical /workspace/infrastructure tooling."
 }
 
 main() {
@@ -384,13 +429,14 @@ main() {
   install_nono
   configure_nono_profiles
   configure_codex_profiles
-  chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT" "$PERMISSION_NOTE_SCRIPT"
-  mkdir -p "$REAL_TREEHOUSE_DIR" "$HOME/.local/bin"
-  install -m 0755 "$PERMISSION_NOTE_SCRIPT" "$PERMISSION_NOTE"
-  ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
+  chmod 0755 \
+    "$TREEHOUSE_WRAPPER" \
+    "$SANDBOX_MODE_SCRIPT" \
+    "$PERMISSION_NOTE_SCRIPT" \
+    "$WORKER_TERRAFORM_GUARD_SCRIPT"
+  configure_operational_launchers
   ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
   ln -sfn "$SANDBOX_MODE_SCRIPT" "$HOME/.local/bin/fm-sandbox"
-  ln -sfn "$PERMISSION_NOTE" "$HOME/.local/bin/fm-permission-note"
   install_firstmate_tools
   configure_harness_sandbox
   configure_git_credentials

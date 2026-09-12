@@ -48,9 +48,17 @@ A broad instruction such as “do the Terraform work” is not apply approval.
 ## 3. Plan: exact revision, local artifact
 
 After explicit plan approval, use the canonical execution method for that
-workspace. A CLI-driven remote workspace may be planned from the clean
-Treehouse revision; VCS- and GitHub-driven workspaces must use their established
-PR/check workflow.
+workspace. Do not plan from the worker's `/workspace/repos/infrastructure`
+Treehouse checkout: the canonical infrastructure toolchain and operator
+credentials belong to the promoted `/workspace/infrastructure` volume and its
+infrastructure devcontainer.
+
+For a CLI-driven workspace, fetch the worker's committed revision into the
+canonical clone and use a clean detached worktree under
+`/workspace/infrastructure/.worktrees/` at that exact SHA. Do not switch or
+overwrite the canonical checkout's active branch. VCS- and GitHub-driven
+workspaces must use their established PR/check workflow, with checkout pinned
+to the reported SHA.
 
 For CLI plans:
 
@@ -109,6 +117,8 @@ Capture these as evidence while `nono` is off; do not pre-grant them:
 
 - captain read/write access to the exact infrastructure worktree and its local
   `.terraform`/plan artifacts;
+- captain/operator access to a clean exact-SHA worktree on the canonical
+  `/workspace/infrastructure` volume;
 - execution of the pinned Terraform toolchain;
 - network access to the Terraform Cloud API used by the selected workspace;
 - read access to a plan-capable Terraform CLI credential or broker;

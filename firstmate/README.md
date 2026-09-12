@@ -135,6 +135,13 @@ Review related entries as a complete workflow before changing a nono profile,
 then add both an intended-operation test and an adjacent-denial test. See
 [`permissions.md`](permissions.md).
 
+Worker harnesses prepend a Terraform/OpenTofu guard even while nono is off. It
+allows only formatting and version inspection and records/refuses plan or
+mutation attempts. This is an accidental-use tripwire, not containment:
+off-mode workers still have full devcontainer access and could address a real
+binary by absolute path. Keep cloud credentials out of workers and supervise
+off-mode sessions accordingly.
+
 The setup is idempotent. It does not overwrite existing local Firstmate
 configuration files and refuses a dirty or unexpected upstream clone.
 
@@ -170,9 +177,11 @@ second concurrently running branch requires the second local-dev-env instance.
 For infrastructure, workers edit, statically check, and commit in Treehouse but
 never receive plan/apply authority or cloud credentials. The captain classifies
 the workspace's canonical CLI/VCS/GitHub trigger, requests explicit permission
-for a plan of an exact commit, and summarizes the guarded result. Apply requires
-a fresh plan for the merged revision and a separate human approval through the
-existing Terraform Cloud or GitHub environment gate. See
+for a plan of an exact commit, and summarizes the guarded result. CLI plans run
+from a clean exact-SHA worktree on the canonical `/workspace/infrastructure`
+volume/toolchain, never from the worker checkout. Apply requires a fresh plan
+for the merged revision and a separate human approval through the existing
+Terraform Cloud or GitHub environment gate. See
 [`terraform-authority-lane.md`](terraform-authority-lane.md).
 
 ## Stop conditions
