@@ -192,19 +192,36 @@ configure_codex_profiles() {
   done
 }
 
+is_harness_sandbox_launcher() {
+  local path="$1"
+  [[ "$(basename "$(readlink -f "$path")")" == "firstmate-harness-sandbox.sh" ]]
+}
+
+resolve_real_harness() {
+  local harness="$1" candidate
+  while IFS= read -r candidate; do
+    [[ -x "$candidate" ]] || continue
+    is_harness_sandbox_launcher "$candidate" && continue
+    readlink -f "$candidate"
+    return 0
+  done < <(type -aP "$harness" 2>/dev/null | awk '!seen[$0]++')
+  return 1
+}
+
 configure_harness_sandbox() {
-  local harness current real
+  local harness candidate real
   chmod 0755 "$HARNESS_SANDBOX"
   install -d -m 0755 "$REAL_HARNESS_DIR" "$HOME/.local/bin"
 
   for harness in claude codex; do
     real="$REAL_HARNESS_DIR/$harness"
-    current="$(command -v "$harness" 2>/dev/null || true)"
-    if [[ -n "$current" ]] \
-      && [[ "$(readlink -f "$current")" != "$(readlink -f "$HARNESS_SANDBOX")" ]]; then
-      ln -sfn "$(readlink -f "$current")" "$real"
+    candidate="$(resolve_real_harness "$harness" || true)"
+    if [[ -n "$candidate" ]]; then
+      ln -sfn "$candidate" "$real"
     fi
     [[ -x "$real" ]] || continue
+    is_harness_sandbox_launcher "$real" \
+      && die "could not resolve the real $harness executable behind an existing sandbox launcher"
     ln -sfn "$HARNESS_SANDBOX" "$HOME/.local/bin/$harness"
   done
 }
@@ -324,35 +341,42 @@ configure_home() {
     $'- This is a bounded RoE pilot: no merge, deploy, release, migration, production-data, payment-state, or destructive authority.\n- Use Treehouse only for editing. Commit before asking the captain to serialize validation through local-dev-env stage-worktree.\n- Never run Composer or Yarn dependency mutation inside a Treehouse worktree.\n- Dispatch at most two local workers; stop on any worktree or staging invariant failure.'
 }
 
-command -v python3 >/dev/null 2>&1 || die "python3 is required"
-command -v herdr >/dev/null 2>&1 || die "Herdr is required; install it through personal dotfiles"
-herdr_version="$(herdr --version 2>&1)"
-version_at_least "$herdr_version" "$HERDR_MIN_VERSION" \
-  || die "Herdr $HERDR_MIN_VERSION or newer is required (found: $herdr_version)"
+main() {
+  local herdr_version
+  command -v python3 >/dev/null 2>&1 || die "python3 is required"
+  command -v herdr >/dev/null 2>&1 || die "Herdr is required; install it through personal dotfiles"
+  herdr_version="$(herdr --version 2>&1)"
+  version_at_least "$herdr_version" "$HERDR_MIN_VERSION" \
+    || die "Herdr $HERDR_MIN_VERSION or newer is required (found: $herdr_version)"
 
-configure_firstmate_clone
-install_treehouse
-install_nono
-configure_nono_profiles
-configure_codex_profiles
-chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT"
-mkdir -p "$HOME/.local/bin"
-ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
-ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
-ln -sfn "$SANDBOX_MODE_SCRIPT" "$HOME/.local/bin/fm-sandbox"
-install_firstmate_tools
-configure_harness_sandbox
-configure_git_credentials
-configure_pilot_backing_clone
-configure_home
+  configure_firstmate_clone
+  install_treehouse
+  install_nono
+  configure_nono_profiles
+  configure_codex_profiles
+  chmod 0755 "$TREEHOUSE_WRAPPER" "$SANDBOX_MODE_SCRIPT"
+  mkdir -p "$HOME/.local/bin"
+  ln -sfn "$TREEHOUSE_WRAPPER" "$HOME/.local/bin/treehouse"
+  ln -sfn "$SCRIPT_DIR/firstmate-local.sh" "$HOME/.local/bin/fm"
+  ln -sfn "$SANDBOX_MODE_SCRIPT" "$HOME/.local/bin/fm-sandbox"
+  install_firstmate_tools
+  configure_harness_sandbox
+  configure_git_credentials
+  configure_pilot_backing_clone
+  configure_home
 
-printf 'Firstmate pilot configured.\n'
-printf '  upstream: %s @ %s\n' "$FIRSTMATE_DIR" "$FIRSTMATE_COMMIT"
-printf '  FM_HOME:  %s\n' "$FM_HOME"
-printf '  backend:  herdr %s\n' "$herdr_version"
-printf '  harness:  %s (captain + crew)\n' "${CHOSEN_HARNESS:-unknown}"
-printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
-printf '  nono:     %s (Landlock required)\n' "$("$NONO" --version)"
-printf '  fm:        %s\n' "$HOME/.local/bin/fm"
-printf '  toggle:    %s on|off|status\n' "$HOME/.local/bin/fm-sandbox"
-printf 'Run: fm --check\n'
+  printf 'Firstmate pilot configured.\n'
+  printf '  upstream: %s @ %s\n' "$FIRSTMATE_DIR" "$FIRSTMATE_COMMIT"
+  printf '  FM_HOME:  %s\n' "$FM_HOME"
+  printf '  backend:  herdr %s\n' "$herdr_version"
+  printf '  harness:  %s (captain + crew)\n' "${CHOSEN_HARNESS:-unknown}"
+  printf '  treehouse: %s\n' "$("$HOME/.local/bin/treehouse" --version)"
+  printf '  nono:     %s (Landlock required)\n' "$("$NONO" --version)"
+  printf '  fm:        %s\n' "$HOME/.local/bin/fm"
+  printf '  toggle:    %s on|off|status\n' "$HOME/.local/bin/fm-sandbox"
+  printf 'Run: fm --check\n'
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
+fi
