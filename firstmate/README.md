@@ -91,8 +91,11 @@ fails on principle rather than on a real network fault. A spawn hits two such
 fetches:
 
 1. `treehouse get`, while it prepares the pool slot. `treehouse-firstmate-guard.sh`
-   handles this one: it adds `--no-fetch` and warns on stderr naming the commit
-   and date the worktree is cut from, so a stale base is a reported fact. Set
+   handles this one: it confines ordinary worker copies to repositories below
+   `/workspace/repos`, admits only durable named second-mate leases from the
+   exact `/workspace/firstmate` repository, places those leased homes in the
+   dedicated `/workspace/.firstmate-secondmates` pool, adds `--no-fetch`, and
+   warns on stderr naming the commit and date the copy is cut from. Set
    `ROE_FIRSTMATE_TREEHOUSE_FETCH=1` where credentials do exist.
 2. `freshen_spawn_worktree_base` in Firstmate's own `bin/fm-spawn.sh`, called
    *after* the slot has been handed out. At the reviewed pin this fetches
