@@ -20,8 +20,23 @@ These skills help you write, refactor, and fix code.
 
 ## Tooling & Setup
 
+- **[preview-markdown](preview-markdown/SKILL.md)** — Open a local Markdown file in Glow in a sibling Herdr pane, preserving the current focus. Requires Herdr and Glow on `PATH` and a session running inside Herdr. Ask “Write the plan to Markdown, then show it in Glow in a new pane” or invoke `$preview-markdown` with a file path. Select the preview pane to scroll and press `q` to exit; previews do not automatically refresh.
 - **setup-pre-commit** — Set up Husky pre-commit hooks with lint-staged, Prettier, type checking, and tests.
 - **git-guardrails-claude-code** — Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, etc.) before they execute.
+
+### Installing the Markdown preview skill for Codex
+
+The setup script links skills for Claude and Cursor. To install this skill for
+Codex, run from the dotai repository root:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+cp -R skills/preview-markdown "${CODEX_HOME:-$HOME/.codex}/skills/"
+```
+
+This copies the skill into your personal Codex skills directory. Re-run after
+pulling skill updates; it replaces the matching skill files. Start a new Codex
+session if an existing session does not discover it.
 
 ## Session Awareness
 
