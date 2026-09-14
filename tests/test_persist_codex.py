@@ -50,6 +50,15 @@ class PersistenceTest(unittest.TestCase):
             persist.main()
         self.assertFalse(self.source.is_symlink())
 
+    def test_snapshot_after_persistence(self):
+        self.target.mkdir()
+        (self.target / 'history.jsonl').write_text('persisted\n')
+        self.source.symlink_to(self.target, target_is_directory=True)
+        with patch('sys.argv', ['persist-codex.py', '--snapshot']):
+            persist.main()
+        snapshot = next((self.home / '.ai/backups').iterdir())
+        self.assertEqual((snapshot / 'history.jsonl').read_text(), 'persisted\n')
+
     def test_live_wal_snapshot_and_migration_guard(self):
         self.source.mkdir()
         db = sqlite3.connect(self.source / 'state.sqlite')

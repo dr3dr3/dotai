@@ -57,11 +57,8 @@ def main():
         return
     source = Path(os.environ.get("CODEX_HOME", str(home / ".codex"))).absolute()
     target = volume / "codex"
-    if source.resolve() == target.resolve():
-        print("Codex already uses the AI volume")
-        return
-    if source.is_symlink():
-        raise SystemExit(f"Custom Codex symlink preserved: {source}; configure its target persistence separately")
+    # Snapshot is valid for both normal and already-persisted Codex homes. Keep
+    # it ahead of the migration short-circuit so a symlinked source is backed up.
     if args.snapshot:
         if not source.is_dir():
             raise SystemExit("No Codex state to snapshot")
@@ -71,6 +68,11 @@ def main():
         copy_state(source, snapshot)
         print(f"Codex snapshot: {snapshot} (live files can continue changing)")
         return
+    if source.resolve() == target.resolve():
+        print("Codex already uses the AI volume")
+        return
+    if source.is_symlink():
+        raise SystemExit(f"Custom Codex symlink preserved: {source}; configure its target persistence separately")
     if source.exists():
         if active_writers(source):
             raise SystemExit("Codex has open files. Exit all Codex clients/app servers, then run python3 /workspace/.ai/dotai/scripts/persist-codex.py before rebuilding.")
