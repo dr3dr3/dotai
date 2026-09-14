@@ -522,15 +522,34 @@ if [ ! -f "$CODEX_CONFIG" ]; then
     echo "  ✓ wrote $CODEX_CONFIG"
   fi
 else
-  # Append only keys we own that are absent. Never clobber a hand-edited value.
+  # Add only keys we own that are absent from the TOML root table. TOML table
+  # headers change the meaning of following keys, so appending to an existing
+  # config can accidentally put these settings under (for example) [features].
   if [ -f "$CODEX_CONFIG_TEMPLATE" ]; then
-    if ! grep -qE '^[[:space:]]*project_doc_fallback_filenames[[:space:]]*=' "$CODEX_CONFIG"; then
-      echo 'project_doc_fallback_filenames = ["CLAUDE.md"]' >> "$CODEX_CONFIG"
-      echo "  ✓ appended project_doc_fallback_filenames"
-    fi
-    if ! grep -qE '^[[:space:]]*project_doc_max_bytes[[:space:]]*=' "$CODEX_CONFIG"; then
-      echo 'project_doc_max_bytes = 262144' >> "$CODEX_CONFIG"
-      echo "  ✓ appended project_doc_max_bytes"
+    CODEX_CONFIG_TMP="$(mktemp)"
+    awk '
+      BEGIN { in_root=1; have_fallback=0; have_max=0 }
+      /^\s*\[/ { in_root=0 }
+      in_root && /^\s*project_doc_fallback_filenames\s*=/ { have_fallback=1 }
+      in_root && /^\s*project_doc_max_bytes\s*=/ { have_max=1 }
+      !inserted && /^\s*\[/ {
+        if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
+        if (!have_max) print "project_doc_max_bytes = 262144"
+        inserted=1
+      }
+      { print }
+      END {
+        if (!inserted) {
+          if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
+          if (!have_max) print "project_doc_max_bytes = 262144"
+        }
+      }
+    ' "$CODEX_CONFIG" > "$CODEX_CONFIG_TMP"
+    if ! cmp -s "$CODEX_CONFIG" "$CODEX_CONFIG_TMP"; then
+      mv "$CODEX_CONFIG_TMP" "$CODEX_CONFIG"
+      echo "  ✓ ensured Codex project-doc settings at TOML root"
+    else
+      rm -f "$CODEX_CONFIG_TMP"
     fi
   fi
   echo "  → $CODEX_CONFIG already present — left existing keys as-is"
