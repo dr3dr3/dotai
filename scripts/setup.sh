@@ -52,6 +52,28 @@ for d in "$DEVEX_DIR/skills/"*/; do
   echo "  ✓ $name"
 done
 
+# ── Codex skills ─────────────────────────────────────────────────────────────
+# Codex reads ~/.codex/skills/<name>/SKILL.md — same format as Claude. Only
+# link when Codex is set up on this box, and leave alone anything that's not
+# ours (Codex's own .system skills, or a skill installed from elsewhere).
+
+if [ -d "$HOME/.codex" ]; then
+  CODEX_SKILLS_DIR="$HOME/.codex/skills"
+  mkdir -p "$CODEX_SKILLS_DIR"
+  echo ""
+  echo "→ Linking skills into $CODEX_SKILLS_DIR/ (read by Codex)"
+  for d in "$DEVEX_DIR/skills/"*/; do
+    [ -f "${d}SKILL.md" ] || continue
+    name="$(basename "$d")"
+    if [ -e "$CODEX_SKILLS_DIR/$name" ] && [ ! -L "$CODEX_SKILLS_DIR/$name" ]; then
+      echo "  → $name already exists (not a link) — skipped"
+      continue
+    fi
+    ln -sfn "${d%/}" "$CODEX_SKILLS_DIR/$name"
+    echo "  ✓ $name"
+  done
+fi
+
 # ── Global ~/.claude/CLAUDE.md ───────────────────────────────────────────────
 #
 # Claude Code loads ~/.claude/CLAUDE.md IN ADDITION to a repo's own CLAUDE.md,
