@@ -11,7 +11,10 @@ source "$DOTAI_DIR/firstmate/pins.env"
 source "$SCRIPT_DIR/firstmate-harness.sh"
 # shellcheck source=firstmate-sandbox-mode.sh
 source "$SCRIPT_DIR/firstmate-sandbox-mode.sh"
+# shellcheck source=firstmate-local-git.sh
+source "$SCRIPT_DIR/firstmate-local-git.sh"
 
+LOCAL_DEV_ENV_DIR="${LOCAL_DEV_ENV_DIR:-/workspace}"
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-/workspace/firstmate}"
 export FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
 export FM_BACKEND=herdr
@@ -80,6 +83,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+fm_personal_git_excludes_check "$LOCAL_DEV_ENV_DIR" \
+  || die "run setup-firstmate.sh to protect personal Firstmate paths"
 [[ -d "$FIRSTMATE_DIR/.git" ]] || die "Firstmate clone missing; run setup-firstmate.sh"
 [[ -d "$FM_HOME/config" && -d "$FM_HOME/data" && -d "$FM_HOME/state" ]] \
   || die "FM_HOME is not initialized; run setup-firstmate.sh"
