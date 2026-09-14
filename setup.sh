@@ -71,9 +71,8 @@ else
     # Pi Harness — self-extensible coding agent (earendil-works/pi).
     # Installed with --ignore-scripts per the vendor docs (https://pi.dev/docs).
     # Pi has NO built-in permission system, so running it inside the container
-    # is the intended sandbox. For local models, point it at the host Ollama via
-    # ~/.config/pi/models.json (OpenAI-compatible endpoint host.docker.internal
-    # :11434/v1) — see the cheat-sheet; cloud needs ANTHROPIC_API_KEY etc.
+    # is the intended sandbox. Model wiring (Vercel AI Gateway + host Ollama)
+    # is done by scripts/setup-pi.py below.
     if command -v pi &>/dev/null; then
         echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
     else
@@ -82,20 +81,15 @@ else
             && echo "✓ Pi installed"
     fi
 
-    # Wire Pi to the host Mac's native Ollama (reached via host.docker.internal in
-    # the devcontainer; OLLAMA_HOST is already set in devcontainer.json). Pi reads
-    # ~/.pi/agent/models.json; source of truth is the committed sandbox profile
-    # config. Install-if-missing so a hand-edited local config is never clobbered.
+    # Persist ~/.pi/agent on the ~/.ai volume, merge the committed providers
+    # (Vercel AI Gateway + the Ollama stub) into the live models.json, and store
+    # the gateway key from 1Password in auth.json. The Ollama MODEL LIST is not
+    # committed — generate it from the host's live API:
+    #   python3 /workspace/.ai/dotai/scripts/pi-ollama-models.py
     if command -v pi &>/dev/null; then
-        PI_MODELS_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/sandbox/profiles/config/pi/models.json"
-        PI_MODELS_DST="$HOME/.pi/agent/models.json"
-        if [ -f "$PI_MODELS_DST" ]; then
-            echo "✓ Pi model config already present at $PI_MODELS_DST — leaving as-is."
-        elif [ -f "$PI_MODELS_SRC" ]; then
-            mkdir -p "$(dirname "$PI_MODELS_DST")"
-            cp "$PI_MODELS_SRC" "$PI_MODELS_DST"
-            echo "✓ Staged Pi → Ollama model config at $PI_MODELS_DST"
-        fi
+        PI_SETUP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/setup-pi.py"
+        python3 "$PI_SETUP" \
+            || echo "⚠ Pi wiring failed (see above) — fix and re-run: python3 $PI_SETUP"
     fi
 fi
 

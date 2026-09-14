@@ -2,3 +2,6 @@
 # contains verbatim session/doc text). Config files are committed; state is not.
 mempalace/state/
 mempalace/**/seed.log
+
+# Python bytecode from running scripts/ directly
+__pycache__/
