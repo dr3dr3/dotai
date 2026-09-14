@@ -42,6 +42,32 @@ used a capability, not that a proposed path or credential grant is minimal.
 The strongest evidence is a reproducible denial with `nono` on, followed by a
 narrow grant and both positive and negative regression tests.
 
+## Local-stack Make commands
+
+Workers need selected `/workspace/Makefile` targets to validate committed work
+against the local stack. With the pilot sandbox off, those commands already run
+with the worker's full devcontainer access; no additional permission mechanism
+is involved.
+
+Do not grant workers general read-write access to `/workspace` to make this work
+with `nono` enabled. Targets such as `stage-worktree` and `unstage` intentionally
+change a shared application checkout and lock, while `make exec-*` reaches the
+shared Docker daemon. Worktree-only filesystem confinement cannot express that
+workflow safely by itself.
+
+Before enabling these commands under `nono`, add a broker that:
+
+1. allowlists the exact validation targets;
+2. binds the repository and branch to the worker's committed task branch;
+3. preserves the existing single-staged-branch lock and multi-instance routing;
+4. refuses dirty shared checkouts and unrelated Docker operations;
+5. always restores the prior checkout after validation; and
+6. has positive tests for the intended targets plus negative tests for arbitrary
+   Make targets, branch substitution, direct Docker access, and sibling writes.
+
+Until that broker exists, Firstmate or the captain runs the established
+`stage-worktree` → `exec-*` → `unstage` sequence after the worker commits.
+
 ## Authority is not an OS permission
 
 Being able to read a token, contact an API, or execute a binary does not

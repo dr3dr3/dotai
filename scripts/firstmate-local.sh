@@ -18,6 +18,8 @@ export FM_BACKEND=herdr
 export TREEHOUSE_ROOT=.
 export ROE_FIRSTMATE_MAX_SLOTS
 export ROE_FIRSTMATE_MAX_ACTIVE_TASKS
+export ROE_FIRSTMATE_MAX_SECOND_MATES
+export ROE_FIRSTMATE_SECOND_MATE_POOL_ROOT
 export ROE_TREEHOUSE_REAL="${ROE_TREEHOUSE_REAL:-$HOME/.local/lib/roe-firstmate/treehouse}"
 export PATH="$HOME/.local/bin:$PATH"
 # Firstmate's bounded-run helper creates its status files with mktemp, which
