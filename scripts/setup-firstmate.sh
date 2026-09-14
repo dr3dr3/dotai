@@ -503,12 +503,18 @@ configure_home() {
     register_project_link "$name" "$source"
   done
 
-  append_project_default "$FM_HOME/data/projects.md" ai-context \
-    "- ai-context [direct-PR] - shared RoE conventions, references, and architecture decision records"
-  append_project_default "$FM_HOME/data/projects.md" infrastructure \
-    "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
-  append_project_default "$FM_HOME/data/projects.md" local-dev-env \
-    "- local-dev-env [direct-PR] - Docker Compose orchestration and validation entry points for the local stack"
+  if [[ -d "$(project_source_path ai-context)/.git" ]]; then
+    append_project_default "$FM_HOME/data/projects.md" ai-context \
+      "- ai-context [direct-PR] - shared RoE conventions, references, and architecture decision records"
+  fi
+  if [[ -d "$(project_source_path infrastructure)/.git" ]]; then
+    append_project_default "$FM_HOME/data/projects.md" infrastructure \
+      "- infrastructure [direct-PR] - RoE Terraform, alarms, dashboards, and cloud platform configuration"
+  fi
+  if [[ -d "$(project_source_path local-dev-env)/.git" ]]; then
+    append_project_default "$FM_HOME/data/projects.md" local-dev-env \
+      "- local-dev-env [direct-PR] - Docker Compose orchestration and validation entry points for the local stack"
+  fi
   write_default "$FM_HOME/data/backlog.md" $'## In flight\n\n## Queued\n\n## Done'
   touch_default "$FM_HOME/data/permission-needs.jsonl"
   write_default "$FM_HOME/data/captain.md" \
