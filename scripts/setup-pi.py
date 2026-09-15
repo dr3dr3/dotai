@@ -11,10 +11,14 @@ Three idempotent steps, each safe to re-run:
    ``sandbox/profiles/config/pi/models.json`` into the live models.json.
    Provider-level fields are overwritten; ``models`` are upserted by id, so the
    generated Ollama list (scripts/pi-ollama-models.py) is never clobbered.
-3. Store the Vercel AI Gateway key in Pi's auth.json (0600) — from
-   ``AI_GATEWAY_API_KEY`` if set, else resolved from 1Password. A file beats an
-   env var here because the Firstmate nono profiles strip ``*_API_KEY`` from
-   worker environments. Skips gracefully when neither source is available.
+3. Store the Vercel AI Gateway key in Pi's auth.json (0600). Sources, in
+   order: ``AI_GATEWAY_API_KEY`` in the environment; local-dev-env's injected
+   tooling secrets (``~/.config/roe/tooling.env``, written by ``make tool-auth``
+   from ``env/tooling.template.env`` per ADR-2026-09-14-1 — the normal path in
+   the RoE devcontainer); a direct ``op read`` for machines with an in-container
+   1Password. A file beats an env var here because the Firstmate nono profiles
+   strip ``*_API_KEY`` from worker environments. Skips gracefully when no
+   source has it.
 """
 import argparse
 import os
@@ -31,7 +35,9 @@ DOTAI_DIR = Path(__file__).resolve().parent.parent
 COMMITTED_MODELS = DOTAI_DIR / "sandbox" / "profiles" / "config" / "pi" / "models.json"
 GATEWAY_PROVIDER = "vercel-ai-gateway"
 GATEWAY_ENV = "AI_GATEWAY_API_KEY"
-DEFAULT_OP_REF = "op://Employee/Vercel AI Gateway/credential"
+# Same reference local-dev-env's env/tooling.template.env declares for this key.
+DEFAULT_OP_REF = "op://ROE - CTO/Vercel AI Gateway/credential"
+DEFAULT_TOOLING_ENV = Path.home() / ".config" / "roe" / "tooling.env"
 DEFAULT_MODEL = ("vercel-ai-gateway", "deepseek/deepseek-v4.1-flash")
 
 
@@ -173,12 +179,30 @@ def seed_default_model(settings_path):
 # ---------------------------------------------------------------------------
 # 3. Gateway key → auth.json
 # ---------------------------------------------------------------------------
+def read_env_file_value(path, name):
+    """Value of ``name`` in a KEY=value file (last wins; quotes stripped), or None."""
+    if not path.is_file():
+        return None
+    value = None
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if line.startswith("export "):
+            line = line[len("export "):]
+        if line.startswith(f"{name}="):
+            value = line[len(name) + 1:].strip().strip("'\"")
+    return value or None
+
+
 def resolve_gateway_key(env=os.environ):
     key = env.get(GATEWAY_ENV, "").strip()
     if key:
         return key, f"${GATEWAY_ENV}"
+    tooling_env = Path(env.get("ROE_TOOLING_ENV", DEFAULT_TOOLING_ENV))
+    key = read_env_file_value(tooling_env, GATEWAY_ENV)
+    if key:
+        return key, f"{tooling_env} (make tool-auth)"
     if not shutil.which("op"):
-        return None, "op not installed"
+        return None, f"not in {tooling_env} and op not installed"
     ref = env.get("AI_GATEWAY_OP_REF", DEFAULT_OP_REF)
     account = env.get("OP_ACCOUNT", "my.1password.com")
     result = subprocess.run(
@@ -229,7 +253,8 @@ def main():
     key, source = resolve_gateway_key()
     if key is None:
         log(f"⚠ Vercel AI Gateway key not stored ({source}). Pi still works for Ollama;")
-        log(f"  set {GATEWAY_ENV} or put the key at {DEFAULT_OP_REF} and re-run.")
+        log(f"  in the RoE devcontainer run `make tool-auth` (needs {DEFAULT_OP_REF} readable),")
+        log(f"  or set {GATEWAY_ENV}, then re-run.")
         return
     if store_gateway_key(agent_dir / "auth.json", key):
         log(f"✓ Vercel AI Gateway key stored in {agent_dir / 'auth.json'} (from {source})")

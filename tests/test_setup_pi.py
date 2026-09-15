@@ -40,6 +40,7 @@ class SetupPiTest(unittest.TestCase):
         self.enterContext(patch.dict(os.environ, {'HOME': str(self.home), 'PI_SETUP_FORCE_VOLUME': '1'}, clear=False))
         for name in ('AI_GATEWAY_API_KEY', 'AI_GATEWAY_OP_REF', 'PI_CODING_AGENT_DIR'):
             os.environ.pop(name, None)
+        os.environ['ROE_TOOLING_ENV'] = str(self.home / '.config/roe/tooling.env')  # absent unless a test writes it
 
     def run_main(self, *extra):
         argv = ['setup-pi.py', '--agent-dir', str(self.agent), '--volume', str(self.volume), *extra]
@@ -169,6 +170,23 @@ class SetupPiTest(unittest.TestCase):
         self.assertEqual(auth['anthropic']['key'], 'keep')
         self.assertEqual(auth['vercel-ai-gateway']['key'], 'vck_test')
 
+    def test_gateway_key_from_local_dev_env_tooling_secrets(self):
+        # local-dev-env's `make tool-auth` writes ~/.config/roe/tooling.env (ADR-2026-09-14-1).
+        tooling = Path(os.environ['ROE_TOOLING_ENV'])
+        tooling.parent.mkdir(parents=True)
+        tooling.write_text('VERCEL_TOKEN=vt\nexport AI_GATEWAY_API_KEY="vck_tooling"\nOTHER=x\n')
+        with patch('shutil.which', return_value=None):  # op must not be needed
+            self.run_main()
+        self.assertEqual(json.loads((self.agent / 'auth.json').read_text())['vercel-ai-gateway']['key'], 'vck_tooling')
+
+    def test_env_var_beats_tooling_secrets(self):
+        tooling = Path(os.environ['ROE_TOOLING_ENV'])
+        tooling.parent.mkdir(parents=True)
+        tooling.write_text('AI_GATEWAY_API_KEY=vck_tooling\n')
+        os.environ['AI_GATEWAY_API_KEY'] = 'vck_env'
+        self.run_main()
+        self.assertEqual(json.loads((self.agent / 'auth.json').read_text())['vercel-ai-gateway']['key'], 'vck_env')
+
     def test_gateway_key_from_1password(self):
         fake_bin = self.home / 'bin'
         fake_bin.mkdir()
@@ -182,6 +200,9 @@ class SetupPiTest(unittest.TestCase):
         with patch('shutil.which', return_value=None):
             self.run_main()
         self.assertFalse((self.agent / 'auth.json').exists())
+
+    def test_default_op_ref_matches_local_dev_env_template(self):
+        self.assertEqual(setup_pi.DEFAULT_OP_REF, 'op://ROE - CTO/Vercel AI Gateway/credential')
 
 
 if __name__ == '__main__':

@@ -142,12 +142,16 @@ To add the same wiring to **another** project's devcontainer, drop this in its
      Pi's baked-in catalog). This is the default model.
    - `ollama` — a stub for the host Mac's native Ollama. **No model list is
      committed**; see below.
-3. **Stores the Vercel AI Gateway key** in `~/.pi/agent/auth.json` (0600), from
-   `AI_GATEWAY_API_KEY` if set, else from 1Password
-   (`op://Employee/Vercel AI Gateway/credential`; override with
-   `AI_GATEWAY_OP_REF`). A file rather than an env var because the Firstmate
-   nono profiles strip `*_API_KEY` from worker environments. Skips with a
-   warning when neither source is available.
+3. **Stores the Vercel AI Gateway key** in `~/.pi/agent/auth.json` (0600).
+   Sources, in order: `AI_GATEWAY_API_KEY` in the environment; local-dev-env's
+   injected tooling secrets at `~/.config/roe/tooling.env` (written by
+   `make tool-auth` from `env/tooling.template.env`, ADR-2026-09-14-1 — the
+   normal path in the RoE devcontainer); a direct `op read` of
+   `op://ROE - CTO/Vercel AI Gateway/credential` (override with
+   `AI_GATEWAY_OP_REF`) for machines with an in-container 1Password. A file
+   rather than an env var because the Firstmate nono profiles strip
+   `*_API_KEY` from worker environments. Skips with a warning when no source
+   has it.
 
 ### The Ollama model list is generated, not written
 
