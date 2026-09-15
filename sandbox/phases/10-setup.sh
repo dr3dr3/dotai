@@ -100,6 +100,7 @@ emit_ro() {  # emit_ro VAR_NAME
 # they spend against the provider). Without these, Claude Code / Codex can't run.
 emit_ro ANTHROPIC_API_KEY   # Claude Code / Claude-based agents
 emit_ro OPENAI_API_KEY      # Codex / OpenAI-based agents
+emit_ro AI_GATEWAY_API_KEY  # Pi via Vercel AI Gateway (profiles/config/pi/models.json)
 # Read-only integration tokens for research:
 emit_ro SENTRY_TOKEN        # scope: project:read, event:read
 emit_ro LINEAR_TOKEN        # RO-by-convention (see profiles/README — known caveat)

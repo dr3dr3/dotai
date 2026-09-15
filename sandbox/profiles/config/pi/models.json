@@ -1,17 +1,48 @@
 {
+  // Committed, non-secret Pi provider config. scripts/setup-pi.sh merges each
+  // provider below into the live ~/.pi/agent/models.json (persisted on the
+  // ~/.ai volume). Merge rule: provider-level fields here overwrite the live
+  // ones; "models" are upserted by id, and model entries that exist only in
+  // the live file — in particular the generated "ollama" list — are kept.
+  // Providers absent from this file are never touched.
+  //
+  // Pi strips comments before parsing (docs/custom-provider.md).
   "providers": {
+    // Vercel AI Gateway. Pi ships this provider built in (base URL, catalog,
+    // AI_GATEWAY_API_KEY / auth.json). Models here are upserted into that
+    // catalog, so the rest of the gateway catalog stays selectable via /model.
+    // The key is written to auth.json by scripts/setup-pi.sh (from 1Password).
+    "vercel-ai-gateway": {
+      "models": [
+        {
+          // Shipped on the gateway 2026-09-09; not yet in Pi 0.85's baked-in
+          // catalog. Fields mirror the built-in deepseek/deepseek-v4-flash entry.
+          // Pricing from vercel.com/ai-gateway/models/deepseek-v4.1-flash.
+          // cacheRead is not published for this model; 10% of input is
+          // DeepSeek's usual ratio and is only used for Pi's cost display.
+          "id": "deepseek/deepseek-v4.1-flash",
+          "name": "DeepSeek V4.1 Flash (Vercel AI Gateway)",
+          "reasoning": true,
+          "input": ["text", "image"],
+          "cost": { "input": 0.15, "output": 0.6, "cacheRead": 0.015, "cacheWrite": 0 },
+          "contextWindow": 1048576,
+          "maxTokens": 384000
+        }
+      ]
+    },
+    // Host Mac's native Ollama, reached over OrbStack's host.docker.internal.
+    // Deliberately NO model list here: hand-written tags go stale the moment a
+    // model is pulled or removed on the host. scripts/pi-ollama-models.sh
+    // generates the "models" array from the host's live /api/tags + /api/show
+    // and replaces this stub in the live file. Ollama ignores the dummy apiKey.
     "ollama": {
       "baseUrl": "http://host.docker.internal:11434/v1",
       "api": "openai-completions",
       "apiKey": "ollama",
       "compat": {
         "supportsDeveloperRole": false,
-        "supportsReasoningEffort": false
-      },
-      "models": [
-        { "id": "qwen3.5:35b-a3b-coding-nvfp4", "name": "Qwen3.5 35B Coding (local Ollama)" },
-        { "id": "gemma4:26b-mlx", "name": "Gemma4 26B (local Ollama)" }
-      ]
+        "supportsReasoningEffort": true
+      }
     }
   }
 }

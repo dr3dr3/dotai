@@ -125,6 +125,82 @@ To add the same wiring to **another** project's devcontainer, drop this in its
 
 ---
 
+## Pi harness: models and persistence
+
+`setup.sh` runs `scripts/setup-pi.py`, which does three idempotent things:
+
+1. **Persists `~/.pi/agent` on the `~/.ai` volume** (`~/.ai/pi`, symlinked back),
+   so `models.json`, `auth.json`, sessions and extensions survive a devcontainer
+   rebuild — the same treatment Codex gets from `persist-codex.py`. An existing
+   `~/.pi/agent` migrates onto the volume without overwriting anything already
+   there (colliding files are parked as `*.pre-persistence.<stamp>`).
+2. **Merges the committed providers** from `sandbox/profiles/config/pi/models.json`
+   into the live file. Provider-level fields overwrite; `models` are upserted by
+   id, so entries that exist only in the live file are kept. Committed today:
+   - `vercel-ai-gateway` — Pi's built-in provider, extended with
+     `deepseek/deepseek-v4.1-flash` (shipped on the gateway 2026-09-09, ahead of
+     Pi's baked-in catalog). This is the default model.
+   - `ollama` — a stub for the host Mac's native Ollama. **No model list is
+     committed**; see below.
+3. **Stores the Vercel AI Gateway key** in `~/.pi/agent/auth.json` (0600).
+   Sources, in order: `AI_GATEWAY_API_KEY` in the environment; local-dev-env's
+   injected tooling secrets at `~/.config/roe/tooling.env` (written by
+   `make tool-auth` from `env/tooling.template.env`, ADR-2026-09-14-1 — the
+   normal path in the RoE devcontainer); a direct `op read` of
+   `op://ROE - CTO/Vercel AI Gateway/credential` (override with
+   `AI_GATEWAY_OP_REF`) for machines with an in-container 1Password. A file
+   rather than an env var because the Firstmate nono profiles strip
+   `*_API_KEY` from worker environments. Skips with a warning when no source
+   has it.
+
+### The Ollama model list is generated, not written
+
+A hand-written tag list is stale the moment a model is pulled or removed on the
+host. Generate it from the host's live API instead — from inside the
+devcontainer, or from a host tab via `docker exec`:
+
+```bash
+python3 /workspace/.ai/dotai/scripts/pi-ollama-models.py          # in-container
+docker exec <devcontainer> python3 /workspace/.ai/dotai/scripts/pi-ollama-models.py   # from the Mac
+```
+
+Re-run after any `ollama pull` / `ollama rm`. It replaces only the `ollama`
+provider's `models`, keeps every other provider, backs the file up first, and
+refuses to touch a file that is not valid JSON. Per model it reads
+`/api/show` capabilities (`completion` required; `thinking` → reasoning,
+`vision` → image input) and **measures the served context window** by loading
+the model and reading `/api/ps` (~12 s per 27B model on this host). That is the
+number Pi compacts against; the architecture maximum is not what Ollama
+necessarily serves, and overstating it makes Ollama silently drop the front of
+the prompt — system prompt and tool schemas first — mid agent loop. `--no-probe`
+skips the load and falls back to Modelfile `num_ctx`, then
+`PI_OLLAMA_CONTEXT_LENGTH`, then a loud warning.
+
+Ollama is reached at `http://host.docker.internal:11434` (OrbStack forwards it
+to the host loopback). Leave Ollama on its default loopback bind — do not set
+`OLLAMA_HOST=0.0.0.0` on the Mac; that puts an unauthenticated inference server
+on the LAN.
+
+Measured on this host (re-measure before changing): `reasoning_effort` works and
+`none` yields zero reasoning tokens (`--thinking off`); Ollama ignores
+`chat_template_kwargs`, so `thinkingFormat: "qwen-chat-template"` must not be
+used even for Qwen tags. For agentic work prefer an `-mtp` tag over `-mlx`
+(~2.4× faster prefill, which dominates a tool-use loop).
+
+### Using it
+
+```bash
+pi                                                    # default: DeepSeek V4.1 Flash via the gateway
+pi --model ollama/qwen3.8:27b-mtp-q4_K_M --thinking off   # local, no reasoning tokens
+pi --list-models                                      # what Pi can see (needs credentials to list a provider)
+pi auth check --provider vercel-ai-gateway            # is the gateway key in place?
+```
+
+Validate with `python3 tests/test_setup_pi.py` and
+`python3 tests/test_pi_ollama_models.py`.
+
+---
+
 ## How it works
 
 Two setup scripts with distinct responsibilities:
@@ -136,7 +212,8 @@ Two setup scripts with distinct responsibilities:
 - **varlock** — resolves `op://` secret refs into the env at launch (npm)
 - **Pi Harness** (`@earendil-works/pi-coding-agent`) — self-extensible agent;
   installed `--ignore-scripts` per vendor docs. No built-in permission system,
-  so the container is its sandbox. Point it at host Ollama via `models.json`.
+  so the container is its sandbox. Model wiring is `scripts/setup-pi.py` — see
+  [Pi harness: models and persistence](#pi-harness-models-and-persistence).
 - **GitHub CLI** (`gh`) for PR workflows
 
 Herdr itself is terminal tooling and is installed/configured by the personal
