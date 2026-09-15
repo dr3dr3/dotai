@@ -15,6 +15,11 @@ REAL_DIR="${ROE_FIRSTMATE_REAL_HARNESS_DIR:-$HOME/.local/lib/roe-firstmate/harne
 REAL_HARNESS="$REAL_DIR/$HARNESS"
 PROFILE_DIR="${ROE_FIRSTMATE_NONO_PROFILE_DIR:-$HOME/.config/nono/profiles}"
 WORKER_GUARD_BIN="${ROE_FIRSTMATE_WORKER_GUARD_BIN:-$HOME/.local/lib/roe-firstmate/worker-guard-bin}"
+# Capability leases (ADR-2026-09-14-1 D6): the captain grants per slot with
+# fm-grant; the worker sandbox gets read-only access to exactly its own lease
+# directory and consumes it through the roe-lease shim on worker-guard-bin.
+LEASE_ROOT="${ROE_FIRSTMATE_LEASE_ROOT:-$HOME/.cache/roe-firstmate/leases}"
+GRANT_BIN="${ROE_FIRSTMATE_GRANT_BIN:-$HOME/.local/bin/fm-grant}"
 ROLE=""
 
 die() {
@@ -59,6 +64,27 @@ if [[ "$ROLE" == worker ]]; then
   export PATH="$WORKER_GUARD_BIN:$PATH"
 fi
 
+# Worker leases: derive the slot id the same way fm-grant / roe-lease do, grant
+# the profile's default (read-only) capabilities if the captain-side tooling
+# can, and expose exactly this slot's lease directory to the sandbox.
+NONO_LEASE_ARGS=()
+if [[ "$ROLE" == worker ]]; then
+  # Same derivation as fm-grant / roe-lease — the three must agree byte for byte.
+  slot="$(pwd -P)"; slot="${slot#/workspace/}"; slot="${slot%/workspace}"
+  slot="${slot//\/.treehouse\//--}"; slot="${slot/#.treehouse\//local-dev-env--}"
+  slot="${slot//\//--}"; SLOT_ID="${slot//./_}"
+  if [[ -x "$GRANT_BIN" && "${ROE_FIRSTMATE_AUTO_LEASES:-1}" == 1 ]]; then
+    # Non-fatal by design: an empty vault or a missing service-account token
+    # must not stop a worker from starting; it just starts without leases and
+    # roe-lease says so on first use.
+    "$GRANT_BIN" --slot "$(pwd -P)" --task "${FM_TASK_ID:-${FM_TASK:-unassigned}}" --defaults \
+      || printf 'warning: default capability leases were not all granted (see above); the worker starts without them.\n' >&2
+  fi
+  if [[ -d "$LEASE_ROOT/$SLOT_ID" ]]; then
+    NONO_LEASE_ARGS=(--read "$LEASE_ROOT/$SLOT_ID")
+  fi
+fi
+
 # Codex's default workspace-write sandbox starts bubblewrap, but this
 # devcontainer cannot create the required unprivileged namespace. Select
 # Codex's no-inner-sandbox mode for every recognized Firstmate process. Keep
@@ -70,6 +96,15 @@ fi
 HARNESS_ARGS=()
 if [[ "$HARNESS" == codex ]]; then
   HARNESS_ARGS=(--profile "fm-$ROLE" --sandbox danger-full-access)
+fi
+# A Claude WORKER must not load the captain's user-level MCP servers: the
+# worker profile has to allow ~/.claude.json (Claude Code's own state), and
+# that file also carries the person's Linear/Notion OAuth grants — a worker
+# acting as the captain through MCP is precisely the identity leak leases
+# exist to close. --strict-mcp-config makes Claude ignore every MCP config
+# except one passed explicitly, which a worker launch never passes.
+if [[ "$HARNESS" == claude && "$ROLE" == worker ]]; then
+  HARNESS_ARGS=(--strict-mcp-config)
 fi
 
 if [[ "$SANDBOX_MODE" == off ]]; then
@@ -103,5 +138,5 @@ PROFILE="roe-firstmate-${HARNESS}-${ROLE}"
 unset ROE_FIRSTMATE_CAPTAIN ROE_FIRSTMATE_SANDBOX_REQUIRED
 export NONO_NO_MIGRATE=1
 
-exec "$NONO" run --profile "$PROFILE" --allow-cwd -- \
+exec "$NONO" run --profile "$PROFILE" --allow-cwd "${NONO_LEASE_ARGS[@]}" -- \
   "$REAL_HARNESS" "${HARNESS_ARGS[@]}" "$@"

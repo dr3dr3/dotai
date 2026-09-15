@@ -53,7 +53,48 @@ they apply the matching nono profile. The captain receives read-only Firstmate
 source plus writable private state and the operational backing clone needed by
 Treehouse; a worker receives only its current worktree plus harness state.
 Neither receives `/app`. The launcher strips ambient credential variables and
-refuses a worker checkout containing an untracked `.env*` file.
+refuses a worker checkout containing an untracked `.env*` file. A Claude
+worker is launched with `--strict-mcp-config`, so it never loads the captain's
+user-level MCP servers (whose OAuth grants would make it act as the captain).
+
+## Capability leases
+
+Workers never hold a person's credentials (ADR-2026-09-14-1 D6). External
+access is a **lease**: a bot credential from the 1Password vault
+`ROE - AI Agents`, granted per slot with an expiry, consumed through one shim,
+every use logged. The catalogue of capabilities and which are granted at
+launch is `ai-devex/firstmate/authority-profiles.json` (`capabilities`,
+`lease_only`).
+
+Captain side (a human shell, not a worker):
+
+```bash
+fm-grant --slot <slot-path> --task <task-id> --defaults      # read_sentry, read_linear, read_aws_staging
+fm-grant --slot <slot-path> --task <task-id> --cap write_linear_comment --ttl 3600
+fm-grant --slot <slot-path> --status                         # leases, expiry, use counts
+fm-grant --slot <slot-path> --revoke [--cap <cap>]           # immediate
+```
+
+The default (read-only) set is granted automatically when a worker launches,
+if the crew service-account token (`ROE_AI_AGENTS_OP_TOKEN`, a cto-tier row of
+`make tool-auth`) is available; a failed default grant warns and the worker
+starts without leases. Anything in `lease_only` — every write — needs an
+explicit `fm-grant`, which is a captain decision.
+
+Worker side — the only way a lease becomes a credential:
+
+```bash
+roe-lease --list
+roe-lease read_sentry -- sentry issues list --project rock-of-eye-api-prod
+roe-lease read_aws_staging -- aws logs tail /roe/staging/api --since 1h
+```
+
+`roe-lease` execs the command with only that capability's variables set and
+appends `{time, cap, argv[0]}` to the slot's use log. A missing or expired
+lease is a hard stop that names the `fm-grant` command; the worker cannot
+widen it. Do not paste a value out of a lease file, and do not try to reach a
+credential any other way — the sandbox denies `*_TOKEN`, `*_API_KEY`, `AWS_*`,
+`LINEAR_*`, `OP_*` by name for exactly this reason.
 
 Outbound networking remains open for subscription API access. Do not claim
 domain-filtered egress: nono proxy mode requires `CAP_SYS_PTRACE`, which the
@@ -123,7 +164,8 @@ workflow instead.
 ## Authority
 
 Workers may investigate, commit scoped changes, validate, and open pull
-requests. They may not merge, deploy, cut tags, run migrations against
+requests, and may use external services only through a capability lease
+(above). They may not merge, deploy, cut tags, run migrations against
 production, access production tenant/payment data, perform destructive
 operations, or widen their own permissions.
 

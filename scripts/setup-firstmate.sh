@@ -49,6 +49,8 @@ SANDBOX_MODE_SCRIPT="$SCRIPT_DIR/firstmate-sandbox-mode.sh"
 PERMISSION_NOTE_SCRIPT="$SCRIPT_DIR/firstmate-permission-note.sh"
 PERMISSION_NOTE="$REAL_TREEHOUSE_DIR/permission-note"
 WORKER_TERRAFORM_GUARD_SCRIPT="$SCRIPT_DIR/firstmate-worker-terraform-guard.sh"
+LEASE_SHIM_SCRIPT="$SCRIPT_DIR/firstmate-lease.sh"
+GRANT_SCRIPT="$SCRIPT_DIR/firstmate-grant.sh"
 WORKER_GUARD_BIN="$REAL_TREEHOUSE_DIR/worker-guard-bin"
 REAL_TOOLCHAIN_DIR="$REAL_TREEHOUSE_DIR/toolchains"
 REAL_HARNESS_DIR="$REAL_TREEHOUSE_DIR/harnesses"
@@ -276,6 +278,16 @@ configure_operational_launchers() {
 
   ln -sfn "$TREEHOUSE_GUARD" "$HOME/.local/bin/treehouse"
   ln -sfn "$PERMISSION_NOTE" "$HOME/.local/bin/fm-permission-note"
+
+  # Capability leases (ADR-2026-09-14-1 D6). The worker shim is installed as a
+  # real copy under lib/ (the base nono profile allows reading it there — a
+  # symlink into the dotai checkout would not resolve inside the sandbox) and
+  # put on the worker PATH via worker-guard-bin. fm-grant is captain-side only.
+  install -m 0755 "$LEASE_SHIM_SCRIPT" "$REAL_TREEHOUSE_DIR/lease"
+  install -m 0755 "$GRANT_SCRIPT" "$REAL_TREEHOUSE_DIR/grant"
+  ln -sfn "$REAL_TREEHOUSE_DIR/lease" "$WORKER_GUARD_BIN/roe-lease"
+  ln -sfn "$REAL_TREEHOUSE_DIR/grant" "$HOME/.local/bin/fm-grant"
+  install -d -m 0700 "$HOME/.cache/roe-firstmate/leases"
   for tool in terraform tofu; do
     real="$REAL_TOOLCHAIN_DIR/$tool"
     candidate="$(resolve_real_tool "$tool" || true)"
