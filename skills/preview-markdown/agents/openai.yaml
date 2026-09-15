@@ -1,0 +1,4 @@
+interface:
+  display_name: "Preview Markdown"
+  short_description: "Open Markdown in Glow beside your Herdr session"
+  default_prompt: "Use $preview-markdown to show this Markdown file in a new Herdr pane using Glow."
