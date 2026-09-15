@@ -1,6 +1,19 @@
 ---
 name: wip-tracker
-description: Track work-in-progress across multiple concurrent AI coding sessions (Claude Code / Copilot / Cursor). Maintains a per-session index of PRs, their live status, and deploy status, and tells you which session/window to return to. Use when the user asks "what am I working on", "what's my WIP", "which sessions are open", "what PRs are still open", "register this session", "register or update this session", "track this PR", "is this session tracked", "what needs my attention", "continue the WIP for X here", "pick up a prior session's work in this fresh session", "clean up my WIP", "triage the board", "help me focus / what should I pick up", or wants to resume unfinished work across parallel sessions that this board already tracks. Also fires on the user's daily shorthand: "my wip" (show the board), "track this" (register/update this session), "track PR #NNN" (attach a PR), "update wip"/"sync my wip" (full mid-work sync of this session), "park it — <next step>" (leave a handoff note via set --next), "pick up <name>" (handoff into this session), "tidy my wip" (cleanup + focus triage), "wip cheatsheet" (print the daily-prompts card). Resuming work that is NOT on the board — never registered, registered on another machine, or named only by topic ("pick up our work on observability tooling", "we lost that session") — is the pick-up skill's job, not this one's: it searches sessions/branches/PRs/Linear for the work, then hands it back here to register.
+description: >-
+  Track work-in-progress across multiple concurrent AI coding sessions (Claude Code /
+  Copilot / Cursor). Keeps a per-session index of PRs with live and deploy status, and
+  says which session/window to return to. Use when the user asks "what am I working
+  on", "what's my WIP", "which sessions are open", "what PRs are still open",
+  "register this session", "track this PR", "is this session tracked", "what needs my
+  attention", "continue the WIP for X here", "pick up a prior session here", "clean up
+  my WIP", "triage the board", "help me focus / what should I pick up", or wants to
+  resume unfinished work across parallel sessions this board already tracks. Also
+  fires on the daily shorthand - "my wip", "track this", "track PR #NNN", "update
+  wip", "sync my wip", "park it - <next step>", "pick up <name>", "tidy my wip", "wip
+  cheatsheet". Work NOT on the board - never registered, on another machine, or named
+  only by topic ("we lost that session") - is the pick-up skill's job; it hands back
+  here to register.
 ---
 
 # WIP Tracker
