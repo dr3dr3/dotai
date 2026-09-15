@@ -1,0 +1,20 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-pi-worker",
+    "version": "1.0.0",
+    "description": "Pi worker confined to one Firstmate Treehouse worktree, plus the Pi busy-state contract paths"
+  },
+  "workdir": {
+    "access": "readwrite"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/pi",
+      "/workspace/.firstmate-home/state"
+    ],
+    "read": [
+      "/workspace/firstmate"
+    ]
+  }
+}

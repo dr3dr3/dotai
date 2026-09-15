@@ -293,7 +293,7 @@ configure_harness_sandbox() {
   chmod 0755 "$HARNESS_SANDBOX"
   install -d -m 0755 "$REAL_HARNESS_DIR" "$HOME/.local/bin"
 
-  for harness in claude codex; do
+  for harness in claude codex pi; do
     real="$REAL_HARNESS_DIR/$harness"
     candidate="$(resolve_real_harness "$harness" || true)"
     if [[ -n "$candidate" ]]; then
@@ -479,7 +479,7 @@ configure_home() {
   write_default "$FM_HOME/config/herdr-presentation-spaces" "on"
   write_default "$FM_HOME/config/backlog-backend" "manual"
   CHOSEN_HARNESS="$(fm_harness_choose "$FM_HOME")" \
-    || die "could not choose Firstmate harness (claude or codex)"
+    || die "could not choose Firstmate harness (claude, codex or pi)"
 
   touch_default "$FM_HOME/data/projects.md"
 

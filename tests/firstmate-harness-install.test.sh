@@ -11,7 +11,8 @@ mkdir -p "$TMP/old/scripts" "$TMP/system/bin" "$TMP/new/scripts" "$TMP/real" "$T
 for path in \
   "$TMP/old/scripts/firstmate-harness-sandbox.sh" \
   "$TMP/new/scripts/firstmate-harness-sandbox.sh" \
-  "$TMP/system/bin/codex"; do
+  "$TMP/system/bin/codex" \
+  "$TMP/system/bin/pi"; do
   printf '#!/usr/bin/env bash\nexit 0\n' >"$path"
   chmod 0755 "$path"
 done
@@ -32,6 +33,8 @@ configure_harness_sandbox
 
 [[ "$(readlink -f "$REAL_HARNESS_DIR/codex")" == "$TMP/system/bin/codex" ]]
 [[ "$(readlink -f "$HOME/.local/bin/codex")" == "$HARNESS_SANDBOX" ]]
+[[ "$(readlink -f "$REAL_HARNESS_DIR/pi")" == "$TMP/system/bin/pi" ]]
+[[ "$(readlink -f "$HOME/.local/bin/pi")" == "$HARNESS_SANDBOX" ]]
 [[ ! -e "$REAL_HARNESS_DIR/claude" ]]
 [[ ! -e "$HOME/.local/bin/claude" ]]
 

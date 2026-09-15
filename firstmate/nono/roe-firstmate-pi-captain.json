@@ -1,0 +1,32 @@
+{
+  "extends": "roe-firstmate-base",
+  "meta": {
+    "name": "roe-firstmate-pi-captain",
+    "version": "1.0.0",
+    "description": "Pi captain with read-only Firstmate source and private operational state"
+  },
+  "workdir": {
+    "access": "read"
+  },
+  "filesystem": {
+    "allow": [
+      "$HOME/.ai/pi",
+      "/workspace/.firstmate-home",
+      "/workspace/.firstmate-secondmates",
+      "/workspace/repos/ai-context",
+      "/workspace/repos/infrastructure",
+      "/workspace/repos/local-dev-env",
+      "/workspace/repos/rock-of-eye-api/.treehouse/firstmate-backing/rock-of-eye-api",
+      "/workspace/repos/rock-of-eye-sso/.treehouse/firstmate-backing/rock-of-eye-sso",
+      "/workspace/repos/rock-of-eye-pms-core/.treehouse/firstmate-backing/rock-of-eye-pms-core",
+      "/workspace/repos/rock-of-eye-all-in-one-portal/.treehouse/firstmate-backing/rock-of-eye-all-in-one-portal",
+      "/workspace/repos/rock-of-eye-client-portal/.treehouse/firstmate-backing/rock-of-eye-client-portal",
+      "/workspace/repos/rock-of-eye-partner-portal/.treehouse/firstmate-backing/rock-of-eye-partner-portal",
+      "/workspace/repos/rock-of-eye-production-core/.treehouse/firstmate-backing/rock-of-eye-production-core",
+      "/workspace/repos/rock-of-eye-production-portal/.treehouse/firstmate-backing/rock-of-eye-production-portal"
+    ],
+    "read": [
+      "$HOME/.config/herdr"
+    ]
+  }
+}

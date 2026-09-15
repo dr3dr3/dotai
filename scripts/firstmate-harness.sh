@@ -6,6 +6,7 @@ fm_harness_normalize() {
   case "$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')" in
     1|claude|claude-code) printf 'claude\n' ;;
     2|codex) printf 'codex\n' ;;
+    3|pi) printf 'pi\n' ;;
     *) return 1 ;;
   esac
 }
@@ -37,13 +38,16 @@ fm_harness_write() {
 
 # Interactive when stdin is a TTY. Otherwise: FIRSTMATE_HARNESS, then existing
 # pin, then claude. An explicit FIRSTMATE_HARNESS always overwrites the pin.
+# Pi is the third choice: its model comes from ~/.pi/agent/settings.json (the
+# Vercel AI Gateway DeepSeek default set by scripts/setup-pi.py) or from the
+# per-spawn --model in config/crew-dispatch.json; see firstmate/README.md.
 fm_harness_choose() {
   local home="$1"
   local chosen="" current="" prompt_default="1" prompt_label="Claude Code"
 
   if [[ -n "${FIRSTMATE_HARNESS:-}" ]]; then
     chosen="$(fm_harness_normalize "$FIRSTMATE_HARNESS")" \
-      || { printf 'firstmate-harness: FIRSTMATE_HARNESS must be claude or codex (got %s)\n' "$FIRSTMATE_HARNESS" >&2; return 1; }
+      || { printf 'firstmate-harness: FIRSTMATE_HARNESS must be claude, codex or pi (got %s)\n' "$FIRSTMATE_HARNESS" >&2; return 1; }
     fm_harness_write "$home" "$chosen"
     printf '%s\n' "$chosen"
     return 0
@@ -53,6 +57,9 @@ fm_harness_choose() {
     if [[ "$current" == codex ]]; then
       prompt_default="2"
       prompt_label="Codex"
+    elif [[ "$current" == pi ]]; then
+      prompt_default="3"
+      prompt_label="Pi"
     fi
   fi
 
@@ -60,14 +67,15 @@ fm_harness_choose() {
     printf '\nFirstmate captain and crew harness\n' >&2
     printf '  1) Claude Code\n' >&2
     printf '  2) Codex\n' >&2
-    printf 'Choice [1/2, default: %s (%s)]: ' "$prompt_default" "$prompt_label" >&2
+    printf '  3) Pi\n' >&2
+    printf 'Choice [1/2/3, default: %s (%s)]: ' "$prompt_default" "$prompt_label" >&2
     local reply=""
     IFS= read -r reply || true
     if [[ -z "$reply" ]]; then
       chosen="$(fm_harness_normalize "$prompt_default")"
     else
       chosen="$(fm_harness_normalize "$reply")" \
-        || { printf 'firstmate-harness: enter 1 (claude) or 2 (codex)\n' >&2; return 1; }
+        || { printf 'firstmate-harness: enter 1 (claude), 2 (codex) or 3 (pi)\n' >&2; return 1; }
     fi
     fm_harness_write "$home" "$chosen"
     printf '%s\n' "$chosen"
