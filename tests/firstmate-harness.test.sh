@@ -53,12 +53,26 @@ assert_file "$HOME3/config/crew-harness" "codex"
 assert_file "$HOME3/config/secondmate-harness" "codex"
 unset FIRSTMATE_HARNESS
 
-if FIRSTMATE_HARNESS=pi fm_harness_choose "$TMP/home-bad" >/dev/null 2>"$TMP/err"; then
+HOME5="$TMP/home-pi"
+mkdir -p "$HOME5/config"
+FIRSTMATE_HARNESS=pi
+got="$(fm_harness_choose "$HOME5")"
+assert_eq "$got" "pi" "FIRSTMATE_HARNESS=pi is accepted"
+assert_file "$HOME5/config/captain-harness" "pi"
+assert_file "$HOME5/config/crew-harness" "pi"
+assert_file "$HOME5/config/secondmate-harness" "pi"
+unset FIRSTMATE_HARNESS
+got="$(fm_harness_choose "$HOME5")"
+assert_eq "$got" "pi" "non-tty keeps an existing pi pin"
+
+if FIRSTMATE_HARNESS=cursor fm_harness_choose "$TMP/home-bad" >/dev/null 2>"$TMP/err"; then
   fail "invalid FIRSTMATE_HARNESS should fail"
 fi
-grep -q 'claude or codex' "$TMP/err" || fail "invalid env should name the allowed values"
+grep -q 'claude, codex or pi' "$TMP/err" || fail "invalid env should name the allowed values"
 
 assert_eq "$(fm_harness_normalize 2)" "codex" "prompt 2 is codex"
+assert_eq "$(fm_harness_normalize 3)" "pi" "prompt 3 is pi"
+assert_eq "$(fm_harness_normalize Pi)" "pi" "pi is case-insensitive"
 assert_eq "$(fm_harness_normalize Claude-Code)" "claude" "claude-code alias"
 
 HOME4="$TMP/home-current"

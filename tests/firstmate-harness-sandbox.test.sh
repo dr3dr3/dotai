@@ -10,6 +10,8 @@ trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/bin" "$TMP/real" "$TMP/profiles" "$TMP/worker-guard-bin"
 touch "$TMP/profiles/roe-firstmate-codex-captain.json"
 touch "$TMP/profiles/roe-firstmate-codex-worker.json"
+touch "$TMP/profiles/roe-firstmate-pi-captain.json"
+touch "$TMP/profiles/roe-firstmate-pi-worker.json"
 touch "$TMP/worker-guard-bin/terraform" "$TMP/worker-guard-bin/tofu"
 chmod 0755 "$TMP/worker-guard-bin/terraform" "$TMP/worker-guard-bin/tofu"
 
@@ -19,6 +21,8 @@ printf 'real:%s\n' "$*" >"$FAKE_REAL_CALL"
 printf 'role=%s path=%s\n' "${ROE_FIRSTMATE_ROLE-unset}" "$PATH" >"$FAKE_REAL_ENV"
 SH
 chmod 0755 "$TMP/real/codex"
+sed 's/^printf .real:/&/' "$TMP/real/codex" >"$TMP/real/pi"
+chmod 0755 "$TMP/real/pi"
 
 cat >"$TMP/fake-nono" <<'SH'
 #!/usr/bin/env bash
@@ -35,6 +39,8 @@ printf 'path=%s\n' "$PATH" >>"$FAKE_NONO_CALL"
 SH
 chmod 0755 "$TMP/fake-nono"
 ln -s "$WRAPPER" "$TMP/bin/codex"
+ln -s "$WRAPPER" "$TMP/bin/pi"
+ln -s "$WRAPPER" "$TMP/bin/cursor"
 
 export ROE_FIRSTMATE_NONO="$TMP/fake-nono"
 export ROE_FIRSTMATE_REAL_HARNESS_DIR="$TMP/real"
@@ -65,6 +71,9 @@ assert_fails_with() {
 )
 [[ "$(cat "$FAKE_REAL_CALL")" == "real:ordinary" ]]
 [[ ! -e "$FAKE_NONO_CALL" ]]
+
+assert_fails_with "claude, codex or pi launcher link" \
+  bash -c "'$TMP/bin/cursor' refused"
 
 (
   cd /workspace
@@ -124,5 +133,31 @@ grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
 grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=captain" "$FAKE_NONO_CALL" >/dev/null
+
+# Pi takes no role-specific arguments: its model and thinking level arrive on
+# the launch line from fm-spawn (crew) or from its own settings (captain).
+(
+  cd "$SLOT"
+  ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/pi" --model ollama/qwen --thinking low worker-brief
+)
+grep -F "nono:run --profile roe-firstmate-pi-worker --allow-cwd -- $TMP/real/pi --model ollama/qwen --thinking low worker-brief" \
+  "$FAKE_NONO_CALL" >/dev/null
+grep -F "captain=unset required=unset role=worker" "$FAKE_NONO_CALL" >/dev/null
+grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
+
+(
+  cd /workspace/firstmate
+  ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/pi" captain-brief
+)
+grep -F "nono:run --profile roe-firstmate-pi-captain --allow-cwd -- $TMP/real/pi captain-brief" \
+  "$FAKE_NONO_CALL" >/dev/null
+
+printf 'off\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
+(
+  cd "$SLOT"
+  ROE_FIRSTMATE_NONO="$TMP/missing-nono" "$TMP/bin/pi" unsandboxed-pi-worker
+) 2>/dev/null
+[[ "$(cat "$FAKE_REAL_CALL")" == "real:unsandboxed-pi-worker" ]]
+printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
 
 printf 'ok - Firstmate harness launches fail closed through nono\n'

@@ -23,8 +23,8 @@ die() {
 }
 
 case "$HARNESS" in
-  claude|codex) ;;
-  *) die "must be invoked through the claude or codex launcher link" ;;
+  claude|codex|pi) ;;
+  *) die "must be invoked through the claude, codex or pi launcher link" ;;
 esac
 
 [[ -x "$REAL_HARNESS" ]] || die "real $HARNESS executable missing at $REAL_HARNESS"
@@ -67,6 +67,9 @@ fi
 # When nono is on it remains the outer boundary; when nono is off this is the
 # explicitly requested unsandboxed pilot mode. Codex's approval policy remains
 # unchanged in both cases.
+# Pi has no inner sandbox or approval mode to select and takes its model and
+# thinking level from Firstmate's launch flags (config/crew-dispatch.json) or
+# its own settings, so it gets no role-specific arguments here.
 HARNESS_ARGS=()
 if [[ "$HARNESS" == codex ]]; then
   HARNESS_ARGS=(--profile "fm-$ROLE" --sandbox danger-full-access)

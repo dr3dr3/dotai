@@ -46,11 +46,11 @@ die() {
 
 usage() {
   cat <<'EOF'
-Usage: fm [--check] [--harness claude|codex] [-- harness-args...]
+Usage: fm [--check] [--harness claude|codex|pi] [-- harness-args...]
        firstmate-local.sh [...]
 
 Default harness is the pin written by setup-firstmate.sh (captain-harness, then
-crew-harness). Override with --harness or FIRSTMATE_HARNESS=claude|codex.
+crew-harness). Override with --harness or FIRSTMATE_HARNESS=claude|codex|pi.
 Run --check outside Herdr to validate installation. Launching a captain requires
 HERDR_ENV=1 so the captain and crew remain visible in the current Herdr session.
 EOF
@@ -145,7 +145,7 @@ shopt -u nullglob
 if [[ -z "$HARNESS" ]]; then
   if [[ -n "${FIRSTMATE_HARNESS:-}" ]]; then
     HARNESS="$(fm_harness_normalize "$FIRSTMATE_HARNESS")" \
-      || die "FIRSTMATE_HARNESS must be claude or codex"
+      || die "FIRSTMATE_HARNESS must be claude, codex or pi"
   elif current="$(fm_harness_current "$FM_HOME")"; then
     HARNESS="$current"
   else
@@ -162,11 +162,19 @@ case "$HARNESS" in
     command -v codex >/dev/null 2>&1 || die "Codex CLI is not installed"
     launch=(codex)
     ;;
+  pi)
+    # Upstream co-primary harness: the tracked .pi/extensions/*.ts in
+    # /workspace/firstmate auto-load once the project trust prompt is approved
+    # (persisted in ~/.pi/agent/trust.json on the ~/.ai volume). Model and
+    # thinking come from Pi's own settings; scripts/setup-pi.py owns those.
+    command -v pi >/dev/null 2>&1 || die "Pi is not installed"
+    launch=(pi)
+    ;;
   cursor)
-    die "Cursor Agent has no reviewed RoE nono profile; use claude or codex"
+    die "Cursor Agent has no reviewed RoE nono profile; use claude, codex or pi"
     ;;
   grok)
-    die "Grok CLI has no reviewed RoE nono profile; use claude or codex"
+    die "Grok CLI has no reviewed RoE nono profile; use claude, codex or pi"
     ;;
   *)
     die "unsupported pilot harness: $HARNESS"

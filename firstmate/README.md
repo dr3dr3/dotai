@@ -32,10 +32,10 @@ bash scripts/setup-firstmate.sh
 fm --check
 ```
 
-Setup asks whether the captain session and crew workers should use Claude Code
-or Codex. On a TTY the default is the existing pin, or Claude if none is set.
+Setup asks whether the captain session and crew workers should use Claude Code,
+Codex, or Pi. On a TTY the default is the existing pin, or Claude if none is set.
 Non-interactive runs keep an existing pin, default to Claude when unset, or
-take `FIRSTMATE_HARNESS=claude|codex` when that is set (which overwrites the
+take `FIRSTMATE_HARNESS=claude|codex|pi` when that is set (which overwrites the
 pin). The choice is written to `config/captain-harness`, `config/crew-harness`,
 and `config/secondmate-harness` under `FM_HOME`.
 
@@ -66,8 +66,8 @@ asserts the profiles allow exactly those eight backing clones, so adding a repo
 to one place without the other fails the suite.
 
 Setup also installs the reviewed nono binary and RoE profiles, then places
-scoped `claude` and `codex` launchers on the personal PATH. Outside Firstmate
-they pass through to the real CLI unchanged. A Firstmate captain or a process
+scoped `claude`, `codex`, and `pi` launchers on the personal PATH. Outside
+Firstmate they pass through to the real CLI unchanged. A Firstmate captain or a process
 started under `.treehouse/` is instead run through nono. The captain can read
 the upstream Firstmate source and write its private operational home and
 backing clone (required for Treehouse allocation); a worker can write only its
@@ -84,6 +84,46 @@ terminal is unfocused. The captain uses low reasoning effort for supervision;
 workers retain high reasoning effort for repository investigation and changes.
 The infrastructure project is explicitly trusted so Codex can load any future
 project-local `.codex/` layer there.
+
+### Pi
+
+Pi is an upstream co-primary harness: the captain is plain `pi` started in
+`/workspace/firstmate`, and the tracked `.pi/extensions/*.ts` auto-load once
+the project trust prompt is approved on first launch (persisted in
+`~/.pi/agent/trust.json`, which `scripts/setup-pi.py` keeps on the `~/.ai`
+volume). Pi has no permission system of its own, so nono is the only boundary
+a Pi captain or worker has — keep the sandbox on for Pi sessions.
+
+Models come from Pi, not from Firstmate. The captain uses Pi's default
+(`~/.pi/agent/settings.json`: DeepSeek V4.1 Flash via the Vercel AI Gateway,
+set by `setup-pi.py`); crewmates take `--model`/`--thinking` from
+`config/crew-dispatch.json`, in Pi's `provider/model` form:
+
+```json
+{
+  "rules": [],
+  "default": { "harness": "pi", "model": "vercel-ai-gateway/deepseek/deepseek-v4.1-flash", "effort": "medium" }
+}
+```
+
+For a local model use `"model": "ollama/qwen3.8:27b-mtp-q4_K_M"` (prefer the
+`-mtp` tag; `"effort": "low"` keeps reasoning tokens down). Expect the first
+call after Ollama has evicted the model to take ~12 s to load; Firstmate's Pi
+arm timeout is 35 s (`FM_PI_ARM_READY_TIMEOUT_MS`), so a cold 27B model fits
+but a cold much larger one may not. The gateway key is read from Pi's
+`auth.json`, never from the environment — nono strips `*_API_KEY` from every
+Firstmate process, and `setup-pi.py` writes the file for exactly that reason.
+
+The Pi worker profile grants two things the Claude and Codex worker profiles
+do not, both required by the busy-state contract in `bin/fm-spawn.sh`: read
+access to `/workspace/firstmate` (the per-task `state/<id>.pi-ext.ts`
+extension imports from the clone and execs `bin/fm-busy-event.sh`) and write
+access to `FM_HOME/state` (busy events and the turn-end marker). Without the
+second a Pi crewmate reads as busy forever. `tests/firstmate-pi-nono-enforcement.test.sh`
+proves those two operations and their adjacent denials (no `FM_HOME/config`,
+no Firstmate source writes, no other harness's state, no ambient credentials)
+through real Landlock, and a Pi run under the worker profile reached both the
+gateway and the host Ollama with the environment stripped.
 
 `fm --check` executes nono's kernel probe and refuses to launch unless Landlock
 is enforceable. This environment currently reports Landlock V6 with filesystem,
@@ -212,7 +252,7 @@ fm
 ```
 
 That launches the pinned captain harness. Override for one session with
-`fm --harness claude|codex`. Cursor and Grok are refused until they have
+`fm --harness claude|codex|pi`. Cursor and Grok are refused until they have
 reviewed RoE nono profiles.
 
 ## Validation
