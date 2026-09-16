@@ -155,10 +155,10 @@ echo "  ok  wrapped command exit code propagates"
 # use log: one line per use, argv[0] only
 log="$HOME/.cache/roe-firstmate/tmp/lease-use/$SLOT_ID/read_sentry.log"
 [[ -f "$log" ]] || fail "use log missing"
-n="$(wc -l <"$log")"; [[ "$n" == 2 ]] || fail "expected 2 uses of read_sentry logged, got $n"
+n="$(wc -l <"$log")"; [[ "$n" == 3 ]] || fail "expected 3 uses of read_sentry logged (env probe, exit-code probe, scratch_home probe), got $n"
 grep -q " cap=read_sentry cmd=sh$" "$log" || fail "use log line shape: $(tail -1 "$log")"
 grep -qE "sntrys|exit 7" "$log" && fail "use log must not contain values or arguments"
-out="$(bash "$GRANT" --slot "$SLOT" --status)"; grep -q "read_sentry .*uses=2" <<<"$out" || fail "status should report uses=2: $out"
+out="$(bash "$GRANT" --slot "$SLOT" --status)"; grep -q "read_sentry .*uses=3" <<<"$out" || fail "status should report uses=3: $out"
 echo "  ok  use log records each use (argv[0] only) and status counts it"
 
 # another slot cannot see this slot's leases (path-derived, not shared)

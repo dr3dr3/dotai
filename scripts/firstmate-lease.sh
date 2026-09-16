@@ -100,6 +100,16 @@ if [[ "${1:-}" == --check ]]; then echo "$CAP usable until $expires"; exit 0; fi
 mkdir -p "$USE_ROOT/$SLOT_ID" 2>/dev/null || true
 printf '%s cap=%s cmd=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$CAP" "$(basename "$1")" >>"$USE_ROOT/$SLOT_ID/$CAP.log" 2>/dev/null || true
 
+# scratch_home (catalogue flag): CLIs that keep state under $HOME — Sentry's
+# ~/.sentry/cli.db — must not see the real one, which carries the captain's
+# own login. Point HOME at a per-slot scratch directory the worker can write.
+if [[ -r "$PROFILES" ]] && command -v jq >/dev/null 2>&1 \
+   && jq -e --arg c "$CAP" '.capabilities[$c].scratch_home == true' "$PROFILES" >/dev/null 2>&1; then
+  SCRATCH_HOME="$USE_ROOT/$SLOT_ID/home"
+  mkdir -p "$SCRATCH_HOME" 2>/dev/null || die "cannot create scratch HOME $SCRATCH_HOME" 1
+  export HOME="$SCRATCH_HOME"
+fi
+
 # Load ONLY this lease's variables, then exec. The file is KEY='value' lines
 # written by fm-grant; sourcing is the parser, in a shell that then execs.
 set -a
