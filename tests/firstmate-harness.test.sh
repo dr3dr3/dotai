@@ -82,3 +82,14 @@ printf 'claude\n' >"$HOME4/config/crew-harness"
 assert_eq "$(fm_harness_current "$HOME4")" "codex" "captain pin wins over crew"
 
 printf 'ok\n'
+
+# fm_count_active_tasks: only slot-occupying worker tasks count
+HOME4="$TMP/home-count"
+mkdir -p "$HOME4/state"
+assert_eq "$(fm_count_active_tasks "$HOME4")" "0" "empty state counts zero"
+printf 'endpoint_task_id=ship-a\nkind=ship\nmode=direct-PR\n' >"$HOME4/state/ship-a.meta"
+printf 'endpoint_task_id=scout-b\nkind=scout\n' >"$HOME4/state/scout-b.meta"
+printf 'endpoint_task_id=otel\nkind=secondmate\nmode=secondmate\n' >"$HOME4/state/otel.meta"
+printf 'endpoint_task_id=reservation\nkind=ship\nworker_dispatch=none\n' >"$HOME4/state/reservation.meta"
+printf 'not a meta\n' >"$HOME4/state/ship-a.status"
+assert_eq "$(fm_count_active_tasks "$HOME4")" "2" "secondmate and worker_dispatch=none records are excluded"

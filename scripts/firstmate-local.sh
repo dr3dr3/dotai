@@ -115,12 +115,7 @@ for tool in git gh jq node no-mistakes gh-axi chrome-devtools-axi lavish-axi tas
 done
 gh auth status >/dev/null 2>&1 || die "GitHub CLI is not authenticated"
 
-active_meta=0
-shopt -s nullglob
-for meta in "$FM_HOME"/state/*.meta; do
-  [[ -f "$meta" ]] && ((active_meta += 1))
-done
-shopt -u nullglob
+active_meta="$(fm_count_active_tasks "$FM_HOME")"
 (( active_meta < ROE_FIRSTMATE_MAX_ACTIVE_TASKS )) \
   || die "task metadata limit reached ($active_meta/$ROE_FIRSTMATE_MAX_ACTIVE_TASKS); reconcile before launching"
 
