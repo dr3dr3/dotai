@@ -27,6 +27,26 @@ fm_harness_current() {
     || return 1
 }
 
+# Count the task records that occupy a Treehouse slot: ship and scout tasks
+# with a dispatched worker. Persistent secondmates are capped separately by
+# ROE_FIRSTMATE_MAX_SECOND_MATES, and a metadata-only record
+# (worker_dispatch=none) launches nothing, so neither counts against
+# ROE_FIRSTMATE_MAX_ACTIVE_TASKS — the same set the Treehouse guard enforces
+# at slot allocation. Counting every .meta here refused a captain launch at
+# 3/2 with one real worker task (2026-09-16).
+fm_count_active_tasks() {
+  local home="$1" meta count=0
+  shopt -s nullglob
+  for meta in "$home"/state/*.meta; do
+    [[ -f "$meta" ]] || continue
+    grep -qx 'kind=secondmate' "$meta" && continue
+    grep -qx 'worker_dispatch=none' "$meta" && continue
+    ((count += 1))
+  done
+  shopt -u nullglob
+  printf '%s\n' "$count"
+}
+
 fm_harness_write() {
   local home="$1" harness="$2"
   install -d -m 0700 "$home/config"

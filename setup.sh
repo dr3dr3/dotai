@@ -22,11 +22,29 @@ set -euo pipefail
 # Personal state belongs to dotai; local-dev-env only supplies the volume.
 python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/persist-codex.py"
 
+# A devcontainer rebuild keeps ~/.local (home volume) but wipes the image's
+# global npm tree. The Firstmate sandbox launchers in ~/.local/bin survive and
+# shadow the real binaries, so `command -v codex` answers "installed" while
+# the executable behind the launcher is gone (2026-09-16 rebuild). Only treat
+# an agent as installed when the resolved target exists and is not a launcher.
+agent_installed() {
+    local agent="$1" found target
+    found="$(command -v "$agent" 2>/dev/null)" || return 1
+    target="$(readlink -f "$found" 2>/dev/null)" || return 1
+    if [[ "$(basename "$target")" == "firstmate-harness-sandbox.sh" ]]; then
+        # PATH answers with the Firstmate launcher; the real binary is the
+        # link setup-firstmate.sh keeps behind it, and that link is only
+        # meaningful while it still resolves.
+        target="$(readlink -f "$HOME/.local/lib/roe-firstmate/harnesses/$agent" 2>/dev/null)" || return 1
+    fi
+    [[ -x "$target" ]]
+}
+
 # -----------------------------------------------------------------------------
 # 1.  Claude Code CLI
 #     Official install: https://code.claude.com/docs/en/overview
 # -----------------------------------------------------------------------------
-if command -v claude &>/dev/null; then
+if agent_installed claude; then
     echo "✓ Claude Code $(claude --version 2>/dev/null | head -1) already installed — skipping."
 else
     echo "→ Installing Claude Code CLI..."
@@ -47,12 +65,18 @@ fi
 # 1b. Secondary agents + secrets tooling (Codex, varlock; Pi Harness optional)
 #     These run *inside* the container so the host stays agent-free. Installed
 #     via npm — the devcontainer ships Node 22; for other containers we guard.
+#
+#     Codex and Pi are opt-in (DOTAI_INSTALL_CODEX=1 / DOTAI_INSTALL_PI=1):
+#     the Firstmate pilot is pinned to Claude, and every extra agent in the
+#     image's global npm tree is one more thing a rebuild silently removes.
 # -----------------------------------------------------------------------------
 if ! command -v npm &>/dev/null; then
     echo "⚠ npm not found — skipping Codex/varlock/Pi (install Node, then re-run)."
 else
-    # Codex CLI (OpenAI) — secondary agent
-    if command -v codex &>/dev/null; then
+    # Codex CLI (OpenAI) — secondary agent, opt-in
+    if [[ "${DOTAI_INSTALL_CODEX:-0}" != 1 ]]; then
+        echo "  (Codex not requested — set DOTAI_INSTALL_CODEX=1 to install)"
+    elif agent_installed codex; then
         echo "✓ Codex $(codex --version 2>/dev/null | head -1) already installed — skipping."
     else
         echo "→ Installing Codex CLI (@openai/codex)..."
@@ -68,12 +92,14 @@ else
         npm install -g varlock && echo "✓ varlock installed"
     fi
 
-    # Pi Harness — self-extensible coding agent (earendil-works/pi).
+    # Pi Harness — self-extensible coding agent (earendil-works/pi), opt-in.
     # Installed with --ignore-scripts per the vendor docs (https://pi.dev/docs).
     # Pi has NO built-in permission system, so running it inside the container
     # is the intended sandbox. Model wiring (Vercel AI Gateway + host Ollama)
     # is done by scripts/setup-pi.py below.
-    if command -v pi &>/dev/null; then
+    if [[ "${DOTAI_INSTALL_PI:-0}" != 1 ]]; then
+        echo "  (Pi not requested — set DOTAI_INSTALL_PI=1 to install)"
+    elif agent_installed pi; then
         echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
     else
         echo "→ Installing Pi Harness (@earendil-works/pi-coding-agent)..."
@@ -86,7 +112,7 @@ else
     # the gateway key from 1Password in auth.json. The Ollama MODEL LIST is not
     # committed — generate it from the host's live API:
     #   python3 /workspace/.ai/dotai/scripts/pi-ollama-models.py
-    if command -v pi &>/dev/null; then
+    if agent_installed pi; then
         PI_SETUP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/setup-pi.py"
         python3 "$PI_SETUP" \
             || echo "⚠ Pi wiring failed (see above) — fix and re-run: python3 $PI_SETUP"

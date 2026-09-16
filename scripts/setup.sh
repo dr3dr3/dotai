@@ -541,6 +541,25 @@ if [ -x "$FM_LAUNCHER" ]; then
     ln -sfn "$FM_SANDBOX" "$HOME/.local/bin/fm-sandbox"
     echo "  ✓ fm-sandbox → $FM_SANDBOX"
   fi
+
+  # Re-converge the whole pilot install, not just the fm link. A devcontainer
+  # rebuild keeps ~/.local and FM_HOME but wipes the image's global npm tree,
+  # leaving surviving launchers pointing at missing harnesses and the axi
+  # tools gone. setup-firstmate.sh repairs exactly that (dangling launchers,
+  # tools, guards) and honours the existing harness pin when non-interactive.
+  # Guarded on an existing FM_HOME so it is a no-op for anyone who has not
+  # opted into the pilot.
+  FM_SETUP="$DEVEX_DIR/scripts/setup-firstmate.sh"
+  FM_PILOT_HOME="${FM_HOME:-/workspace/.firstmate-home}"
+  if [ -x "$FM_SETUP" ] && [ -d "$FM_PILOT_HOME/config" ]; then
+    echo "→ Re-converging the Firstmate pilot install ($FM_PILOT_HOME)"
+    if bash "$FM_SETUP" </dev/null >/tmp/dotai-firstmate-setup.log 2>&1; then
+      echo "  ✓ Firstmate pilot converged — verify with: fm --check"
+    else
+      echo "  ⚠ Firstmate pilot setup failed — see /tmp/dotai-firstmate-setup.log"
+      tail -5 /tmp/dotai-firstmate-setup.log
+    fi
+  fi
 fi
 
 # ── Codex CLI (personal) ──────────────────────────────────────────────────────

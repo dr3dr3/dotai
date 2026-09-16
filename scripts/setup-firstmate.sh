@@ -356,7 +356,12 @@ install_firstmate_tools() {
     curl -fsSL https://raw.githubusercontent.com/kunchenguid/no-mistakes/main/docs/install.sh | bash
   fi
 
-  npm install -g gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi
+  # --prefix "$HOME/.local": bins in ~/.local/bin (already on PATH), libs in
+  # ~/.local/lib/node_modules — the persistent home volume, so a devcontainer
+  # rebuild does not wipe them the way it wipes the image's nvm global tree.
+  # A per-command prefix, not NPM_CONFIG_PREFIX, so the team's own global
+  # installs in post-create are untouched.
+  npm install -g --prefix "$HOME/.local" gh-axi chrome-devtools-axi lavish-axi tasks-axi quota-axi
   gh-axi setup hooks
   chrome-devtools-axi setup hooks
   lavish-axi setup hooks
