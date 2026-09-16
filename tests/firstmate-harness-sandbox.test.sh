@@ -43,6 +43,8 @@ ln -s "$WRAPPER" "$TMP/bin/pi"
 ln -s "$WRAPPER" "$TMP/bin/cursor"
 
 export ROE_FIRSTMATE_NONO="$TMP/fake-nono"
+# Never let a launcher test reach the real fm-grant / vault: leases have their own suite.
+export ROE_FIRSTMATE_AUTO_LEASES=0
 export ROE_FIRSTMATE_REAL_HARNESS_DIR="$TMP/real"
 export ROE_FIRSTMATE_NONO_PROFILE_DIR="$TMP/profiles"
 export ROE_FIRSTMATE_SANDBOX_MODE_FILE="$TMP/sandbox-mode"
@@ -159,5 +161,28 @@ printf 'off\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
 ) 2>/dev/null
 [[ "$(cat "$FAKE_REAL_CALL")" == "real:unsandboxed-pi-worker" ]]
 printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
+
+# ── fail-closed on cwd (Herdr restore resumes agents with NO fm environment) ──
+# A bare launch from /workspace/firstmate is the captain, sandboxed, with no
+# ROE_FIRSTMATE_* variables at all.
+(
+  cd /workspace/firstmate
+  "$TMP/bin/codex" resumed-captain
+)
+grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access resumed-captain" \
+  "$FAKE_NONO_CALL" >/dev/null || { echo "bare launch in /workspace/firstmate must be sandboxed as captain"; exit 1; }
+
+# A Treehouse slot OUTSIDE /workspace/repos (local-dev-env's own, or a
+# secondmate's) is a worker, sandboxed, with no variables at all.
+LDE_SLOT="/workspace/.treehouse/.sandbox-test-$$/1/workspace"
+mkdir -p "$(dirname "$LDE_SLOT")"
+git -C /workspace worktree add -q --detach "$LDE_SLOT" HEAD
+trap 'git -C /workspace worktree remove --force "$LDE_SLOT" 2>/dev/null; rm -rf "$(dirname "$(dirname "$LDE_SLOT")")"; rm -rf "$TMP"' EXIT
+(
+  cd "$LDE_SLOT"
+  "$TMP/bin/codex" resumed-worker
+)
+grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access resumed-worker" \
+  "$FAKE_NONO_CALL" >/dev/null || { echo "bare launch in a /workspace/.treehouse slot must be sandboxed as worker"; exit 1; }
 
 printf 'ok - Firstmate harness launches fail closed through nono\n'
