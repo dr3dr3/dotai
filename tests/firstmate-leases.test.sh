@@ -23,6 +23,9 @@ assert_fails_with() {
 }
 
 # ── fixtures ────────────────────────────────────────────────────────────────
+# The developer's real shell exports ROE_AI_AGENTS_OP_TOKEN (the ~/.bashrc hook
+# from make tool-auth); the test must never reach a real vault.
+unset ROE_AI_AGENTS_OP_TOKEN OP_SERVICE_ACCOUNT_TOKEN
 mkdir -p "$TMP/bin" "$TMP/home/.cache/roe-firstmate" "$TMP/home/.config/roe"
 export HOME="$TMP/home"
 
