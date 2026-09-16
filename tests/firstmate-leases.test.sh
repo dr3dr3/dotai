@@ -43,7 +43,7 @@ cat >"$TMP/profiles.json" <<'JSON'
     }
   },
   "capabilities": {
-    "read_sentry":  {"write": false, "source": {"kind": "op", "item": "Sentry read token", "fields": {"SENTRY_AUTH_TOKEN": "credential"}}},
+    "read_sentry":  {"write": false, "scratch_home": true, "source": {"kind": "op", "item": "Sentry read token", "fields": {"SENTRY_AUTH_TOKEN": "credential"}}},
     "read_linear":  {"write": false, "source": {"kind": "op", "item": "Linear agent API key", "fields": {"LINEAR_API_KEY": "credential"}}},
     "write_linear_comment": {"write": true, "source": {"kind": "op", "item": "Linear agent API key", "fields": {"LINEAR_API_KEY": "credential"}}},
     "read_aws_staging": {"write": false, "source": {"kind": "aws", "profile": "roe-staging-readonly"}},
@@ -139,6 +139,14 @@ out="$(run_in_slot read_linear -- sh -c 'printf "%s" "$LINEAR_API_KEY"')"
 [[ "$out" == "lin_bot_va'lue" ]] || fail "value round-trip with embedded quote: $out"
 out="$(run_in_slot read_aws_staging -- sh -c 'echo "$AWS_DEFAULT_REGION"')"; [[ "$out" == ap-southeast-2 ]] || fail "aws region"
 echo "  ok  exec sees only the leased capability's variables; values round-trip"
+
+# scratch_home: read_sentry runs with a per-slot HOME; read_linear keeps the real one
+out="$(run_in_slot read_sentry -- sh -c 'echo "$HOME"')"
+[[ "$out" == "$HOME/.cache/roe-firstmate/tmp/lease-use/$SLOT_ID/home" ]] || fail "scratch_home not applied: $out"
+[[ -d "$out" ]] || fail "scratch HOME not created"
+out="$(run_in_slot read_linear -- sh -c 'echo "$HOME"')"
+[[ "$out" == "$HOME" ]] || fail "HOME must be untouched for a capability without scratch_home: $out"
+echo "  ok  scratch_home redirects HOME for the flagged capability only"
 
 # exit code of the wrapped command propagates
 ( cd "$SLOT" && bash "$LEASE" read_sentry -- sh -c 'exit 7' ) && fail "exit code not propagated" || [[ $? == 7 ]] || fail "expected exit 7"

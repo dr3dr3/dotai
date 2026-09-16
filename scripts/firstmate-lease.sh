@@ -18,6 +18,10 @@
 # keeps a Sentry-reading worker from also holding a write token by accident.
 #
 #   roe-lease --list          what this slot currently holds (never values)
+#
+# A capability flagged scratch_home in the catalogue runs with HOME pointed at
+# a per-slot scratch directory, so a CLI that keeps state under $HOME (Sentry)
+# never opens the captain's own ~/.sentry.
 #   roe-lease <cap> --check   exit 0 if usable, 2 if missing, 3 if expired
 #
 # A missing or expired lease is a hard stop with a message that names the
