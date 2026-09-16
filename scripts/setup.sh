@@ -73,6 +73,7 @@ if [ -d "$HOME/.codex" ]; then
     echo "  ✓ $name"
   done
 fi
+
 # ── Cursor skills ────────────────────────────────────────────────────────────
 # Cursor reads the repo-level .claude/skills/, not ~/.claude/skills/, so the
 # links above are invisible to it. Link into the repo too. An existing entry
@@ -504,6 +505,9 @@ if command -v herdr &>/dev/null; then
   command -v codex &>/dev/null && [ -d "$HOME/.codex" ] && _herdr_integration codex
   command -v pi &>/dev/null && [ -d "$HOME/.pi" ] && _herdr_integration pi
 fi
+
+# Atuin binary and human shell setup live in dotfiles.
+bash "$SCRIPT_DIR/setup-atuin-hooks.sh" || echo "  ⚠ Atuin agent hooks not installed (see output above); setup continues"
 
 # ── Cursor / Windsurf ────────────────────────────────────────────────────────
 
