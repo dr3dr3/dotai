@@ -9,9 +9,13 @@ DOTAI_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$DOTAI_DIR/firstmate/pins.env"
 # shellcheck source=firstmate-harness.sh
 source "$SCRIPT_DIR/firstmate-harness.sh"
+# shellcheck source=firstmate-local-git.sh
+source "$SCRIPT_DIR/firstmate-local-git.sh"
 
+LOCAL_DEV_ENV_DIR="${LOCAL_DEV_ENV_DIR:-/workspace}"
 FIRSTMATE_DIR="${FIRSTMATE_DIR:-/workspace/firstmate}"
 FM_HOME="${FM_HOME:-/workspace/.firstmate-home}"
+AI_DEVEX_DIR="${AI_DEVEX_DIR:-$LOCAL_DEV_ENV_DIR/.ai/ai-devex}"
 PILOT_PROJECT_NAME="${PILOT_PROJECT_NAME:-rock-of-eye-api}"
 PILOT_SOURCE_PATH="${PILOT_SOURCE_PATH:-/workspace/repos/rock-of-eye-api}"
 PILOT_PROJECT_PATH="${PILOT_PROJECT_PATH:-$PILOT_SOURCE_PATH/.treehouse/firstmate-backing/$PILOT_PROJECT_NAME}"
@@ -549,6 +553,10 @@ main() {
   version_at_least "$herdr_version" "$HERDR_MIN_VERSION" \
     || die "Herdr $HERDR_MIN_VERSION or newer is required (found: $herdr_version)"
 
+  fm_personal_git_excludes_configure "$LOCAL_DEV_ENV_DIR" "$AI_DEVEX_DIR" \
+    || die "could not configure local Git excludes for personal Firstmate paths"
+  fm_personal_git_excludes_check "$LOCAL_DEV_ENV_DIR" \
+    || die "personal Firstmate paths remain visible to the team repository"
   configure_firstmate_clone
   install_treehouse
   install_nono
