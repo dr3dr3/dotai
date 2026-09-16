@@ -315,7 +315,9 @@ if [ -z "${LINEAR_ACCESS_TOKEN:-}" ] && command -v op &>/dev/null; then
   echo ""
   echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF, account $LINEAR_OP_ACCOUNT)"
   _linear_err="$(mktemp)"
-  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>"$_linear_err")" \
+  # </dev/null: with no session, op prompts interactively on inherited stdin
+  # and the whole post-create hangs (seen 2026-09-16 on a fresh RoE devcontainer).
+  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>"$_linear_err" </dev/null)" \
      && [ -n "$_linear_tok" ]; then
     export LINEAR_ACCESS_TOKEN="$_linear_tok"
     export LINEAR_API_KEY="${LINEAR_API_KEY:-$_linear_tok}"  # env name used by the CLI / skills

@@ -205,10 +205,17 @@ def resolve_gateway_key(env=os.environ):
         return None, f"not in {tooling_env} and op not installed"
     ref = env.get("AI_GATEWAY_OP_REF", DEFAULT_OP_REF)
     account = env.get("OP_ACCOUNT", "my.1password.com")
-    result = subprocess.run(
-        ["op", "read", "--account", account, ref],
-        capture_output=True, text=True, check=False,
-    )
+    # stdin must be closed: with no session (the RoE devcontainer mounts no
+    # 1Password agent) `op` otherwise drops into an interactive "add an
+    # account?" prompt on the inherited stdin and post-create hangs forever.
+    try:
+        result = subprocess.run(
+            ["op", "read", "--account", account, ref],
+            capture_output=True, text=True, check=False,
+            stdin=subprocess.DEVNULL, timeout=30,
+        )
+    except subprocess.TimeoutExpired:
+        return None, f"op read {ref} timed out after 30s"
     key = result.stdout.strip()
     if result.returncode == 0 and key:
         return key, f"1Password {ref}"
