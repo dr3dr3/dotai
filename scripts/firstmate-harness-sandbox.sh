@@ -36,11 +36,17 @@ esac
 [[ "$(readlink -f "$REAL_HARNESS")" != "$(readlink -f "$0")" ]] \
   || die "real $HARNESS executable resolves back to the sandbox launcher"
 
-if [[ "${ROE_FIRSTMATE_CAPTAIN:-0}" == 1 ]]; then
+# Role is decided by WHERE the harness starts, not only by what the launcher
+# exported. A Herdr session restore resumes an agent pane as a bare
+# `claude --resume <id>` with none of fm's ROE_FIRSTMATE_* environment; before
+# this, a captain resumed that way ran unsandboxed in /workspace/firstmate and
+# a worker in a local-dev-env or secondmate Treehouse slot (outside
+# /workspace/repos) passed straight through. Both are now fail-closed on cwd.
+if [[ "${ROE_FIRSTMATE_CAPTAIN:-0}" == 1 || "$(pwd -P)/" == /workspace/firstmate/ ]]; then
   [[ "$(pwd -P)/" == /workspace/firstmate/ ]] \
     || die "captain sandbox must start from /workspace/firstmate"
   ROLE=captain
-elif [[ "$(pwd -P)/" == /workspace/repos/*/.treehouse/*/ ]]; then
+elif [[ "$(pwd -P)/" == /workspace/*/.treehouse/*/ || "$(pwd -P)/" == /workspace/.treehouse/*/ ]]; then
   REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
     || die "worker sandbox must start inside a Treehouse Git checkout"
   [[ -f "$REPO_ROOT/.git" ]] \
