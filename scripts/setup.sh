@@ -316,9 +316,15 @@ if [ -z "${LINEAR_ACCESS_TOKEN:-}" ] && command -v op &>/dev/null; then
   echo ""
   echo "→ Resolving Linear API key from 1Password ($LINEAR_OP_REF, account $LINEAR_OP_ACCOUNT)"
   _linear_err="$(mktemp)"
-  # </dev/null: with no session, op prompts interactively on inherited stdin
-  # and the whole post-create hangs (seen 2026-09-16 on a fresh RoE devcontainer).
-  if _linear_tok="$(op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>"$_linear_err" </dev/null)" \
+  # setsid + </dev/null: with no account configured, op asks "Do you want to
+  # add an account manually now?" — and it asks on /dev/tty, not stdin, so the
+  # </dev/null added on 2026-09-16 (#46) was not enough. Run from a terminal
+  # (a re-run of post-create.sh, 2026-09-17) it still stopped the whole setup
+  # on that question. setsid gives op no controlling terminal, so /dev/tty
+  # cannot be opened and it fails at once with "No accounts configured".
+  # (setsid is util-linux; fall back to a bare run where it is missing.)
+  _op_run() { if command -v setsid &>/dev/null; then setsid -w "$@"; else "$@"; fi; }
+  if _linear_tok="$(_op_run op read --account "$LINEAR_OP_ACCOUNT" "$LINEAR_OP_REF" 2>"$_linear_err" </dev/null)" \
      && [ -n "$_linear_tok" ]; then
     export LINEAR_ACCESS_TOKEN="$_linear_tok"
     export LINEAR_API_KEY="${LINEAR_API_KEY:-$_linear_tok}"  # env name used by the CLI / skills
