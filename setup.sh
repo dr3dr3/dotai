@@ -22,6 +22,9 @@ set -euo pipefail
 # Personal state belongs to dotai; local-dev-env only supplies the volume.
 python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/persist-codex.py"
 
+# Personal shortcuts are enabled only inside devcontainers.
+python3 "$(dirname "${BASH_SOURCE[0]}")/scripts/setup-agent-aliases.py"
+
 # A devcontainer rebuild keeps ~/.local (home volume) but wipes the image's
 # global npm tree. The Firstmate sandbox launchers in ~/.local/bin survive and
 # shadow the real binaries, so `command -v codex` answers "installed" while
@@ -256,6 +259,8 @@ fi
 # -----------------------------------------------------------------------------
 # Done
 # -----------------------------------------------------------------------------
+bash "$(dirname "${BASH_SOURCE[0]}")/scripts/setup-atuin-hooks.sh" || echo "  ⚠ Atuin agent hooks not installed (see output above); setup continues"
+
 echo ""
 echo "✅ Tool installation complete."
 echo ""
