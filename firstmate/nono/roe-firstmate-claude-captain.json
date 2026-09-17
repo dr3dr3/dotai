@@ -10,12 +10,18 @@
       "claude_code_linux"
     ]
   },
+  "environment": {
+    "allow_vars": [
+      "CLAUDE_CONFIG_DIR"
+    ]
+  },
   "workdir": {
     "access": "read"
   },
   "filesystem": {
     "allow": [
       "$HOME/.ai/claude",
+      "/workspace/.ai/dotai",
       "/workspace/.firstmate-home",
       "/workspace/.firstmate-secondmates",
       "/workspace/repos/ai-context",

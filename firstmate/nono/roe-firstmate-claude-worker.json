@@ -10,6 +10,11 @@
       "claude_code_linux"
     ]
   },
+  "environment": {
+    "allow_vars": [
+      "CLAUDE_CONFIG_DIR"
+    ]
+  },
   "workdir": {
     "access": "readwrite"
   },

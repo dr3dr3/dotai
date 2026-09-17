@@ -8,6 +8,8 @@ TMP="$(mktemp -d /workspace/repos/rock-of-eye-api/.treehouse/.firstmate-nono-wra
 trap 'rm -rf "$TMP"' EXIT
 
 mkdir -p "$TMP/bin" "$TMP/real" "$TMP/profiles" "$TMP/worker-guard-bin"
+touch "$TMP/profiles/roe-firstmate-claude-captain.json"
+touch "$TMP/profiles/roe-firstmate-claude-worker.json"
 touch "$TMP/profiles/roe-firstmate-codex-captain.json"
 touch "$TMP/profiles/roe-firstmate-codex-worker.json"
 touch "$TMP/profiles/roe-firstmate-pi-captain.json"
@@ -22,7 +24,8 @@ printf 'role=%s path=%s\n' "${ROE_FIRSTMATE_ROLE-unset}" "$PATH" >"$FAKE_REAL_EN
 SH
 chmod 0755 "$TMP/real/codex"
 sed 's/^printf .real:/&/' "$TMP/real/codex" >"$TMP/real/pi"
-chmod 0755 "$TMP/real/pi"
+cp "$TMP/real/codex" "$TMP/real/claude"
+chmod 0755 "$TMP/real/pi" "$TMP/real/claude"
 
 cat >"$TMP/fake-nono" <<'SH'
 #!/usr/bin/env bash
@@ -36,8 +39,10 @@ printf 'captain=%s required=%s role=%s\n' \
   "${ROE_FIRSTMATE_SANDBOX_REQUIRED-unset}" \
   "${ROE_FIRSTMATE_ROLE-unset}" >>"$FAKE_NONO_CALL"
 printf 'path=%s\n' "$PATH" >>"$FAKE_NONO_CALL"
+printf 'config_dir=%s\n' "${CLAUDE_CONFIG_DIR-unset}" >>"$FAKE_NONO_CALL"
 SH
 chmod 0755 "$TMP/fake-nono"
+ln -s "$WRAPPER" "$TMP/bin/claude"
 ln -s "$WRAPPER" "$TMP/bin/codex"
 ln -s "$WRAPPER" "$TMP/bin/pi"
 ln -s "$WRAPPER" "$TMP/bin/cursor"
@@ -135,6 +140,30 @@ grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
 grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=captain" "$FAKE_NONO_CALL" >/dev/null
+
+# Claude must reach nono with CLAUDE_CONFIG_DIR on the real AI-volume path,
+# whatever the launcher had (the container default is the ~/.claude symlink;
+# a Herdr restore has nothing). Codex and pi have no such variable to carry.
+(
+  cd /workspace/firstmate
+  env -u CLAUDE_CONFIG_DIR ROE_FIRSTMATE_CAPTAIN=1 "$TMP/bin/codex" captain-brief
+)
+grep -F "config_dir=unset" "$FAKE_NONO_CALL" >/dev/null
+(
+  cd /workspace/firstmate
+  CLAUDE_CONFIG_DIR=/home/vscode/.claude ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 \
+    "$TMP/bin/claude" captain-brief
+)
+grep -F "nono:run --profile roe-firstmate-claude-captain --allow-cwd -- $TMP/real/claude captain-brief" \
+  "$FAKE_NONO_CALL" >/dev/null
+grep -F "config_dir=$HOME/.ai/claude" "$FAKE_NONO_CALL" >/dev/null
+(
+  cd "$SLOT"
+  env -u CLAUDE_CONFIG_DIR ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/claude" worker-brief
+)
+grep -F "nono:run --profile roe-firstmate-claude-worker --allow-cwd -- $TMP/real/claude --strict-mcp-config worker-brief" \
+  "$FAKE_NONO_CALL" >/dev/null
+grep -F "config_dir=$HOME/.ai/claude" "$FAKE_NONO_CALL" >/dev/null
 
 # Pi takes no role-specific arguments: its model and thinking level arrive on
 # the launch line from fm-spawn (crew) or from its own settings (captain).
