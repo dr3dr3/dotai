@@ -63,6 +63,22 @@ for harness in claude codex; do
     "$ROOT/firstmate/nono/roe-firstmate-$harness-worker.json" >/dev/null
 done
 
+# Claude Code locates its account state through CLAUDE_CONFIG_DIR; the sandbox
+# launcher sets it and both Claude profiles must let it through the base
+# environment allowlist, or every sandboxed session falls back to a
+# ~/.claude.json it cannot reach and re-runs login.
+for role in captain worker; do
+  jq -e '.environment.allow_vars | index("CLAUDE_CONFIG_DIR") != null' \
+    "$ROOT/firstmate/nono/roe-firstmate-claude-$role.json" >/dev/null
+done
+# The Claude captain (and only the captain) may work in the dotai checkout.
+jq -e '.filesystem.allow | index("/workspace/.ai/dotai") != null' \
+  "$ROOT/firstmate/nono/roe-firstmate-claude-captain.json" >/dev/null
+for profile in "$ROOT"/firstmate/nono/roe-firstmate-*-worker.json \
+  "$ROOT"/firstmate/nono/roe-firstmate-{codex,pi}-captain.json; do
+  jq -e '(.filesystem.allow | index("/workspace/.ai/dotai")) == null' "$profile" >/dev/null
+done
+
 if [[ ! -x "$NONO" ]]; then
   printf 'skip - pinned nono is not installed\n'
   exit 0
@@ -116,5 +132,12 @@ printf 'must-not-read\n' >"$SIBLING/secret"
 
 [[ -f "$WORK/allowed-write" ]]
 [[ ! -e "$SIBLING/forbidden-write" ]]
+
+(
+  cd "$WORK"
+  CLAUDE_CONFIG_DIR="$HOME/.ai/claude" \
+    "$NONO" run --profile "$ROOT/firstmate/nono/roe-firstmate-claude-worker.json" --allow-cwd -- \
+      bash -c 'test "$CLAUDE_CONFIG_DIR" = "$HOME/.ai/claude"'
+)
 
 printf 'ok - nono confines Firstmate worker filesystem and environment\n'

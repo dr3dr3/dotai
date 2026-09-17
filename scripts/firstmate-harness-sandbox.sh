@@ -115,6 +115,15 @@ fi
 if [[ "$HARNESS" == claude && "$ROLE" == worker ]]; then
   HARNESS_ARGS=(--strict-mcp-config)
 fi
+# Claude Code finds its account state (.claude.json, credentials) through
+# CLAUDE_CONFIG_DIR. The container sets it to ~/.claude, a symlink onto the AI
+# volume, and a Herdr restore may not set it at all; point it at the real
+# directory the Claude profiles grant so a sandboxed session does not fall
+# back to a ~/.claude.json it can neither find nor create and re-run login.
+# The Claude profiles pass the variable through nono's environment allowlist.
+if [[ "$HARNESS" == claude ]]; then
+  export CLAUDE_CONFIG_DIR="$HOME/.ai/claude"
+fi
 
 if [[ "$SANDBOX_MODE" == off ]]; then
   printf '\nWARNING: Firstmate nono sandbox is OFF; running %s %s unsandboxed.\n\n' \
