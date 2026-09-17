@@ -70,6 +70,31 @@ fi
 
 "$NONO" setup --check-only >/dev/null
 
+# Firstmate bootstrap execs the four axi tools; they are npm-installed under
+# ~/.local/lib/node_modules and symlinked from ~/.local/bin, and Landlock needs
+# read on both directories to exec through the link. The adjacent credentials
+# must stay denied: ~/.npmrc sits beside node_modules in deny_credentials, and
+# ~/.config/gh is the push-capable token README.md forbids granting a captain.
+captain="$ROOT/firstmate/nono/roe-firstmate-claude-captain.json"
+nono_why_status() {
+  "$NONO" why --profile "$captain" --path "$1" --op read --json 2>/dev/null \
+    | jq -r '.status'
+}
+for tool in gh-axi lavish-axi quota-axi tasks-axi; do
+  for path in "$HOME/.local/bin/$tool" "$HOME/.local/lib/node_modules/$tool/dist/bin/$tool.js"; do
+    if [[ "$(nono_why_status "$path")" != allowed ]]; then
+      printf 'captain profile does not allow reading %s\n' "$path" >&2
+      exit 1
+    fi
+  done
+done
+for path in "$HOME/.npmrc" "$HOME/.config/gh/hosts.yml"; do
+  if [[ "$(nono_why_status "$path")" != denied ]]; then
+    printf 'captain profile must keep %s denied\n' "$path" >&2
+    exit 1
+  fi
+done
+
 WORK="$(mktemp -d /workspace/repos/.firstmate-nono-work.XXXXXX)"
 SIBLING="$(mktemp -d /workspace/repos/.firstmate-nono-sibling.XXXXXX)"
 trap 'rm -rf "$WORK" "$SIBLING"' EXIT

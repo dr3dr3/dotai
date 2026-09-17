@@ -31,7 +31,9 @@
       "/workspace/repos/rock-of-eye-production-portal/.treehouse/firstmate-backing/rock-of-eye-production-portal"
     ],
     "read": [
-      "$HOME/.config/herdr"
+      "$HOME/.config/herdr",
+      "$HOME/.local/bin",
+      "$HOME/.local/lib/node_modules"
     ],
     "allow_file": [
       "$HOME/.claude.json"
