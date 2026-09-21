@@ -46,13 +46,33 @@ def active_writers(source):
     return False
 
 
+def _is_mounted(path: Path) -> bool:
+    """True when `path` is a mount point.
+
+    Path.is_mount() compares the device id of `path` with its parent's, so a
+    volume bind-mounted at ~/.ai from the SAME block device as $HOME (the
+    devcontainer's home volume, /dev/vdb1 for both) reads as "not a mount" and
+    the relocation is silently skipped. /proc/self/mountinfo is authoritative.
+    """
+    try:
+        target = str(path.resolve())
+        with open("/proc/self/mountinfo") as fh:
+            for line in fh:
+                fields = line.split()
+                if len(fields) > 4 and fields[4] == target:
+                    return True
+    except OSError:
+        pass
+    return path.is_mount()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--snapshot", action="store_true", help="Consistent SQLite backup without relocating live state")
     args = parser.parse_args()
     home = Path.home()
     volume = home / ".ai"
-    if not volume.is_mount():
+    if not _is_mounted(volume):
         print("AI volume not mounted; leaving Codex at its normal location")
         return
     source = Path(os.environ.get("CODEX_HOME", str(home / ".codex"))).absolute()
