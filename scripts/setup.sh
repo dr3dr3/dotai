@@ -282,10 +282,10 @@ if ! command -v claude &>/dev/null; then
     echo "→ Installing Claude Code CLI (npm -g @anthropic-ai/claude-code)"
     # --allow-scripts runs the package postinstall (install.cjs) that npm's
     # allow-scripts gating otherwise blocks.
-    if npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code; then
+    if npm install -g --prefix "$HOME/.local" --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code; then
       echo "  ✓ Claude Code installed: $(claude --version 2>/dev/null || echo 'check PATH')"
     else
-      echo "  ⚠ Claude Code install failed — install manually: npm install -g @anthropic-ai/claude-code"
+      echo "  ⚠ Claude Code install failed — install manually: npm install -g --prefix \"\$HOME/.local\" @anthropic-ai/claude-code"
     fi
   else
     echo ""

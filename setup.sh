@@ -73,6 +73,15 @@ fi
 #     the Firstmate pilot is pinned to Claude, and every extra agent in the
 #     image's global npm tree is one more thing a rebuild silently removes.
 # -----------------------------------------------------------------------------
+# npm globals go to ~/.local, not the image's nvm tree. $HOME is the persistent
+# home volume, so a devcontainer rebuild keeps them; the nvm tree is inside the
+# image and is wiped every rebuild — which is how `codex` vanished on 2026-09-21
+# while its login, config and the `cx` alias (all under $HOME) survived and made
+# it look installed. ~/.local/bin is first on PATH. Same pattern as the axi
+# tools in scripts/setup-firstmate.sh: a per-command prefix, not
+# NPM_CONFIG_PREFIX, so the team's own installs in post-create are untouched.
+NPM_HOME_PREFIX="$HOME/.local"
+
 if ! command -v npm &>/dev/null; then
     echo "⚠ npm not found — skipping Codex/varlock/Pi (install Node, then re-run)."
 else
@@ -83,7 +92,7 @@ else
         echo "✓ Codex $(codex --version 2>/dev/null | head -1) already installed — skipping."
     else
         echo "→ Installing Codex CLI (@openai/codex)..."
-        npm install -g @openai/codex && echo "✓ Codex installed"
+        npm install -g --prefix "$NPM_HOME_PREFIX" @openai/codex && echo "✓ Codex installed"
     fi
 
     # varlock — resolves op:// references into the env at agent launch time.
@@ -92,7 +101,7 @@ else
         echo "✓ varlock $(varlock --version 2>/dev/null | head -1) already installed — skipping."
     else
         echo "→ Installing varlock..."
-        npm install -g varlock && echo "✓ varlock installed"
+        npm install -g --prefix "$NPM_HOME_PREFIX" varlock && echo "✓ varlock installed"
     fi
 
     # Pi Harness — self-extensible coding agent (earendil-works/pi), opt-in.
@@ -106,7 +115,7 @@ else
         echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
     else
         echo "→ Installing Pi Harness (@earendil-works/pi-coding-agent)..."
-        npm install -g --ignore-scripts @earendil-works/pi-coding-agent \
+        npm install -g --prefix "$NPM_HOME_PREFIX" --ignore-scripts @earendil-works/pi-coding-agent \
             && echo "✓ Pi installed"
     fi
 
