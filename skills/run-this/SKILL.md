@@ -1,6 +1,6 @@
 ---
 name: run-this
-description: Emit a single copy-pasteable terminal block that André runs himself, which captures ALL its output to a timestamped file under /workspace/tmp/ and prints that path — so he replies with the path, not a wall of pasted output. Use whenever a command needs to run in his terminal rather than through the Bash tool: anything touching production, anything behind an interactive prompt (AWS SSO, sudo, gh auth), anything long-running, anything the permission layer blocks, or when he says "give me a script to run", "give me the commands", "I'll run it", "what should I run", "give me a one-liner", "run this in my terminal". Also use to REPLACE a paste — if he is about to paste large output, hand him this shape instead. Not for commands you can simply run yourself with Bash.
+description: Prepare a reviewed request for André's persistent operator pane, or a captured terminal block when the pane is unavailable. Use for interactive authentication, approved production writes, commands that require his terminal, or when he asks for commands to run. Prefer direct agent execution for authorised reads and ordinary work.
 ---
 
 # Run This
@@ -10,10 +10,34 @@ he runs it in his terminal, then pastes hundreds or thousands of lines back into
 the chat. Measured over 19–24 Aug 2026 that was **44% of everything he typed**
 (279k characters across 94 messages, largest single paste 19,805 chars).
 
-This skill kills the return leg. The command captures its own output to a file;
-he replies with **one path**; Claude reads the file.
+This skill removes the return paste. A bounded operator request records its
+result; the captured-block fallback writes output to a file, so André can reply
+with **one path** instead of pasting a transcript.
 
-## The contract
+## Operator-pane update
+
+For commands André must run, classify the operation using
+[operator recipes](references/operator-recipes.md). Personal sessions can submit
+an exact request with `node scripts/roe-operator.ts`; André reviews and runs it in one
+persistent Herdr pane. The request route is trusted personal tooling, not an
+authority grant or a transport for restricted role agents. Where this inbox is
+unavailable, retain the captured block fallback below. The older per-command
+`herdr-pane.sh` is a compatibility fallback, not the preferred route: it opens
+another pane for every request. Do not stage a command in an unrelated shell.
+
+The supported families include interactive authentication, bounded diagnostics,
+Firstmate-coordinated local runtime work, CLI-driven Terraform through Make,
+production release through Make, and dispatch through an approved workflow. For a write script use
+`templates/write-operation.sh`: check exact preconditions and stop on failure. The existing `templates/script.sh` is for
+read-only probes that should report every step. `roe-coordination recover`,
+production data writes and other exceptional operations require their own
+reviewed procedure; a request record never substitutes for it.
+
+## Captured-block fallback contract
+
+The rules below apply to the captured block and quiet-capture recipes. Native
+operator-pane login, Terraform and release runs record status separately; Terraform uses
+its Make transcript and login output is not saved.
 
 1. You emit **one** fenced block he can select and paste — no commentary inside it.
 2. It writes everything (stdout **and** stderr) to `/workspace/tmp/<slug>-<UTC>.log`,
@@ -32,7 +56,7 @@ reason, and **say which one in a single line above the block**:
 
 | Reason | Example |
 |---|---|
-| **Writes** to production | prod SSM put, prod DB write, a deploy dispatch, anything on `roe-prod-admin` |
+| **Approved writes** to production | a purpose-built prod workflow or release dispatch after its owner approves |
 | Needs interactive auth | `aws sso login`, `gh auth login`, `terraform login` |
 | Blocked by the permission layer | denied or ask-tier command |
 | Long-running | fleet sweeps, refreshes, longevity probes |
@@ -79,7 +103,9 @@ $RT <slug> --quiet -- bash /workspace/tmp/<slug>.sh
 Options and rules:
 
 - **Everything after `--` is exec'd verbatim.** Pipelines, redirects, env-var
-  prefixes need `bash -c '…'`.
+  prefixes need `bash -c '…'`. Do not wrap a command that already owns its
+  interactive TTY and transcript, such as `make tf-apply`, in `capture.sh`; use
+  its named operator recipe directly.
 - **`--quiet`** for anything long or noisy — output goes only to the file. Never
   `--quiet` an interactive command; he needs to see the device-code prompt.
 - **Slug is kebab-case**, ideally the Linear id plus intent: `eng-2621-fk-impact`.
@@ -120,28 +146,15 @@ These are Rock of Eye specific and have each cost a session before:
   answers the question. If you see a new secret shape leak, add a pattern to
   `scrub.sh` and a case to `self-test.sh`; there is deliberately no `--no-scrub`.
 
-## Step 4 — Hand it over: Herdr pane first, fenced block as fallback
+## Step 4 — Hand it over: operator inbox first, captured block as fallback
 
-**Try the pane first.** If this session is running inside Herdr, open a bash
-pane next to it with the line already typed — he reads it and presses Enter,
-no copy-paste at all:
-
-```bash
-bash ~/.claude/skills/run-this/scripts/herdr-pane.sh <slug> [--quiet] -- <command and args>
-```
-
-- exit **0** → it printed the pane id. Tell him in one line what's waiting in
-  the pane (`run-this: <slug>` is its label) and what you're looking for. Do
-  **not** also paste the block — that's the double-handling this skill exists
-  to remove.
-- exit **3** → not inside Herdr (or the CLI can't reach the session). Fall
-  through to the fenced block below. Say nothing about Herdr.
-- exit **4** → the pane opened but bash didn't come up; tell him the pane id
-  and give the fenced block too.
-
-It never presses Enter for him, and it types exactly one line — pipelines
-and multi-step work go through `bash -c '…'` or a script in `/workspace/tmp/`.
-The pane is bash, not his default fish, so the block runs exactly as written.
+**Use the persistent operator pane.** For one of the supported families,
+prepare a request with `node scripts/roe-operator.ts submit` following
+[operator-recipes.md](references/operator-recipes.md). Tell André its short purpose
+and request ID. He refreshes his Operator pane, inspects the frozen command and
+runs it there. Do not send text to his shell or press Enter. A submitted request
+is pending, not approved or executed. If no trusted operator inbox is available,
+use the captured block below. Do not create a fresh Herdr pane automatically.
 
 **Fallback — the fenced block.** Above it, one line: what it does and what
 you're looking for in the result. Below it, nothing — the path is the last
@@ -158,8 +171,10 @@ Either way: then stop and wait.
 
 ## Step 5 — Read it back
 
-When he replies with the path, read the file and check these **before**
-interpreting a single line of content:
+For a captured-block result, read the path and check these **before**
+interpreting a single line of content. For a native operator request, read its
+request record and the Make transcript if present; no capture DONE marker is
+expected for native authentication, Terraform or release:
 
 1. **Is the DONE marker the last line?** If not, the run was cut short (or is
    still going). Say so; don't interpret a partial log as a result.
@@ -179,10 +194,11 @@ on, so he can spot-check without opening the file.
 
 ## Verifying the skill itself
 
-`bash ~/.claude/skills/run-this/scripts/self-test.sh` — 30 checks over
+`bash ~/.claude/skills/run-this/scripts/self-test.sh` — checks over
 capture.sh and scrub.sh in a throwaway log dir. Run it when asked whether
 run-this is working, or after editing either script.
 `scripts/aws-session.sh` reports SSO token expiry and whether named profiles
 resolve (distinguishing "expired" from "role not assigned").
-`scripts/herdr-pane.sh` is exercised for its fallback and usage paths by the
-self-test; the live pane path needs a Herdr session (`HERDR_ENV=1`).
+`scripts/herdr-pane.sh` remains for compatibility. The self-test exercises
+capture and scrub. `node --test scripts/roe-operator.test.ts` checks request validation and
+the native-TTY Terraform and release routes with fake external commands.
