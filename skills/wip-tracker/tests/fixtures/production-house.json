@@ -1,0 +1,261 @@
+{
+  "notice": "Historical 2026-09-28 fixture only. No live verification or authority.",
+  "conditions": [
+    {
+      "id": "infrastructure",
+      "text": "Production infrastructure completed and ability to release to Production"
+    },
+    {
+      "id": "houses",
+      "text": "WTL and Hondsyork live; Hondsyork connected to Wil Valor and A Timeless Tailor"
+    },
+    {
+      "id": "mvp",
+      "text": "Mark/Jimmy MVP requirements complete, including QC image upload"
+    },
+    {
+      "id": "observability",
+      "text": "OpenTelemetry across production-portal and production-core; MVP metrics and alerts working"
+    }
+  ],
+  "checkpoint": {
+    "position": "Dated reconciliation only. Four parallel paths; production availability unproven.",
+    "decisions": [
+      "Older one-house scope differs from agreed two-house plus observability scope",
+      "AI-first measurement report obligation remains unresolved"
+    ],
+    "evidence": [],
+    "questions": [
+      "Reconcile full requirements and metrics/alerts",
+      "WTL retailer scope unspecified",
+      "Reconcile older AI-first measurement report obligation"
+    ],
+    "blockers": [],
+    "scope_revision": 1,
+    "conditions": [
+      {
+        "id": "infrastructure",
+        "state": "gap",
+        "evidence": [
+          "ENG-2978"
+        ],
+        "remaining": "SPA hosting, QC storage, launch configuration and first-release evidence"
+      },
+      {
+        "id": "houses",
+        "state": "unknown",
+        "evidence": [],
+        "remaining": "Reconcile two houses and retailer links against older one-house roadmap"
+      },
+      {
+        "id": "mvp",
+        "state": "unknown",
+        "evidence": [
+          "qc-feature-prs"
+        ],
+        "remaining": "Full acceptance list, production storage and deployed QC verification"
+      },
+      {
+        "id": "observability",
+        "state": "unknown",
+        "evidence": [
+          "ENG-2862"
+        ],
+        "remaining": "Dedicated coverage for both services not established; missing proof is not proof of absence"
+      }
+    ],
+    "observations": [
+      {
+        "key": "ENG-2978",
+        "claim": "Merged backend infrastructure does not prove all launch work complete",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "ENG-2978"
+        },
+        "status": "supported"
+      },
+      {
+        "key": "qc-feature-prs",
+        "claim": "Core #46 and portal #56 merged September 24; production availability unproven",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "qc-feature-prs"
+        },
+        "status": "supported"
+      },
+      {
+        "key": "ENG-2543",
+        "claim": "Tenant-switcher defect resolved; remaining tenant-portal transport does not gate Production Portal",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "ENG-2543"
+        },
+        "status": "supported",
+        "blocks": false
+      },
+      {
+        "key": "SSO-286",
+        "claim": "Intentionally held SSO work",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "SSO-286"
+        },
+        "status": "supported",
+        "blocks": true,
+        "hold_reason": "Required deploy order remains in force",
+        "release_condition": "Established deploy-order prerequisite verified"
+      },
+      {
+        "key": "ENG-3584",
+        "claim": "QC explicitly in scope makes production QC storage part of finish line",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "ENG-3584"
+        },
+        "status": "supported",
+        "blocks": true
+      },
+      {
+        "key": "ENG-2862",
+        "claim": "API instrumentation issue is not proof for both Production House services",
+        "observed_at": "2026-09-28T10:00:00+00:00",
+        "source": {
+          "type": "historical-fixture",
+          "ref": "ENG-2862"
+        },
+        "status": "supported"
+      }
+    ],
+    "actions": [
+      {
+        "id": "infra-reconcile",
+        "text": "Locate infrastructure session and reconcile SPA hosting, QC storage and launch evidence",
+        "category": "required-now",
+        "actor": {
+          "status": "proposed",
+          "name": "André",
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "houses-checklist",
+        "text": "Prepare two-house and Hondsyork retailer onboarding checklist",
+        "category": "required-now",
+        "actor": {
+          "status": "unknown",
+          "name": null,
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "qc-verify",
+        "text": "Verify deployed QC only after production storage evidence",
+        "category": "waiting",
+        "actor": {
+          "status": "proposed",
+          "name": "André",
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [
+          "ENG-2543",
+          "ENG-3584"
+        ],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "held-sso",
+        "text": "Retain SSO hold until established release condition",
+        "category": "waiting",
+        "actor": {
+          "status": "unknown",
+          "name": null,
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [
+          "SSO-286"
+        ],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "metrics-list",
+        "text": "Reconcile MVP metrics and alerts for both services",
+        "category": "required-now",
+        "actor": {
+          "status": "unknown",
+          "name": null,
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "optional-guide",
+        "text": "Consider an explanatory onboarding guide",
+        "category": "optional-follow-up",
+        "actor": {
+          "status": "proposed",
+          "name": "André",
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      },
+      {
+        "id": "separate-opportunity",
+        "text": "Consider a separate post-release improvement",
+        "category": "separate-opportunity",
+        "actor": {
+          "status": "proposed",
+          "name": "André",
+          "evidence": []
+        },
+        "destination": {
+          "status": "unknown",
+          "session": null
+        },
+        "dependencies": [],
+        "evidence": [],
+        "contribution": "Advance the agreed release condition; recommendation only"
+      }
+    ]
+  }
+}
