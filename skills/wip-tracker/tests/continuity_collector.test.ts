@@ -29,13 +29,17 @@ function setup() {
     inbox,
     grants: [{ thread: f.thread, assignment_revision: 0 }],
   };
-  const collector = new Collector(f.store, binding);
+  const load = (value: object, path = `${f.dir}/binding-${id()}.json`) => {
+    writeFileSync(path, canonical(value), { mode: 0o600 });
+    return bindingFile(path);
+  };
+  const collector = new Collector(f.store, load(binding));
   const write = (event: any, raw = canonical(event)) => {
     const path = `${outbox}/${event.id}.json`;
     writeFileSync(path, raw, { mode: 0o600 });
     return path;
   };
-  return { f, outbox, inbox, binding, collector, write };
+  return { f, outbox, inbox, binding, collector, load, write };
 }
 const using = (name: string, fn: (x: ReturnType<typeof setup>) => void) =>
   test(name, () => {
@@ -112,7 +116,7 @@ using("receiver needs exact handoff grant and previous assignment", (x) => {
       },
     ],
   };
-  const target = new Collector(x.f.store, receiver);
+  const target = new Collector(x.f.store, x.load(receiver));
   x.write(accept);
   assert.equal(target.collect()[0].code, "accepted");
   assert.equal(x.f.store.get("threads", x.f.thread).coordinator, x.f.receiver);
@@ -213,16 +217,44 @@ using(
   "binding refuses channels containing database and foreign thread",
   (x) => {
     assert.throws(
-      () => new Collector(x.f.store, { ...x.binding, outbox: x.f.dir }),
+      () => new Collector(x.f.store, x.load({ ...x.binding, outbox: x.f.dir })),
       { code: "unsafe_path" },
     );
     assert.throws(
       () =>
-        new Collector(x.f.store, {
-          ...x.binding,
-          grants: [{ thread: id(), assignment_revision: 0 }],
-        }),
+        new Collector(
+          x.f.store,
+          x.load({
+            ...x.binding,
+            grants: [{ thread: id(), assignment_revision: 0 }],
+          }),
+        ),
       { code: "not_found" },
     );
   },
 );
+using("file binding cannot come from a child-writable channel", (x) => {
+  assert.throws(() => new Collector(x.f.store, x.binding as any), {
+    code: "invalid",
+  });
+  assert.doesNotThrow(() => new Collector(x.f.store, x.load(x.binding)));
+
+  const other = x.f.open();
+  const forged = {
+    ...x.binding,
+    grants: [{ thread: other, assignment_revision: 0 }],
+  };
+  x.write(
+    x.f.event("checkpoint", id(), {
+      thread: other,
+      expected_revision: 0,
+      assignment_revision: 0,
+      content: content(),
+    }),
+  );
+  const childBinding = x.load(forged, `${x.outbox}/binding.json`);
+  assert.throws(() => new Collector(x.f.store, childBinding), {
+    code: "unsafe_path",
+  });
+  assert.equal(all(x.f.store.db, "SELECT * FROM checkpoints").length, 0);
+});

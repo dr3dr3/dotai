@@ -160,10 +160,20 @@ export function publish(fd: number, name: string, value: Doc): void {
     }
   }
 }
-export function bindingFile(path: string): Doc {
+const bindingBrand = Symbol("loaded owner binding");
+export interface LoadedBinding {
+  readonly path: string;
+  readonly value: Doc;
+  readonly [bindingBrand]: true;
+}
+export function bindingFile(path: string): LoadedBinding {
   const fd = directory(parse(path).dir);
   try {
-    return readJson(fd, parse(path).base);
+    return {
+      path: resolve(path),
+      value: readJson(fd, parse(path).base),
+      [bindingBrand]: true,
+    };
   } finally {
     closeSync(fd);
   }
@@ -171,7 +181,13 @@ export function bindingFile(path: string): Doc {
 export class Collector {
   readonly binding: Doc;
   readonly store: Store;
-  constructor(store: Store, binding: Doc) {
+  constructor(store: Store, source: LoadedBinding) {
+    check(
+      source[bindingBrand] === true,
+      "invalid",
+      "Load binding from an owner-held file",
+    );
+    const binding = source.value;
     fields(binding, [
       "version",
       "session",
@@ -205,6 +221,12 @@ export class Collector {
         !relativeTo(store.path, binding.inbox),
       "unsafe_path",
       "Channel grants include each other or database",
+    );
+    check(
+      !relativeTo(source.path, binding.outbox) &&
+        !relativeTo(source.path, binding.inbox),
+      "unsafe_path",
+      "Binding policy must be outside child-writable channels",
     );
     check(
       Array.isArray(binding.grants) &&

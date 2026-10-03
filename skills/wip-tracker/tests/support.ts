@@ -5,10 +5,15 @@ import {
   type Actor,
   type Event,
   type Doc,
+  type SemanticAction,
+  type SemanticCheckpoint,
+  type HandoffBrief,
+  type PreparePayload,
+  type AcceptPayload,
 } from "../scripts/continuity.ts";
 export const id = randomUUID;
 export const TIME = "2026-09-28T12:00:00Z";
-export const content = (next = "Inspect evidence"): Doc => ({
+export const content = (next = "Inspect evidence"): SemanticCheckpoint => ({
   position: "Fixture work checkpointed",
   next_action: next,
   decisions: [],
@@ -18,10 +23,10 @@ export const content = (next = "Inspect evidence"): Doc => ({
 });
 export const action = (
   name: string,
-  category = "required-now",
-  actor = "proposed",
+  category: SemanticAction["category"] = "required-now",
+  actor: SemanticAction["actor"]["status"] = "proposed",
   dependencies: string[] = [],
-): Doc => ({
+): SemanticAction => ({
   id: name,
   text: name,
   category,
@@ -143,7 +148,7 @@ export class Fixture {
       handoff?: string;
       revision?: number;
       receiver?: string;
-      mode?: string;
+      mode?: HandoffBrief["mode"];
       exit?: string;
     } = {},
   ): Doc {
@@ -171,7 +176,7 @@ export class Fixture {
         },
         authority: "Record-only fixture",
         expected_handoff_revision: options.revision ?? 0,
-      },
+      } satisfies PreparePayload,
       t.coordinator,
     );
   }
@@ -187,7 +192,7 @@ export class Fixture {
       h.sender,
     );
   }
-  acceptPayload(h: Doc): Doc {
+  acceptPayload(h: Doc): AcceptPayload {
     const t = this.store.get("threads", h.thread);
     return {
       revision: h.revision,

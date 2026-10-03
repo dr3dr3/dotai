@@ -36,7 +36,9 @@ export interface SemanticAction {
     name: string | null;
     evidence: TypedLink[];
   };
-  destination: { status: "verified" | "unknown"; session: string | null };
+  destination:
+    | { status: "verified"; session: string }
+    | { status: "unknown"; session: null };
   dependencies: string[];
   evidence: TypedLink[];
   contribution: string;
@@ -86,6 +88,37 @@ export interface HandoffBrief {
   mode: "collaboration" | "facilitation" | "service";
   exit_condition: string;
 }
+export interface CheckpointPayload {
+  thread: string;
+  expected_revision: number;
+  assignment_revision: number;
+  content: SemanticCheckpoint;
+  disposition?: "open" | "parked" | "closed";
+  human_approval?: string;
+}
+export interface PreparePayload {
+  thread: string;
+  expected_thread_revision: number;
+  receiver: string;
+  brief: HandoffBrief;
+  authority: string;
+  expected_handoff_revision: number;
+}
+export interface AcceptPayload {
+  revision: number;
+  expected_state_revision: number;
+  expected_thread_revision: number;
+  previous_coordinator: string;
+  checkpoint_id: string;
+  content: SemanticCheckpoint;
+  understanding: string;
+}
+export type TypedContinuityEvent = Omit<Event, "kind" | "payload"> &
+  (
+    | { kind: "checkpoint"; payload: CheckpointPayload }
+    | { kind: "prepare"; payload: PreparePayload }
+    | { kind: "accept"; payload: AcceptPayload }
+  );
 export type Doc = Record<string, any>;
 export type Actor = {
   producer: string;
@@ -201,7 +234,7 @@ export function interaction(mode: unknown, exit: unknown): void {
   );
   text(exit);
 }
-export function semantic(value: unknown): void {
+export function semantic(value: unknown): asserts value is SemanticCheckpoint {
   fields(
     value,
     ["position", "decisions", "evidence", "questions", "blockers"],
@@ -1413,7 +1446,20 @@ export class Store {
           evidence[o.key] = { ...o, checkpoint: cp.id, authored_at: cp.time };
         else if (
           instant(o.observed_at) === instant(old.observed_at) &&
-          Object.entries(o).some(([k, v]) => canonical(old[k]) !== canonical(v))
+          canonical(o) !==
+            canonical(
+              Object.fromEntries(
+                Object.entries(old).filter(
+                  ([key]) =>
+                    ![
+                      "checkpoint",
+                      "authored_at",
+                      "stale",
+                      "ambiguity",
+                    ].includes(key),
+                ),
+              ),
+            )
         ) {
           old.status = "unknown";
           old.ambiguity = "Conflicting observations at same time";
@@ -1765,10 +1811,14 @@ export function renderOutcomes(rows: Doc[]): string {
             (a: Doc) =>
               `    Advances: ${a.contribution}; waiting: ${a.waiting_for.join(", ")}; unknown dependencies: ${a.dependency_unknown.join(", ")}`,
           ),
-          ...Object.values(r.evidence).map(
-            (f: any) =>
-              `  Evidence ${f.key} [${f.status}${f.stale ? "; stale" : ""}] observed ${f.observed_at}: ${f.claim} (${f.source.ref})`,
-          ),
+          ...Object.values(r.evidence).flatMap((f: any) => [
+            `  Evidence ${f.key} [${f.status}${f.stale ? "; stale" : ""}] observed ${f.observed_at}: ${f.claim} (${f.source.ref})`,
+            ...(f.hold_reason || f.release_condition
+              ? [
+                  `    Hold: ${f.hold_reason ?? "unspecified"}; release when: ${f.release_condition ?? "unspecified"}`,
+                ]
+              : []),
+          ]),
           ...(r.remaining_acceptance ? [`  ${r.remaining_acceptance}`] : []),
           "  Danny advisory view / Concierge records. Recommendations grant no execution authority.",
         ].join("\n");

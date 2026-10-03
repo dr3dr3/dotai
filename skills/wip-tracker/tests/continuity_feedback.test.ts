@@ -1,6 +1,7 @@
 import test from "node:test";
 import { Worker } from "node:worker_threads";
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import { Store, all, one } from "../scripts/continuity.ts";
 import {
   Feedback,
@@ -398,6 +399,22 @@ using(
     } finally {
       restored.close();
     }
+  },
+);
+using(
+  "seven-day backup boundary refuses restore and purges tracked file",
+  async (x) => {
+    const backup = `${x.f.dir}/expiring.sqlite`;
+    await x.service.backup(backup);
+    x.advance(defaults.backup_seconds);
+    const target = `${x.f.dir}/expired-restore.sqlite`;
+    await assert.rejects(x.service.restore(backup, target), {
+      code: "expired",
+    });
+    assert.equal(existsSync(target), false);
+    assert.deepEqual(x.service.maintain().removed_backups, [backup]);
+    assert.equal(existsSync(backup), false);
+    assert.equal(all(x.f.store.db, "SELECT * FROM feedback_backups").length, 0);
   },
 );
 using("full identity purge blocks old work after restore", async (x) => {

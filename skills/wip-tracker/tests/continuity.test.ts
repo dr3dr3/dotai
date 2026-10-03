@@ -9,6 +9,7 @@ import {
   writeFileSync,
   readFileSync,
   existsSync,
+  symlinkSync,
 } from "node:fs";
 import {
   Store,
@@ -174,7 +175,7 @@ using(
     );
   },
 );
-for (const mode of ["collaboration", "facilitation", "service"])
+for (const mode of ["collaboration", "facilitation", "service"] as const)
   using(`${mode} mode and exit condition survive acceptance`, (f) => {
     const h = f.send(f.prepare({ mode, exit: "Return actual exit evidence" }));
     f.accept(h);
@@ -351,6 +352,41 @@ using(
     assert.equal(view.evidence.dep.hold_reason, "Wait for handoff");
   },
 );
+using(
+  "same-time observations with optional field changes stay ambiguous",
+  (f) => {
+    const outcome = f.outcome([{ id: "done", text: "Done" }]);
+    const thread = f.open(outcome);
+    for (const observed of [
+      observation("done", "accepted"),
+      observation("done", "accepted", { blocks: true }),
+    ]) {
+      const t = f.store.get("threads", thread);
+      f.emit(
+        "checkpoint",
+        id(),
+        {
+          thread,
+          expected_revision: t.revision,
+          assignment_revision: 0,
+          content: {
+            ...content(),
+            scope_revision: 1,
+            observations: [observed],
+            conditions: [
+              { id: "done", state: "met", evidence: ["done"], remaining: "" },
+            ],
+          },
+        },
+        f.sender,
+      );
+    }
+    const view = f.store.outcomeView(outcome, TIME)[0];
+    assert.equal(view.evidence.done.status, "unknown");
+    assert.match(view.evidence.done.ambiguity, /Conflicting observations/);
+    assert.equal(view.conditions[0].state, "unknown");
+  },
+);
 using("optional follow-up does not extend completion line", (f) => {
   const outcome = f.outcome(),
     thread = f.open(outcome),
@@ -428,6 +464,12 @@ using(
     f.store.db.exec("PRAGMA user_version=99");
     assert.throws(() => new Store(f.path), { code: "schema" });
     f.store.db.exec("PRAGMA user_version=2");
+    const corrupt = `${f.dir}/corrupt.sqlite3`;
+    writeFileSync(corrupt, "not SQLite", { mode: 0o600 });
+    assert.throws(() => new Store(corrupt));
+    const linked = `${f.dir}/linked.sqlite3`;
+    symlinkSync(f.path, linked);
+    assert.throws(() => new Store(linked), { code: "unsafe_path" });
   },
 );
 using("inert launch request never returns fulfilled", (f) => {
@@ -534,6 +576,9 @@ test("dated Production House fixture keeps four conditions and unresolved holds"
       "optional-follow-up",
     );
     assert.equal(view.execution_authority, "none");
+    const human = renderOutcomes([view]);
+    assert.match(human, /Required deploy order remains in force/);
+    assert.match(human, /Established deploy-order prerequisite verified/);
   } finally {
     f.close();
   }

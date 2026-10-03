@@ -61,8 +61,11 @@ An operator-held binding names a registered session, stable producer, private
 outbox/receipt inbox and exact thread/assignment grants; a receiver grant also
 names the handoff revision. The role contributes bounded canonical JSON files
 only; canonical parsing rejects duplicate keys before commit. The collector
-fixture uses Linux `/proc/self/fd` to anchor file operations to opened
-directories. The collector validates file ownership, modes, type, links, path components, size,
+loads policy from an owner-held binding file outside both child-writable
+channels and rejects a binding placed inside either channel. A plain object
+cannot be passed to the collector as binding policy. The fixture uses Linux
+`/proc/self/fd` to anchor file operations to opened directories. The collector
+validates file ownership, modes, type, links, path components, size,
 provenance and assignment in the same write transaction as the store event,
 then publishes an atomic receipt. Its child channel permits checkpoints and
 handoff transitions. It exposes no broad DB reads/writes, feedback event family,
