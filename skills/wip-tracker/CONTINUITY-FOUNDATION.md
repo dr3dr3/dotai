@@ -2,12 +2,14 @@
 
 This package is a source-only foundation for local work continuity. It is not
 installed into `wip.sh`, the current skill, the role launcher or a running
-agent. No store path is selected or initialized by this change. The Python
-scripts use only the standard library and require an explicit database path.
+agent. No store path is selected or initialized by this change. The TypeScript
+scripts require Node 22.18 or later and an explicit database path. Node's
+built-in `node:sqlite` remains experimental in Node 22, so the driver is an
+activation review point.
 
 ## What the records mean
 
-`scripts/continuity.py` owns one local SQLite store. It records sessions,
+`scripts/continuity.ts` owns one local SQLite store. It records sessions,
 threads, outcome/thread/origin links, immutable semantic checkpoints and
 revision-checked handoffs. An exact event replay returns its durable result;
 reuse of an ID or producer sequence with different content conflicts. A receiver
@@ -30,14 +32,15 @@ action. Closing a thread or observing a session exit does not prove the exit
 condition. [AI-THINK-C1-HANDOFF.md](AI-THINK-C1-HANDOFF.md) gives the deferred
 shared request/result/checkpoint template placement and a manual P4/P6 route.
 
-The store schema is version 2. It rejects missing, corrupt or wrong-version
-stores and snapshots on normal open. There is no migration from version 1 or
+The store schema is version 2. See [STORAGE-OPTIONS.md](STORAGE-OPTIONS.md)
+for the SQLite decision and alternatives. It rejects missing, corrupt or
+wrong-version stores and snapshots on normal open. There is no migration from version 1 or
 legacy WIP data. The selected store must live on one local filesystem in a
 private owner-held directory; backups and restore have separate guarded APIs.
 
 ## Feedback remains disabled
 
-`scripts/continuity_feedback.py` adds transactional feedback tables in the same
+`scripts/continuity_feedback.ts` adds transactional feedback tables in the same
 store, but no live prompt, hook or collector is installed. Its fixture defaults
 are proposals for later approval: shared 24-hour cooldown, one request per
 outcome, an unconfirmed claim becoming unknown after 10 minutes without retry,
@@ -53,11 +56,13 @@ backup location, and a real journey still need separate approval and wiring.
 
 ## C2 transport boundary
 
-`scripts/continuity_collector.py` is a trusted, one-shot filesystem collector.
+`scripts/continuity_collector.ts` is a trusted, one-shot filesystem collector.
 An operator-held binding names a registered session, stable producer, private
 outbox/receipt inbox and exact thread/assignment grants; a receiver grant also
-names the handoff revision. The role contributes bounded JSON files only. The
-collector validates file ownership, modes, type, links, path components, size,
+names the handoff revision. The role contributes bounded canonical JSON files
+only; canonical parsing rejects duplicate keys before commit. The collector
+fixture uses Linux `/proc/self/fd` to anchor file operations to opened
+directories. The collector validates file ownership, modes, type, links, path components, size,
 provenance and assignment in the same write transaction as the store event,
 then publishes an atomic receipt. Its child channel permits checkpoints and
 handoff transitions. It exposes no broad DB reads/writes, feedback event family,
@@ -69,16 +74,20 @@ Trusted operator CLI flags are inputs, not authentication for restricted roles.
 From the repository root:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s skills/wip-tracker/tests -v
-PYTHONDONTWRITEBYTECODE=1 python3 skills/wip-tracker/scripts/continuity_fixtures.py
+cd skills/wip-tracker
+npm ci --ignore-scripts
+npm run typecheck
+npm test
+npm run demo
 ```
 
-The 60 tests use temporary stores and local inert processes. They cover
+The TypeScript tests use temporary stores and separate local worker
+connections. They cover
 idempotency, competing acceptance and checkpoint writers, stale assignments,
 the outcome-flow acceptance cases, all three interaction modes and missing or
 unmet exit evidence, collector path/provenance/receipt failures, and feedback
 claim/replay/crash, silence, delayed binding, deletion and backup restore. The
-demo includes dated Production House evidence solely as a fixture; it authorises
+test fixture includes dated Production House evidence solely as a fixture; it authorises
 no live read, mutation, implementation or release.
 
 Activation remains a later integration decision: verify the launcher/provider

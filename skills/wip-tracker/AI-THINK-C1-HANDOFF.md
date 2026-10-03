@@ -58,8 +58,7 @@ role to acknowledge the mode and exit condition alongside the bounded scope.
 
 At a natural P4 or P6 pilot review, the owner/Concierge reads a small, explicitly
 chosen sample of authorised thread records through C1's read-only `query` or
-`view` (for an offline fixture: `python3 skills/wip-tracker/scripts/continuity.py
---db <private-fixture-store> query --thread <thread-id>`). For each, compare the
+`view` (for an offline fixture: `node skills/wip-tracker/scripts/continuity_cli.ts query --db <private-fixture-store> --thread <thread-id>`). For each, compare the
 accepted mode and exit condition with the latest matching `engagement_exit`, its
 source links, and the actual outcome done conditions. Mark absent exit evidence
 as unknown and retain any unmet dependency with its owner and next action.
@@ -72,5 +71,4 @@ record. Production House examples remain dated fixtures, never live evidence.
 
 Offline acceptance fixtures cover all three modes, a changed mode before
 acceptance, an explicit revision after acceptance, stale exit evidence, an unmet
-exit, and a closed session/thread with no exit evidence. The full 60-test suite
-and temporary-store demo passed on 2026-09-30.
+exit, and a closed session/thread with no exit evidence. The TypeScript suite and temporary-store demo passed on 2026-10-03.
