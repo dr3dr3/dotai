@@ -1,0 +1,16 @@
+{
+  "files": {
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/codex-vercel-gateway-turn-probe/run.ts": "5e2c1fb377a37503f27154e4536ff6ff549765a9d21f8f4badb55409cb75adb6",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/codex-vercel-gateway-turn-probe/client.ts": "712326c56b8e6cadc45619b66504adac0a2306f27a170aab0491a67b98ffc8fb",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/codex-vercel-gateway-turn-probe/entry.sh": "3d3cef47a58724f267bac8c235ea9f0877072778db23759c19b8dd08e9260d41",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/codex-vercel-gateway-turn-probe/profile.json": "3a9d61de66d213927570584a3911bb95bf8266a392957cc261175730667e32b4",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/scripts/roe-role.ts": "f6e2c47b6ad0870399bfee1dc24e091645ccb6434ff974789ecc9fd3f6a78710",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/scripts/roe-role-state.ts": "2d7deeb2fa82408d1874596e6470e1a734f5977ad199ae0e6fb49ec3a98e650d",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/catalogue.json": "a2ee6fe05113147028da6d67e9c5b0df4534b1b67f7082dba354d5ff9d2fbd54",
+    "/workspace/.ai/dotai-codex-vercel-gateway-turn/roles/codex-runtime.json": "f8050709119d8fdd5ec3625dc948a13edb07e015d2e6f471556db1513e2c65e5",
+    "/home/vscode/.local/lib/roe-firstmate/nono": "520433bc42ee9938a154867b965a243e9cfa348a3a1987fb7422c1bff653b4e9",
+    "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+  },
+  "profile_sha256": "3a9d61de66d213927570584a3911bb95bf8266a392957cc261175730667e32b4",
+  "bundle_sha256": "255a927a4303e4280997714039864b860f68c4566c009f13018aacd45beab29a"
+}
