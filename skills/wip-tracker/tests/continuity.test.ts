@@ -16,6 +16,7 @@ import {
   ContinuityError,
   render,
   renderOutcomes,
+  renderCompactOutcomes,
   type Doc,
 } from "../scripts/continuity.ts";
 import { Fixture, id, TIME, content, action, observation } from "./support.ts";
@@ -426,6 +427,283 @@ using("optional follow-up does not extend completion line", (f) => {
   assert.equal(view.actions[0].category, "optional-follow-up");
   assert.match(renderOutcomes([view]), /Danny advisory view/);
 });
+using(
+  "closeout routes a required action and selects one optional branch once",
+  (f) => {
+    const outcome = f.outcome(),
+      thread = f.open(outcome),
+      required = action("evidence", "required-now"),
+      optional = {
+        ...action("improve-summary", "optional-follow-up"),
+        contribution:
+          "Improve later readability, outside current done conditions",
+      };
+    required.destination = { status: "verified", session: f.sender };
+    const first = f.store.get("threads", thread);
+    f.emit(
+      "checkpoint",
+      id(),
+      {
+        thread,
+        expected_revision: first.revision,
+        assignment_revision: first.assignment_revision,
+        content: {
+          ...content(),
+          actions: [required, optional],
+          closeout: {
+            primary_action_id: required.id,
+            candidates: [
+              {
+                action_id: required.id,
+                benefit: "Finish agreed outcome",
+                estimate: "small",
+              },
+              {
+                action_id: optional.id,
+                benefit: "Clearer summary",
+                estimate: "uncertain",
+              },
+            ],
+          },
+        },
+      },
+      f.sender,
+    );
+    let view = f.store.outcomeView(outcome, TIME)[0];
+    assert.equal(view.active_actions.length, 1);
+    assert.equal(view.active_actions[0].id, required.id);
+    assert.equal(view.active_actions[0].destination.session, f.sender);
+    assert.deepEqual(view.active_wip_threads, [thread]);
+    assert.equal(view.candidates.length, 1);
+    assert.deepEqual(view.candidates[0].selected_branch, null);
+    assert.match(renderCompactOutcomes([view]), /Primary next: evidence/);
+    assert.doesNotMatch(renderCompactOutcomes([view]), /Clearer summary/);
+    assert.match(
+      renderCompactOutcomes([view], true),
+      /improve-summary.*origin:/,
+    );
+
+    const next = f.store.get("threads", thread);
+    const completedCheckpoint = id();
+    f.emit(
+      "checkpoint",
+      completedCheckpoint,
+      {
+        thread,
+        expected_revision: next.revision,
+        assignment_revision: next.assignment_revision,
+        content: {
+          ...content("Ask André whether to pursue the optional idea"),
+          actions: [optional],
+          closeout: {
+            primary_action_id: optional.id,
+            candidates: [
+              {
+                action_id: optional.id,
+                benefit: "Clearer summary",
+                estimate: "uncertain",
+              },
+            ],
+          },
+          scope_revision: 1,
+          observations: [observation("done", "Required evidence accepted")],
+          conditions: [
+            { id: "done", state: "met", evidence: ["done"], remaining: "" },
+          ],
+        },
+      },
+      f.sender,
+    );
+    f.emit(
+      "complete-outcome",
+      outcome,
+      {
+        expected_revision: 1,
+        scope_revision: 1,
+        acceptance_evidence: [
+          { type: "fixture", ref: "André accepted original result" },
+        ],
+      },
+      f.sender,
+    );
+    view = f.store.outcomeView(outcome, TIME)[0];
+    assert.equal(view.completed, true);
+    assert.deepEqual(view.active_wip_threads, []);
+    assert.equal(view.candidates.length, 1);
+
+    const branchOutcome = id(),
+      branchThread = id(),
+      payload = {
+        source_checkpoint: completedCheckpoint,
+        action_id: optional.id,
+        outcome_id: branchOutcome,
+        title: "Improve summary separately",
+        conditions: [{ id: "improved", text: "Summary reviewed" }],
+        authority: [
+          { type: "human-approval", ref: "André chose optional branch" },
+        ],
+        reason: "Selected after original completion",
+        coordinator: f.sender,
+      };
+    assert.equal(
+      f.emit(
+        "select-candidate",
+        id(),
+        { ...payload, authority: [] },
+        f.sender,
+        false,
+      ).code,
+      "forbidden",
+    );
+    assert.equal(
+      f.emit(
+        "select-candidate",
+        id(),
+        { ...payload, action_id: required.id },
+        f.sender,
+        false,
+      ).code,
+      "invalid",
+    );
+    const rolledBackOutcome = id();
+    assert.equal(
+      f.emit(
+        "select-candidate",
+        thread,
+        { ...payload, outcome_id: rolledBackOutcome },
+        f.sender,
+        false,
+      ).code,
+      "conflict",
+    );
+    assert.throws(() => f.store.get("outcomes", rolledBackOutcome), {
+      code: "not_found",
+    });
+    const event = f.event("select-candidate", branchThread, payload);
+    const selected = f.store.apply(event, f.actor(f.sender));
+    assert.equal(selected.ok, true);
+    assert.equal(selected.value.id, branchThread);
+    assert.deepEqual(f.store.apply(event, f.actor(f.sender)), selected);
+    assert.equal(
+      f.emit(
+        "select-candidate",
+        id(),
+        { ...payload, outcome_id: id() },
+        f.sender,
+        false,
+      ).code,
+      "conflict",
+    );
+    assert.equal(f.store.get("threads", branchThread).origin, thread);
+    assert.deepEqual(f.store.get("threads", branchThread).origin_action, {
+      checkpoint: completedCheckpoint,
+      action_id: optional.id,
+    });
+    const branchView = f.store.outcomeView(branchOutcome, TIME)[0];
+    assert.equal(branchView.threads.length, 1);
+    assert.deepEqual(branchView.active_wip_threads, [branchThread]);
+    assert.match(
+      renderCompactOutcomes([branchView]),
+      /Selected branch: improve-summary/,
+    );
+    f.accept(f.send(f.prepare({ thread: branchThread })));
+    assert.equal(f.store.get("threads", branchThread).coordinator, f.receiver);
+    view = f.store.outcomeView(outcome, TIME)[0];
+    assert.equal(view.candidates[0].selected_branch.id, branchThread);
+    assert.deepEqual(view.active_wip_threads, []);
+    assert.match(
+      renderCompactOutcomes([view], true),
+      new RegExp(`selected branch ${branchThread}`),
+    );
+    assert.equal(
+      f.emit(
+        "open",
+        id(),
+        {
+          title: "Bypass",
+          outcome: "Bypass",
+          links: [],
+          coordinator: f.sender,
+          outcome_id: branchOutcome,
+          origin: thread,
+          origin_action: {
+            checkpoint: completedCheckpoint,
+            action_id: optional.id,
+          },
+        },
+        f.sender,
+        false,
+      ).code,
+      "forbidden",
+    );
+    const later = f.store.get("threads", thread),
+      laterCheckpoint = id();
+    f.emit(
+      "checkpoint",
+      laterCheckpoint,
+      {
+        thread,
+        expected_revision: later.revision,
+        assignment_revision: later.assignment_revision,
+        content: {
+          ...content(),
+          actions: [optional],
+          closeout: {
+            primary_action_id: optional.id,
+            candidates: [
+              {
+                action_id: optional.id,
+                benefit: "Clearer summary",
+                estimate: "uncertain",
+              },
+            ],
+          },
+        },
+      },
+      f.sender,
+    );
+    assert.equal(
+      f.emit(
+        "select-candidate",
+        id(),
+        { ...payload, source_checkpoint: laterCheckpoint, outcome_id: id() },
+        f.sender,
+        false,
+      ).code,
+      "conflict",
+    );
+    assert.equal(
+      f.store.outcomeView(outcome, TIME)[0].candidates[0].selected_branch.id,
+      branchThread,
+    );
+    assert.equal(
+      f.store.db
+        .prepare("SELECT count(*) n FROM threads WHERE origin=?")
+        .get(thread)!.n,
+      1,
+    );
+    const compact = spawnSync(
+      process.execPath,
+      [
+        new URL("../scripts/continuity_cli.ts", import.meta.url).pathname,
+        "outcomes",
+        "--db",
+        f.path,
+        "--outcome",
+        outcome,
+        "--as-of",
+        TIME,
+        "--compact",
+        "--candidates",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(compact.status, 0);
+    assert.match(compact.stdout, /Optional\/separate candidates: 1/);
+    assert.match(compact.stdout, new RegExp(`selected branch ${branchThread}`));
+    assert.doesNotMatch(compact.stdout, /Active: improve-summary/);
+  },
+);
 using(
   "legacy single action remains readable; stale evidence becomes unknown",
   (f) => {

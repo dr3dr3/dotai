@@ -51,6 +51,10 @@ export interface SemanticCheckpoint {
   blockers: string[];
   next_action?: string;
   actions?: SemanticAction[];
+  closeout?: {
+    primary_action_id: string;
+    candidates: Array<{ action_id: string; benefit: string; estimate: string }>;
+  };
   observations?: Array<{
     key: string;
     claim: string;
@@ -241,6 +245,7 @@ export function semantic(value: unknown): asserts value is SemanticCheckpoint {
     [
       "next_action",
       "actions",
+      "closeout",
       "observations",
       "conditions",
       "scope_revision",
@@ -320,6 +325,42 @@ export function semantic(value: unknown): asserts value is SemanticCheckpoint {
         value.actions.length,
       "invalid",
       "Duplicate action IDs",
+    );
+  }
+  if ("closeout" in value) {
+    fields(value.closeout, ["primary_action_id", "candidates"]);
+    const { primary_action_id, candidates } = value.closeout;
+    text(primary_action_id);
+    check(Array.isArray(candidates), "invalid", "Expected closeout candidates");
+    const actions = value.actions ?? [];
+    check(actions.length > 0, "invalid", "Closeout needs classified actions");
+    for (const candidate of candidates) {
+      fields(candidate, ["action_id", "benefit", "estimate"]);
+      text(candidate.action_id);
+      text(candidate.benefit);
+      text(candidate.estimate);
+    }
+    check(
+      candidates.length === actions.length &&
+        new Set(candidates.map((c) => c.action_id)).size === actions.length &&
+        actions.every((a: SemanticAction) =>
+          candidates.some((c) => c.action_id === a.id),
+        ) &&
+        actions.some((a: SemanticAction) => a.id === primary_action_id),
+      "invalid",
+      "Closeout must classify each action and name one primary",
+    );
+    check(
+      !actions.some((a: SemanticAction) =>
+        ["required-now", "waiting"].includes(a.category),
+      ) ||
+        actions.some(
+          (a: SemanticAction) =>
+            a.id === primary_action_id &&
+            ["required-now", "waiting"].includes(a.category),
+        ),
+      "invalid",
+      "Primary must advance required work while it remains",
     );
   }
   for (const k of ["decisions", "questions", "blockers"]) strings(value[k]);
@@ -773,7 +814,7 @@ export class Store {
     t.checkpoint = id;
     return cp;
   }
-  dispatch(e: Event, a: Actor): Doc {
+  dispatch(e: Event, a: Actor, internalSelection = false): Doc {
     const { kind, payload: p, subject } = e;
     if (kind === "register") {
       check(
@@ -830,7 +871,7 @@ export class Store {
       fields(
         p,
         ["title", "outcome", "links", "coordinator"],
-        ["outcome_id", "origin"],
+        ["outcome_id", "origin", "origin_action"],
       );
       text(p.title);
       text(p.outcome);
@@ -838,6 +879,24 @@ export class Store {
       this.get("sessions", p.coordinator);
       if (p.outcome_id) this.get("outcomes", p.outcome_id);
       if (p.origin) this.get("threads", p.origin);
+      if (p.origin_action) {
+        check(
+          internalSelection,
+          "forbidden",
+          "Action origin requires explicit candidate selection",
+        );
+        fields(p.origin_action, ["checkpoint", "action_id"]);
+        check(p.origin, "invalid", "Action origin needs parent thread");
+        const cp = this.get("checkpoints", p.origin_action.checkpoint);
+        check(cp.thread === p.origin, "invalid", "Action origin differs");
+        check(
+          cp.content.actions?.some(
+            (x: Doc) => x.id === p.origin_action.action_id,
+          ),
+          "invalid",
+          "Action origin missing",
+        );
+      }
       check(
         a.kind === "operator" ||
           (a.kind === "session" && a.session === p.coordinator),
@@ -859,6 +918,90 @@ export class Store {
         origin: p.origin ?? null,
       });
       return body;
+    }
+    if (kind === "select-candidate") {
+      fields(p, [
+        "source_checkpoint",
+        "action_id",
+        "outcome_id",
+        "title",
+        "conditions",
+        "authority",
+        "reason",
+        "coordinator",
+      ]);
+      check(a.kind === "session", "forbidden", "Working session required");
+      const cp = this.get("checkpoints", p.source_checkpoint);
+      const parent = this.get("threads", cp.thread);
+      Store.owner(parent, a);
+      check(parent.outcome_id, "invalid", "Source needs an outcome");
+      const candidate = cp.content.actions?.find(
+        (x: Doc) => x.id === p.action_id,
+      );
+      check(
+        cp.content.closeout?.candidates.some(
+          (x: Doc) => x.action_id === p.action_id,
+        ) &&
+          candidate &&
+          ["optional-follow-up", "separate-opportunity"].includes(
+            candidate.category,
+          ),
+        "invalid",
+        "Only a recorded optional or separate candidate can branch",
+      );
+      check(
+        !one(
+          this.db,
+          "SELECT e.id FROM events e JOIN checkpoints c ON c.id=json_extract(e.body,'$.event.payload.source_checkpoint') WHERE e.kind='select-candidate' AND c.thread=? AND json_extract(e.body,'$.event.payload.action_id')=? AND json_extract(e.result,'$.ok')=1",
+          parent.id,
+          p.action_id,
+        ),
+        "conflict",
+        "Candidate already activated",
+      );
+      check(
+        p.coordinator === a.session,
+        "forbidden",
+        "Open under current coordinator, then hand off explicitly",
+      );
+      links(p.authority);
+      check(
+        p.authority.some((x: TypedLink) => x.type === "human-approval"),
+        "forbidden",
+        "Explicit selection authority required",
+      );
+      this.dispatch(
+        {
+          ...e,
+          kind: "outcome-scope",
+          subject: p.outcome_id,
+          payload: {
+            expected_revision: 0,
+            title: p.title,
+            conditions: p.conditions,
+            authority: p.authority,
+            reason: p.reason,
+          },
+        },
+        a,
+      );
+      return this.dispatch(
+        {
+          ...e,
+          kind: "open",
+          payload: {
+            title: p.title,
+            outcome: p.title,
+            links: [{ type: "source-outcome", ref: parent.outcome_id }],
+            coordinator: p.coordinator,
+            outcome_id: p.outcome_id,
+            origin: parent.id,
+            origin_action: { checkpoint: cp.id, action_id: p.action_id },
+          },
+        },
+        a,
+        true,
+      );
     }
     if (kind === "bind-provider") {
       check(
@@ -1512,6 +1655,16 @@ export class Store {
         },
       ];
       for (const action of proposed) {
+        const closeout = cp.content.closeout;
+        const suggestion = closeout?.candidates.find(
+          (x: Doc) => x.action_id === action.id,
+        );
+        const branch = one(
+          this.db,
+          "SELECT body FROM threads WHERE origin=? AND json_extract(body,'$.origin_action.action_id')=? LIMIT 1",
+          t.id,
+          action.id,
+        );
         const waiting: string[] = [],
           uncertain: string[] = [];
         for (const key of action.dependencies) {
@@ -1541,6 +1694,10 @@ export class Store {
           ...action,
           thread: t.id,
           checkpoint: cp.id,
+          primary: closeout?.primary_action_id === action.id,
+          benefit: suggestion?.benefit ?? null,
+          estimate: suggestion?.estimate ?? null,
+          selected_branch: branch ? JSON.parse(branch.body) : null,
           waiting_for: waiting,
           dependency_unknown: uncertain,
           destination_note: located
@@ -1550,12 +1707,44 @@ export class Store {
         });
       }
     }
+    const activeActions = actions
+      .filter((a) => ["required-now", "waiting"].includes(a.category))
+      .sort(
+        (a, b) =>
+          Number(b.primary) - Number(a.primary) ||
+          Number(a.category === "waiting") - Number(b.category === "waiting"),
+      );
+    const candidates = actions.filter((a) =>
+      ["optional-follow-up", "separate-opportunity"].includes(a.category),
+    );
+    const selectedBranches = threads
+      .filter((t) => t.origin_action && t.disposition !== "closed")
+      .map((t) => {
+        const source = this.get("checkpoints", t.origin_action.checkpoint);
+        return {
+          thread: t.id,
+          coordinator: t.coordinator,
+          proposed_first_action: source.content.actions.find(
+            (a: Doc) => a.id === t.origin_action.action_id,
+          ).text,
+          checkpoint_pending: t.checkpoint === null,
+        };
+      });
     return {
       outcome,
       conditions,
       threads: details,
       evidence,
       actions,
+      active_actions: activeActions,
+      candidates,
+      selected_branches: selectedBranches,
+      active_wip_threads: [
+        ...new Set([
+          ...activeActions.map((a) => a.thread),
+          ...selectedBranches.map((b) => b.thread),
+        ]),
+      ],
       completed: outcome.completion !== null,
       ready_to_close: outcome.completion !== null,
       remaining_acceptance: outcome.completion
@@ -1821,6 +2010,40 @@ export function renderOutcomes(rows: Doc[]): string {
           ]),
           ...(r.remaining_acceptance ? [`  ${r.remaining_acceptance}`] : []),
           "  Danny advisory view / Concierge records. Recommendations grant no execution authority.",
+        ].join("\n");
+      })
+      .join("\n") || "No matching outcomes."
+  );
+}
+export function renderCompactOutcomes(
+  rows: Doc[],
+  includeCandidates = false,
+): string {
+  return (
+    rows
+      .map((r) => {
+        const first = r.active_actions[0];
+        return [
+          `${r.outcome.title} — ${r.completed ? "complete" : "open"} (${r.outcome.id})`,
+          first
+            ? `  Primary next: ${first.text} [${first.category}] → ${first.destination.status === "verified" ? first.destination.session : "destination unknown"}`
+            : r.selected_branches.length
+              ? `  Selected branch: ${r.selected_branches[0].proposed_first_action} → coordinator ${r.selected_branches[0].coordinator}${r.selected_branches[0].checkpoint_pending ? "; checkpoint pending" : ""}`
+              : "  Primary next: no required or waiting action",
+          ...r.active_actions
+            .slice(1)
+            .map(
+              (a: Doc) =>
+                `  Active: ${a.text} [${a.category}] → ${a.destination.status === "verified" ? a.destination.session : "destination unknown"}`,
+            ),
+          `  Optional/separate candidates: ${r.candidates.length}${includeCandidates ? "" : " (expand with --candidates)"}`,
+          ...(includeCandidates
+            ? r.candidates.map(
+                (a: Doc) =>
+                  `    ${a.category}: ${a.text}; benefit: ${a.benefit ?? "unknown"}; size/uncertainty: ${a.estimate ?? "unknown"}; origin: ${a.checkpoint}/${a.id}; ${a.selected_branch ? `selected branch ${a.selected_branch.id}` : "not selected"}`,
+              )
+            : []),
+          "  Danny advisory view / Concierge records. Suggestions grant no execution authority.",
         ].join("\n");
       })
       .join("\n") || "No matching outcomes."
