@@ -1,6 +1,6 @@
 {
   "files": {
-    "/workspace/.ai/dotai-codex-installed-startup/roles/codex-installed-startup-probe/run.ts": "dc71c2988e68493cd17e4562c6c4e7a5019d359f7d6875b4cc61255a4d2e48b1",
+    "/workspace/.ai/dotai-codex-installed-startup/roles/codex-installed-startup-probe/run.ts": "fdbcb1afb35d6c624c0cc9af1c620d72474b7d646903dad66e15364bc46b843d",
     "/workspace/.ai/dotai-codex-installed-startup/roles/codex-installed-startup-probe/entry.sh": "a53f29db0f82b4620e197676b0edcabad74f7ad6ae83dde24d2a4278c285edb7",
     "/workspace/.ai/dotai-codex-installed-startup/roles/codex-installed-startup-probe/start.sh": "8805875565f518e990812f3f488ecc54e32e56d340b2a48f74dfbc1999fa3f83",
     "/workspace/.ai/dotai-codex-installed-startup/scripts/roe-role.ts": "f6e2c47b6ad0870399bfee1dc24e091645ccb6434ff974789ecc9fd3f6a78710",
@@ -10,6 +10,6 @@
     "/home/vscode/.local/lib/roe-firstmate/nono": "520433bc42ee9938a154867b965a243e9cfa348a3a1987fb7422c1bff653b4e9",
     "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
   },
-  "profile_sha256": "fc4bc1f13f280c06820ca6ede88c3e3fad6405916b4956a0c5dd133341100aef",
-  "bundle_sha256": "9361119bd5c9468f16f9bf13ccc22e29a02a5b885670e0f3377bc317ff9041d0"
+  "profile_sha256": "b35788d13fe3f0a306de8047bbb263240c732ad26deab762ed4a2f290b203fc2",
+  "bundle_sha256": "82a15b17281100a6f445b9d597ec00b2c4d85763255b0046921b822fa42c964e"
 }

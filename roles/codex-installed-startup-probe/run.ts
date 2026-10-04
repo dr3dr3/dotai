@@ -76,6 +76,9 @@ export function startupProfile(): object {
     filesystem: { read: string[]; read_file: string[] };
   };
   value.meta.name = "roe-pilot-installed-startup";
+  value.filesystem.read = value.filesystem.read.filter(
+    (path) => path !== "/tmp/probe/context",
+  );
   value.filesystem.read.push("/tmp/probe");
   value.filesystem.read_file = value.filesystem.read_file.filter(
     (file) => file !== "/tmp/probe/check.sh",
