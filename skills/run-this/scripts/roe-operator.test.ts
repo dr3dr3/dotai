@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chmodSync, mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { chmodSync, mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { commandFor, load, run } from './roe-operator.ts';
+import { commandFor, executionCommand, load, run } from './roe-operator.ts';
 import type { Request } from './roe-operator.ts';
 
 const SHA = 'a'.repeat(40);
@@ -14,6 +15,39 @@ function request(): Request {
     purpose: 'Apply reviewed change', origin: 'test', source: null, expected_revision: SHA, tf_action: 'apply',
     command: ['make', '-C', '/workspace/infrastructure', 'tf-apply', `STACK=${STACK}`] };
 }
+
+test('local runtime gets a captured terminal for interactive confirmation', () => {
+  const item = { ...request(), recipe: 'local-runtime' as const,
+    command: ['roe-coordination', 'run', '--home', '/workspace/.firstmate-home',
+      '--task', 'synthetic-gate', '--', 'bash', '/tmp/synthetic.sh'] };
+  const command = executionCommand(item, 'synthetic-gate');
+  assert.deepEqual(command.slice(1, 3), ['synthetic-gate', '--']);
+  assert.deepEqual(command.slice(3), item.command);
+  assert.equal(command.includes('--quiet'), false);
+});
+
+test('noninteractive requests remain quiet and native interactive recipes run directly', () => {
+  const diagnostic = { ...request(), recipe: 'diagnostic' as const, command: ['true'] };
+  assert.deepEqual(executionCommand(diagnostic, 'diagnostic').slice(1), ['diagnostic', '--quiet', '--', 'true']);
+  assert.deepEqual(executionCommand(request(), 'terraform'), request().command);
+});
+
+test('interactive capture accepts a terminal prompt without recording hidden input', () => {
+  const root = mkdtempSync(join(tmpdir(), 'roe-operator-prompt-'));
+  try {
+    const script = join(root, 'prompt.sh');
+    writeFileSync(script, '#!/usr/bin/env bash\nset -eu\nprintf "Confirm: " > /dev/tty\nIFS= read -r confirmation < /dev/tty\ntest "$confirmation" = YES\nprintf "Dummy secret: " > /dev/tty\nIFS= read -r -s dummy < /dev/tty\nprintf "\\n" > /dev/tty\ntest "$dummy" = DUMMY_TOKEN\nprintf "prompt_passed\\n"\n', { mode: 0o700 });
+    const command = executionCommand({ ...request(), recipe: 'local-runtime', command: ['bash', script] }, 'prompt');
+    const result = spawnSync(command[0], command.slice(1), {
+      env: { ...process.env, RUN_THIS_LOG_DIR: root }, input: 'YES\nDUMMY_TOKEN\n', encoding: 'utf8',
+    });
+    const log = readFileSync(join(root, readdirSync(root).find(name => name.endsWith('.log'))!), 'utf8');
+    assert.equal(result.status, 0);
+    assert.match(log, /prompt_passed/);
+    assert.match(log, /=== DONE rc=0/);
+    assert.doesNotMatch(log, /DUMMY_TOKEN/);
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
 
 test('Terraform recipe produces only a named Make target and rejects traversal', () => {
   assert.deepEqual(commandFor('terraform', { stack: [STACK], revision: [SHA], 'tf-action': ['apply'] }).command, request().command);

@@ -76,8 +76,10 @@ else
   # a pipe (Python — so the AWS CLI — among others) would otherwise hold the
   # device-code URL until exit, and he'd sit at a blank screen and Ctrl-C.
   # `-e` returns the child's exit status; `-q` no "Script started" banner.
+  # Disable terminal input echo before the child starts so a typed credential
+  # cannot appear in the transcript while the child changes terminal settings.
   cmd=$(printf '%q ' "$@")
-  script -qefc "$cmd" /dev/null 2>&1 | "$SCRUB" | tee -a "$L"
+  script -qef -E never -c "$cmd" /dev/null 2>&1 | "$SCRUB" | tee -a "$L"
   rc=${PIPESTATUS[0]}
 fi
 elapsed=$(( $(date +%s) - start ))

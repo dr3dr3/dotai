@@ -246,11 +246,10 @@ export function run(path: string, item: Request): void {
     }
   }
   item.status = 'running'; item.started_at = new Date().toISOString(); writeRecord(path, item);
-  const native = item.recipe === 'terraform' || item.recipe === 'auth' || item.recipe === 'release';
   const slug = `${item.slug}-${item.id.slice(0, 8)}`;
   const transcriptDir = join(inbox(), `${item.id}-terraform`);
   if (item.recipe === 'terraform') mkdirSync(transcriptDir, { mode: 0o700 });
-  const command = native ? item.command : [CAPTURE, slug, '--quiet', '--', ...item.command];
+  const command = executionCommand(item, slug);
   const env = { ...process.env, ...(item.recipe === 'terraform' ? { TF_LOG_DIR: transcriptDir } : {}) };
   const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit', env });
   item.log_path = item.recipe === 'terraform' ? latestLog(transcriptDir) : item.recipe === 'auth' || item.recipe === 'release' ? null : latestLog(process.env.RUN_THIS_LOG_DIR || '/workspace/tmp', slug + '-');
@@ -260,6 +259,11 @@ export function run(path: string, item: Request): void {
   writeRecord(path, item);
   console.log(`Request ${item.id}: ${item.status}${item.exit_code === undefined ? '' : ` rc=${item.exit_code}`}`);
   if (item.log_path) console.log(`Transcript: ${item.log_path}`);
+}
+export function executionCommand(item: Request, slug: string): string[] {
+  if (item.recipe === 'terraform' || item.recipe === 'auth' || item.recipe === 'release') return item.command;
+  if (item.recipe === 'local-runtime') return [CAPTURE, slug, '--', ...item.command];
+  return [CAPTURE, slug, '--quiet', '--', ...item.command];
 }
 async function serve(): Promise<void> {
   const root = inbox();
