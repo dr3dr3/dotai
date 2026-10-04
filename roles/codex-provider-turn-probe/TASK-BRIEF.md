@@ -7,6 +7,13 @@ verified hard spend limit no greater than $50. Registration must not start a
 worker, Docker, Codex, a model call or a reservation. Do not use a personal
 OAuth store or the shared role state as a writable mount.
 
+André has allowed pay-as-you-go pricing for this bounded trial but prefers
+subscription-backed Codex and Claude for normal pilot use. This is an optional
+one-off API-project diagnostic, not the default provider path. Assess the
+subscription-auth route separately before choosing whether this paid probe is
+needed. API-project acceptance cannot stand in for ChatGPT-plan OAuth
+acceptance or Claude subscription adapter acceptance.
+
 Source: `/workspace/.ai/dotai-codex-provider-turn`, branch
 `feat/codex-provider-turn`. Verify committed HEAD, exact SHA-256 of `run.ts`
 and `pins.json`, and `node run.ts --bundle-check` before registration. The

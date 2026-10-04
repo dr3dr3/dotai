@@ -3,6 +3,32 @@
 Lane: independent personal internal tooling. Runtime status at preparation:
 `Runtime: available (reservation required for runtime operations)`.
 
+## Billing scope clarified 2026-10-04
+
+André authorised pay-as-you-go API pricing for a bounded trial, with a $50
+maximum, and stated that normal pilot use should primarily draw on his Codex
+and Claude subscriptions. This API-project fixture is therefore a **one-off
+diagnostic candidate**, not the default provider path or acceptance evidence
+for subscription-backed operation. It must not be registered or run merely
+because the pricing category was authorised: the dedicated project's real hard
+limit, current usage, model scope, data suitability and temporary key still
+need review. The subscription path should be assessed before deciding whether
+the API-key diagnostic adds useful evidence.
+
+OpenAI's documented local Sign in with ChatGPT flow can issue a plan-usage OAuth
+token for eligible accounts and pass it to Codex app-server through an
+environment key. That would require a separate bounded acceptance fixture for
+registration, consent, token storage/refresh outside the role, one completed
+turn and denial/cleanup. Do not copy a personal OAuth store into the role or
+reuse this API-key result as evidence for that flow. Claude Code's subscription
+login requires its own adapter acceptance; Pi remains separate and unverified.
+
+Sources:
+- https://developers.openai.com/siwc/quickstart
+- https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server
+- https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex
+- https://docs.anthropic.com/en/docs/claude-code/getting-started
+
 ## Verified offline
 
 - The reviewed native Codex 0.157.1 ARM64 ELF remains pinned at SHA-256
