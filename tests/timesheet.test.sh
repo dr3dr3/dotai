@@ -47,7 +47,7 @@ cat >"$TMP/meetings.json" <<'JSON'
 JSON
 python3 "$S" draft 2026-09 --sources claude,meeting --meetings "$TMP/meetings.json" --json "$TMP/d.json" >/dev/null
 
-python3 - "$TMP/d.json" <<'PY'
+python3 - "$TMP/d.json" "$S" <<'PY'
 import json, sys
 r = json.load(open(sys.argv[1]))
 days = {d['date']: d for d in r['days']}
@@ -60,6 +60,9 @@ assert days['2026-09-05']['notes'] == ''
 assert days['2026-09-06']['measured'] == 16.0 and days['2026-09-06']['hours'] == 14.0, days['2026-09-06']
 assert days['2026-09-06']['notes'].startswith('[timesheet ✓ 16h measured, capped at 14h · 06:00–22:00 · 1 meeting]')
 assert days['2026-09-02']['notes'].startswith('[timesheet ✓ 2.5h measured · 10:00–13:30 · 4 prompts]')
+import importlib.util
+spec = importlib.util.spec_from_file_location('ts', sys.argv[2]); ts = importlib.util.module_from_spec(spec); spec.loader.exec_module(ts)
+assert ts.evidence_line(2, 2, '10:00–12:00', {'pr': 2, 'commit': 1}) == '[timesheet ✓ 2h measured · 10:00–12:00 · 1 commit, 2 PRs/issues]'
 assert r['total'] == 17.5, r['total']
 PY
 echo "timesheet: ok"
