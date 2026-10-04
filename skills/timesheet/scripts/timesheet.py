@@ -226,15 +226,16 @@ def day_note(texts, meetings, limit=6):
     return ' · '.join(parts)
 
 
-EVIDENCE_LABELS = (('claude', 'prompt'), ('commit', 'commit'), ('pr', 'PR/issue'), ('meeting', 'meeting'))
+EVIDENCE_LABELS = (('claude', 'prompt', 'prompts'), ('commit', 'commit', 'commits'),
+                   ('pr', 'PR/issue', 'PRs/issues'), ('meeting', 'meeting', 'meetings'))
 
 
 def evidence_line(measured, billed, span, counts):
     """First segment of every Harvest note: what the hours rest on, so a reader can tell a
     tool-measured day from one typed by hand (which carries no such line)."""
     adj = f', capped at {billed:g}h' if billed < measured else ''
-    ev = ', '.join(f"{counts[k]} {label}{'s' if counts[k] > 1 else ''}"
-                   for k, label in EVIDENCE_LABELS if counts.get(k))
+    ev = ', '.join(f'{counts[k]} {one if counts[k] == 1 else many}'
+                   for k, one, many in EVIDENCE_LABELS if counts.get(k))
     return f'[timesheet ✓ {measured:g}h measured{adj} · {span} · {ev}]'
 
 
