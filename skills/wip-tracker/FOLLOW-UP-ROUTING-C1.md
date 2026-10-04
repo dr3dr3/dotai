@@ -33,18 +33,22 @@ optional/separate candidate count. Add `--candidates` to expand the candidate
 group with benefit, estimate, immutable checkpoint/action origin and selected
 branch, if any. JSON outcome views retain the full `actions` array and expose
 `active_actions`, `candidates`, `selected_branches` and `active_wip_threads`;
-unselected optional ideas never add an active thread. A selected branch is
-visible with its proposed first action even before the first checkpoint. These are Danny advisory views over
-Concierge-owned records.
+unselected optional ideas never add an active thread. Required actions on
+closed threads appear as reconciliation items; parked threads and branches are
+shown separately and do not count as active WIP. A selected open branch is
+visible with its proposed first action even before the first checkpoint. These
+are Danny advisory views over Concierge-owned records.
 
 ## Explicit branch selection
 
 The trusted local C1 `select-candidate` event takes a source checkpoint and
 optional/separate action ID, a fresh outcome ID and new thread ID (the event
 subject), title, done conditions, reason, current coordinator and an explicit
-`human-approval` authority link. The source coordinator must submit it. One
-transaction reuses the existing `outcome-scope` and `open` validations and
-creates a new outcome and origin-linked thread. The new thread carries an
+`human-approval` authority link. The source coordinator must submit it
+from the current checkpoint; a later checkpoint supersedes the candidate list,
+so still-available ideas must be carried forward explicitly. One transaction
+reuses the existing `outcome-scope` and `open` validations and creates a new
+outcome and origin-linked thread. The new thread carries an
 immutable `origin_action` pointing to the source checkpoint and action. Direct
 `open` events cannot set that action origin. The branch stays in its current
 coordinator's session until the existing prepare/send/accept handoff changes
@@ -56,6 +60,9 @@ copied into a later checkpoint. Exact event replay returns the original
 result. A different event cannot create another accepted branch. Other routes
 (continue in the current session or use an existing owner session) remain
 ordinary checkpoint/handoff decisions; they do not silently create a branch.
+This offline event does not yet define how a later Concierge intake selects an
+idea after the source session exits. P4 must specify a trusted operator or
+receiver route with human approval and correct provenance before live wiring.
 
 The offline fixture demonstrates a required discovery leading Danny's next
 move, an optional idea remaining outside active WIP, evidence and acceptance

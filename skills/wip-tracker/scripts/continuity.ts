@@ -934,6 +934,11 @@ export class Store {
       const cp = this.get("checkpoints", p.source_checkpoint);
       const parent = this.get("threads", cp.thread);
       Store.owner(parent, a);
+      check(
+        parent.checkpoint === cp.id,
+        "stale",
+        "Candidate source is no longer the current checkpoint",
+      );
       check(parent.outcome_id, "invalid", "Source needs an outcome");
       const candidate = cp.content.actions?.find(
         (x: Doc) => x.id === p.action_id,
@@ -1707,13 +1712,25 @@ export class Store {
         });
       }
     }
-    const activeActions = actions
-      .filter((a) => ["required-now", "waiting"].includes(a.category))
+    const threadDisposition = new Map(
+      threads.map((t) => [t.id, t.disposition]),
+    );
+    const unresolvedActions = actions.filter((a) =>
+      ["required-now", "waiting"].includes(a.category),
+    );
+    const activeActions = unresolvedActions
+      .filter((a) => threadDisposition.get(a.thread) === "open")
       .sort(
         (a, b) =>
           Number(b.primary) - Number(a.primary) ||
           Number(a.category === "waiting") - Number(b.category === "waiting"),
       );
+    const parkedActions = unresolvedActions.filter(
+      (a) => threadDisposition.get(a.thread) === "parked",
+    );
+    const closedUnresolvedActions = unresolvedActions.filter(
+      (a) => threadDisposition.get(a.thread) === "closed",
+    );
     const candidates = actions.filter((a) =>
       ["optional-follow-up", "separate-opportunity"].includes(a.category),
     );
@@ -1724,6 +1741,7 @@ export class Store {
         return {
           thread: t.id,
           coordinator: t.coordinator,
+          disposition: t.disposition,
           proposed_first_action: source.content.actions.find(
             (a: Doc) => a.id === t.origin_action.action_id,
           ).text,
@@ -1737,12 +1755,16 @@ export class Store {
       evidence,
       actions,
       active_actions: activeActions,
+      parked_actions: parkedActions,
+      closed_unresolved_actions: closedUnresolvedActions,
       candidates,
       selected_branches: selectedBranches,
       active_wip_threads: [
         ...new Set([
           ...activeActions.map((a) => a.thread),
-          ...selectedBranches.map((b) => b.thread),
+          ...selectedBranches
+            .filter((b) => b.disposition === "open")
+            .map((b) => b.thread),
         ]),
       ],
       completed: outcome.completion !== null,
@@ -2023,18 +2045,35 @@ export function renderCompactOutcomes(
     rows
       .map((r) => {
         const first = r.active_actions[0];
+        const openBranch = r.selected_branches.find(
+          (b: Doc) => b.disposition === "open",
+        );
         return [
           `${r.outcome.title} — ${r.completed ? "complete" : "open"} (${r.outcome.id})`,
           first
             ? `  Primary next: ${first.text} [${first.category}] → ${first.destination.status === "verified" ? first.destination.session : "destination unknown"}`
-            : r.selected_branches.length
-              ? `  Selected branch: ${r.selected_branches[0].proposed_first_action} → coordinator ${r.selected_branches[0].coordinator}${r.selected_branches[0].checkpoint_pending ? "; checkpoint pending" : ""}`
-              : "  Primary next: no required or waiting action",
+            : openBranch
+              ? `  Selected branch: ${openBranch.proposed_first_action} → coordinator ${openBranch.coordinator}${openBranch.checkpoint_pending ? "; checkpoint pending" : ""}`
+              : "  Primary next: no active action",
           ...r.active_actions
             .slice(1)
             .map(
               (a: Doc) =>
                 `  Active: ${a.text} [${a.category}] → ${a.destination.status === "verified" ? a.destination.session : "destination unknown"}`,
+            ),
+          ...r.parked_actions.map(
+            (a: Doc) =>
+              `  Parked: ${a.text} [${a.category}] → thread ${a.thread}`,
+          ),
+          ...r.closed_unresolved_actions.map(
+            (a: Doc) =>
+              `  Reconcile closed thread: ${a.text} [${a.category}] → thread ${a.thread}`,
+          ),
+          ...r.selected_branches
+            .filter((b: Doc) => b.disposition === "parked")
+            .map(
+              (b: Doc) =>
+                `  Parked branch: ${b.proposed_first_action} → thread ${b.thread}`,
             ),
           `  Optional/separate candidates: ${r.candidates.length}${includeCandidates ? "" : " (expand with --candidates)"}`,
           ...(includeCandidates

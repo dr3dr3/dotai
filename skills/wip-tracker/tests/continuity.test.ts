@@ -608,6 +608,29 @@ using(
     );
     f.accept(f.send(f.prepare({ thread: branchThread })));
     assert.equal(f.store.get("threads", branchThread).coordinator, f.receiver);
+    const acceptedBranch = f.store.get("threads", branchThread);
+    f.emit(
+      "checkpoint",
+      id(),
+      {
+        thread: branchThread,
+        expected_revision: acceptedBranch.revision,
+        assignment_revision: acceptedBranch.assignment_revision,
+        disposition: "parked",
+        human_approval: "Fixture park",
+        content: {
+          ...content(),
+          actions: [action("branch-wait", "waiting")],
+        },
+      },
+      f.receiver,
+    );
+    const parkedBranch = f.store.outcomeView(branchOutcome, TIME)[0];
+    assert.deepEqual(parkedBranch.active_wip_threads, []);
+    assert.match(
+      renderCompactOutcomes([parkedBranch]),
+      /Parked branch: improve-summary/,
+    );
     view = f.store.outcomeView(outcome, TIME)[0];
     assert.equal(view.candidates[0].selected_branch.id, branchThread);
     assert.deepEqual(view.active_wip_threads, []);
@@ -704,6 +727,146 @@ using(
     assert.doesNotMatch(compact.stdout, /Active: improve-summary/);
   },
 );
+using("superseded candidate cannot create a branch", (f) => {
+  const outcome = f.outcome();
+  const thread = f.open(outcome);
+  const optional = action("improve-summary", "optional-follow-up");
+  const original = f.store.get("threads", thread);
+  const sourceCheckpoint = id();
+  f.emit(
+    "checkpoint",
+    sourceCheckpoint,
+    {
+      thread,
+      expected_revision: original.revision,
+      assignment_revision: original.assignment_revision,
+      content: {
+        ...content(),
+        actions: [optional],
+        closeout: {
+          primary_action_id: optional.id,
+          candidates: [
+            {
+              action_id: optional.id,
+              benefit: "Clearer review",
+              estimate: "small",
+            },
+          ],
+        },
+      },
+    },
+    f.sender,
+  );
+  const payload = {
+    source_checkpoint: sourceCheckpoint,
+    action_id: optional.id,
+    outcome_id: id(),
+    title: "Old optional idea",
+    conditions: [{ id: "done", text: "Summary reviewed" }],
+    authority: [{ type: "human-approval", ref: "Fixture selection" }],
+    reason: "Fixture branch",
+    coordinator: f.sender,
+  };
+  const afterOptional = f.store.get("threads", thread);
+  f.emit(
+    "checkpoint",
+    id(),
+    {
+      thread,
+      expected_revision: afterOptional.revision,
+      assignment_revision: afterOptional.assignment_revision,
+      content: {
+        ...content("Idea withdrawn"),
+        actions: [],
+        decisions: ["Do not pursue summary"],
+      },
+    },
+    f.sender,
+  );
+  assert.equal(
+    f.emit("select-candidate", id(), payload, f.sender, false).code,
+    "stale",
+  );
+  assert.throws(() => f.store.get("outcomes", payload.outcome_id), {
+    code: "not_found",
+  });
+
+  const afterWithdrawal = f.store.get("threads", thread);
+  const required = { ...optional, category: "required-now" };
+  f.emit(
+    "checkpoint",
+    id(),
+    {
+      thread,
+      expected_revision: afterWithdrawal.revision,
+      assignment_revision: afterWithdrawal.assignment_revision,
+      content: {
+        ...content(),
+        actions: [required],
+        closeout: {
+          primary_action_id: required.id,
+          candidates: [
+            {
+              action_id: required.id,
+              benefit: "Finish agreed scope",
+              estimate: "small",
+            },
+          ],
+        },
+      },
+    },
+    f.sender,
+  );
+  assert.equal(
+    f.emit(
+      "select-candidate",
+      id(),
+      { ...payload, outcome_id: id() },
+      f.sender,
+      false,
+    ).code,
+    "stale",
+  );
+});
+
+using("closed and parked threads are not active WIP", (f) => {
+  const outcome = f.outcome();
+  const closed = f.open(outcome);
+  const parked = f.open(outcome);
+  for (const [thread, disposition, category] of [
+    [closed, "closed", "required-now"],
+    [parked, "parked", "waiting"],
+  ] as const) {
+    const current = f.store.get("threads", thread);
+    f.emit(
+      "checkpoint",
+      id(),
+      {
+        thread,
+        expected_revision: current.revision,
+        assignment_revision: current.assignment_revision,
+        disposition,
+        human_approval: "Fixture disposition",
+        content: {
+          ...content(),
+          actions: [action(`${disposition}-action`, category)],
+        },
+      },
+      f.sender,
+    );
+  }
+  const view = f.store.outcomeView(outcome, TIME)[0];
+  assert.deepEqual(view.active_actions, []);
+  assert.deepEqual(view.active_wip_threads, []);
+  assert.equal(view.parked_actions.length, 1);
+  assert.equal(view.closed_unresolved_actions.length, 1);
+  const compact = renderCompactOutcomes([view]);
+  assert.match(compact, /Primary next: no active action/);
+  assert.match(compact, /Parked: parked-action/);
+  assert.match(compact, /Reconcile closed thread: closed-action/);
+  assert.doesNotMatch(compact, /Active: closed-action|Active: parked-action/);
+});
+
 using(
   "legacy single action remains readable; stale evidence becomes unknown",
   (f) => {
