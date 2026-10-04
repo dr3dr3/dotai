@@ -167,7 +167,7 @@ export async function main(args = process.argv.slice(2)): Promise<number> {
     if (!execute) return 0;
     assert.ok(process.env.ROE_RUNTIME_TOKEN, "Firstmate reservation required");
     assert.ok(process.env.ROE_PILOT_PROVIDER_TOKEN, "approved API project token required");
-    assert.equal(process.env.ROE_PILOT_PROJECT_CAP_USD, "50", "verified $50 project hard limit required");
+    assert.equal(process.env.ROE_PILOT_PROJECT_HARD_LIMIT_USD, "40", "operator verification of enforced $40 project threshold required");
     assert.equal(process.env.ROE_PILOT_PROJECT_ISOLATED, "yes", "isolated API project attestation required");
     const engine = JSON.parse(success(call(["docker", "version", "--format", "{{json .Server}}"], undefined, 15000), "engine check")) as typeof ENGINE;
     for (const [key, value] of Object.entries(ENGINE)) assert.equal(engine[key as keyof typeof ENGINE], value);

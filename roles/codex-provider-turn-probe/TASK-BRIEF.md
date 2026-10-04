@@ -1,17 +1,22 @@
 # Firstmate registration brief: codex-provider-turn-probe
 
 Lane: independent personal internal tooling. Register a **new** queued,
-metadata-only, operator-only scout with `worker_dispatch=none` only after André
-accepts the dedicated API-project credential path and the project has a
-verified hard spend limit no greater than $50. Registration must not start a
+metadata-only, operator-only scout with `worker_dispatch=none` only after the
+dedicated nonproduction API project has a verified **$40 monthly spend
+threshold with Enforce a hard limit enabled**, current usage is checked and
+`gpt-6-luna` is allowed for the project. This threshold leaves a buffer under
+André's $50 trial budget; it does not guarantee an absolute spending ceiling,
+because OpenAI says enforcement is not instantaneous and recorded spend may
+slightly exceed the threshold. Registration must not start a
 worker, Docker, Codex, a model call or a reservation. Do not use a personal
 OAuth store or the shared role state as a writable mount.
+Complete `PROJECT-PREFLIGHT.md` and return its nonsecret facts to the ai-pilot
+pane before registration; the runner cannot verify billing settings itself.
 
-André has allowed pay-as-you-go pricing for this bounded trial but prefers
-subscription-backed Codex and Claude for normal pilot use. This is an optional
-one-off API-project diagnostic, not the default provider path. Assess the
-subscription-auth route separately before choosing whether this paid probe is
-needed. API-project acceptance cannot stand in for ChatGPT-plan OAuth
+André approved pay-as-you-go pricing for this one bounded trial but prefers
+subscription-backed Codex and Claude for normal pilot use. This is a one-off
+API-project diagnostic, not the default provider path. Assess the
+subscription-auth route separately; API-project acceptance cannot stand in for ChatGPT-plan OAuth
 acceptance or Claude subscription adapter acceptance.
 
 Source: `/workspace/.ai/dotai-codex-provider-turn`, branch
@@ -30,12 +35,13 @@ roe-coordination run --home /workspace/.firstmate-home --task codex-provider-tur
 ```
 
 The Operator pane must supply a temporary key from the isolated API project as
-`ROE_PILOT_PROVIDER_TOKEN`, and attest `ROE_PILOT_PROJECT_CAP_USD=50` and
+`ROE_PILOT_PROVIDER_TOKEN`, and attest `ROE_PILOT_PROJECT_HARD_LIMIT_USD=40` and
 `ROE_PILOT_PROJECT_ISOLATED=yes`. Never put the key in the command line,
 task metadata, transcript, git, or a shared HOME. The key is exposed to the
 disposable Codex process and Docker inspect while the turn container exists;
-the project limit and prompt revocation are required. The captain must review
-the project's actual hard limit, current usage, model restriction, data
+the enforced project threshold and prompt revocation are required. The captain
+must review the project's hard-enforcement switch, exact $40 threshold,
+current usage, model restriction, data
 suitability, and key scope before setting the attestation. The runner cannot
 verify those account settings by itself.
 
@@ -62,3 +68,5 @@ revoke the key before further work. Never bypass a refusal.
 This accepts only Codex API-project authentication and one bounded inference
 turn. Native transcript resume, container persistence, Herdr restore, Claude
 and Pi adapter acceptance, and role activation remain separate and disabled.
+
+OpenAI spend-limit behavior: https://developers.openai.com/api/docs/guides/spend-limits
