@@ -234,6 +234,7 @@ REGISTRY = [
     # (script name, hook event, tool matcher)
     ("guard-instance-docker.sh", "PreToolUse",  "Bash"),
     ("memory-index-budget.sh",   "PostToolUse", "Write|Edit|MultiEdit|NotebookEdit"),
+    ("timesheet-archive.sh",     "SessionStart", ""),
 ]
 
 data = {}
