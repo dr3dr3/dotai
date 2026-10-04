@@ -226,6 +226,18 @@ def day_note(texts, meetings, limit=6):
     return ' · '.join(parts)
 
 
+EVIDENCE_LABELS = (('claude', 'prompt'), ('commit', 'commit'), ('pr', 'PR/issue'), ('meeting', 'meeting'))
+
+
+def evidence_line(measured, billed, span, counts):
+    """First segment of every Harvest note: what the hours rest on, so a reader can tell a
+    tool-measured day from one typed by hand (which carries no such line)."""
+    adj = f', capped at {billed:g}h' if billed < measured else ''
+    ev = ', '.join(f"{counts[k]} {label}{'s' if counts[k] > 1 else ''}"
+                   for k, label in EVIDENCE_LABELS if counts.get(k))
+    return f'[timesheet ✓ {measured:g}h measured{adj} · {span} · {ev}]'
+
+
 def build(a):
     tz = ZoneInfo(a.tz)
     y, m = map(int, a.month.split('-'))
@@ -247,30 +259,42 @@ def build(a):
         ev = [e for e in events if e[0].astimezone(tz).date() == d]
         texts = [e[2] for e in sorted(ev, key=lambda e: (e[1] != 'pr', e[0])) if e[2]]
         mt = [t for s, _, t in meetings if s.astimezone(tz).date() == d]
+        measured = len(sl) * 0.5
+        # A day under the minimum is not logged at all; a long day is billed at the maximum.
+        billed = 0.0 if measured < a.min_day else min(measured, a.max_day)
+        span = f'{sl[0]:%H:%M}–{sl[-1] + SLOT:%H:%M}' if sl else ''
+        counts = dict(collections.Counter(e[1] for e in ev), **({'meeting': len(mt)} if mt else {}))
         days.append({
             'date': d.isoformat(),
-            'hours': len(sl) * 0.5,
-            'span': f'{sl[0]:%H:%M}–{sl[-1] + SLOT:%H:%M}' if sl else '',
-            'counts': dict(collections.Counter(e[1] for e in ev), **({'meeting': len(mt)} if mt else {})),
-            'notes': day_note(texts, mt),
+            'measured': measured,
+            'hours': billed,
+            'rule': 'under minimum' if measured and not billed else 'capped' if billed < measured else '',
+            'span': span,
+            'counts': counts,
+            'notes': ' · '.join(filter(None, [evidence_line(measured, billed, span, counts), day_note(texts, mt)]))
+                     if billed else '',
         })
         d += dt.timedelta(days=1)
     first_claude = min((e[0] for e in events if e[1] == 'claude'), default=None)
-    return {'month': a.month, 'tz': a.tz, 'gap_fill': a.gap_fill, 'sources': sorted(srcs),
+    return {'month': a.month, 'tz': a.tz, 'gap_fill': a.gap_fill, 'min_day': a.min_day, 'max_day': a.max_day,
+            'sources': sorted(srcs),
             'claude_from': first_claude.astimezone(tz).isoformat() if first_claude else None,
             'days': days, 'total': sum(x['hours'] for x in days)}
 
 
 def print_draft(r, notes=True):
-    print(f"{r['month']}  tz={r['tz']}  gap-fill={r['gap_fill']}m  sources={','.join(r['sources'])}")
+    print(f"{r['month']}  tz={r['tz']}  gap-fill={r['gap_fill']}m  day={r['min_day']:g}–{r['max_day']:g}h"
+          f"  sources={','.join(r['sources'])}")
     if r['claude_from'] and r['claude_from'][:7] == r['month']:
         print(f"Claude evidence starts {r['claude_from'][:16]} — earlier days rest on GitHub alone")
-    print(f"\n{'date':<11}{'dow':<4}{'hours':>6}  {'span':<12} evidence")
+    print(f"\n{'date':<11}{'dow':<4}{'hours':>6}{'meas':>6}  {'span':<12} evidence")
     week = 0.0
     for x in r['days']:
         d = dt.date.fromisoformat(x['date'])
         ev = ' '.join(f'{k}={v}' for k, v in sorted(x['counts'].items()))
-        print(f"{x['date']:<11}{d:%a} {x['hours']:>6.1f}  {x['span']:<12} {ev}")
+        meas = f"{x['measured']:>6.1f}" if x['rule'] else ''
+        print(f"{x['date']:<11}{d:%a} {x['hours']:>6.1f}{meas:>6}  {x['span']:<12} {ev}"
+              + (f"  ({x['rule']})" if x['rule'] else ''))
         if notes and x['notes']:
             print(f"{'':<23}{x['notes'][:160]}")
         week += x['hours']
@@ -367,7 +391,8 @@ def cmd_push(a):
         elif mine and x['hours'] == 0:
             plan.append(('delete', x, mine[0], f"{mine[0]['hours']}h → 0"))
         elif mine and (mine[0]['hours'] != x['hours'] or (mine[0]['notes'] or '') != x['notes']):
-            plan.append(('update', x, mine[0], f"{mine[0]['hours']}h → {x['hours']}h"))
+            plan.append(('update', x, mine[0], f"{mine[0]['hours']}h → {x['hours']}h"
+                         if mine[0]['hours'] != x['hours'] else f"{x['hours']}h, notes only"))
         elif mine:
             plan.append(('same', x, mine[0], ''))
         elif x['hours']:
@@ -410,6 +435,8 @@ def main():
         p.add_argument('month', help='YYYY-MM')
         p.add_argument('--tz', default=os.environ.get('TIMESHEET_TZ', 'Australia/Brisbane'))
         p.add_argument('--gap-fill', type=int, default=30, help='bridge gaps up to this many minutes')
+        p.add_argument('--min-day', type=float, default=1.0, help='days measuring less are not logged')
+        p.add_argument('--max-day', type=float, default=14.0, help='cap on hours logged for one day')
         p.add_argument('--sources', default='claude,commit,pr,meeting')
         p.add_argument('--meetings', help='JSON list of {start,end,title} (from Google Calendar)')
         p.add_argument('--org', default='rock-of-eye', help='only count GitHub activity in this org')
