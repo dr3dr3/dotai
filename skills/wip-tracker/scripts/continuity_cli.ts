@@ -1,6 +1,12 @@
 /** Trusted operator fixture CLI. Flags are inputs, not role authentication. */
 import { parseArgs } from "node:util";
-import { Store, canonical, render, renderOutcomes } from "./continuity.ts";
+import {
+  Store,
+  canonical,
+  render,
+  renderOutcomes,
+  renderCompactOutcomes,
+} from "./continuity.ts";
 import { Collector, bindingFile } from "./continuity_collector.ts";
 async function input(): Promise<string> {
   let result = "";
@@ -30,6 +36,8 @@ async function main(): Promise<number> {
         outcome: { type: "string" },
         "as-of": { type: "string" },
         json: { type: "boolean" },
+        compact: { type: "boolean" },
+        candidates: { type: "boolean" },
         binding: { type: "string" },
       },
     });
@@ -69,7 +77,11 @@ async function main(): Promise<number> {
     } else if (command === "outcomes") {
       result = store.outcomeView(values.outcome, values["as-of"]);
       if (!values.json) {
-        console.log(renderOutcomes(result));
+        console.log(
+          values.compact
+            ? renderCompactOutcomes(result, values.candidates)
+            : renderOutcomes(result),
+        );
         return 0;
       }
     } else if (command === "backup") {

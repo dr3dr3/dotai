@@ -23,6 +23,9 @@ Checkpoints can name several concrete actions, each with category, actor status,
 destination, dependencies and evidence. Optional follow-ups do not extend the
 agreed finish line. The read-only derived outcome view is advisory for Danny;
 Concierge owns the underlying records.
+[FOLLOW-UP-ROUTING-C1.md](FOLLOW-UP-ROUTING-C1.md) describes the optional
+one-primary closeout contract, compact Danny view and explicit, replay-safe
+selection of a separate origin-linked outcome.
 
 A handoff brief requires intended interaction mode (`collaboration`,
 `facilitation` or `service`) and an exit condition before acceptance. An explicit
