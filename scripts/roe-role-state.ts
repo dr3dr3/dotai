@@ -56,7 +56,10 @@ test "$(stat -c %u:%g:%a /state/pilot)" = 1000:1000:700
 printf 'STATE_PREPARED\\n'`;
 const DOCTOR = `set -eu
 test "$(stat -c %u:%g:%a /state)" = 0:0:711
-test "$(find /state -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+if ls /state >/dev/null 2>&1; then
+  printf 'ROOT_LISTING_ALLOWED\\n' >&2
+  exit 1
+fi
 for dir in /state/pilot /state/pilot/work /state/pilot/continuity \
   /state/pilot/output /state/pilot/tmp /state/pilot/home \
   /state/pilot/home/.codex /state/pilot/home/.config \

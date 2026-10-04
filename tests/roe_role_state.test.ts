@@ -102,6 +102,11 @@ test("prepare and doctor plan only mount the private role volume", () => {
       );
       if (item.name.includes("-doctor-"))
         assert.ok(item.command.includes(`${plan.mount},readonly`));
+      if (item.name.includes("-doctor-")) {
+        const shell = item.command.at(-1)!;
+        assert.ok(shell.includes("if ls /state >/dev/null 2>&1; then"));
+        assert.ok(!shell.includes("find /state -mindepth"));
+      }
     }
   }
 });

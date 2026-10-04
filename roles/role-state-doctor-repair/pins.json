@@ -1,0 +1,11 @@
+{
+  "files": {
+    "/workspace/.ai/dotai-role-prepare-repair/roles/role-state-doctor-repair/run.ts": "c0c7dcf67d2dd473d7623503daa6c75055c7194e260636c6cfd54a902a7f4629",
+    "/workspace/.ai/dotai-role-prepare-repair/scripts/roe-role.ts": "f6e2c47b6ad0870399bfee1dc24e091645ccb6434ff974789ecc9fd3f6a78710",
+    "/workspace/.ai/dotai-role-prepare-repair/scripts/roe-role-state.ts": "2d7deeb2fa82408d1874596e6470e1a734f5977ad199ae0e6fb49ec3a98e650d",
+    "/workspace/.ai/dotai-role-prepare-repair/roles/catalogue.json": "a2ee6fe05113147028da6d67e9c5b0df4534b1b67f7082dba354d5ff9d2fbd54",
+    "/workspace/.ai/dotai-role-prepare-repair/roles/codex-runtime.json": "f8050709119d8fdd5ec3625dc948a13edb07e015d2e6f471556db1513e2c65e5",
+    "/home/vscode/.local/lib/roe-firstmate/nono": "520433bc42ee9938a154867b965a243e9cfa348a3a1987fb7422c1bff653b4e9",
+    "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+  }
+}

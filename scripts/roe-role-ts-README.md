@@ -14,7 +14,8 @@ and inert instruction file, seals the volume root to `0711`, and runs a
 read-only doctor check. If the exact labeled local volume already exists,
 `prepare` only runs that doctor check and refuses incompatible or partial
 state. `doctor` never creates a volume and verifies metadata, paths, modes,
-contract digest and that the role home contains no files or symlinks.
+contract digest, that the sealed volume root cannot be listed by UID 1000,
+and that the role home contains no files or symlinks.
 
 The Docker calls use the pinned image with one named volume mount, no host
 bind, no network, read-only image root, all capabilities dropped, no new
