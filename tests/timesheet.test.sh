@@ -41,7 +41,9 @@ python3 "$S" archive --quiet
 # Transcripts pruned: the ledger alone must still carry the month.
 rm -rf "$CLAUDE_PROJECTS"/*
 cat >"$TMP/meetings.json" <<'JSON'
-[{"start": "2026-09-04T09:00:00+10:00", "end": "2026-09-04T10:00:00+10:00", "title": "Weekly with Mark"}]
+[{"start": "2026-09-04T09:00:00+10:00", "end": "2026-09-04T10:00:00+10:00", "title": "Weekly with Mark"},
+ {"start": "2026-09-05T09:00:00+10:00", "end": "2026-09-05T09:30:00+10:00", "title": "Quick sync"},
+ {"start": "2026-09-06T06:00:00+10:00", "end": "2026-09-06T22:00:00+10:00", "title": "Offsite"}]
 JSON
 python3 "$S" draft 2026-09 --sources claude,meeting --meetings "$TMP/meetings.json" --json "$TMP/d.json" >/dev/null
 
@@ -52,7 +54,12 @@ days = {d['date']: d for d in r['days']}
 assert days['2026-09-02']['hours'] == 2.5, days['2026-09-02']   # 10:00-12:00 + 13:00
 assert days['2026-09-02']['span'] == '10:00–13:30', days['2026-09-02']
 assert days['2026-09-03']['hours'] == 0, 'crew worktree prompts must not bill'
-assert days['2026-09-04']['hours'] == 1.0 and 'Weekly with Mark' in days['2026-09-04']['notes']
-assert r['total'] == 3.5, r['total']
+assert days['2026-09-04']['hours'] == 1.0 and 'Weekly with Mark' in days['2026-09-04']['notes']  # 1h is enough
+assert days['2026-09-05']['measured'] == 0.5 and days['2026-09-05']['hours'] == 0, 'under 1h is not logged'
+assert days['2026-09-05']['notes'] == ''
+assert days['2026-09-06']['measured'] == 16.0 and days['2026-09-06']['hours'] == 14.0, days['2026-09-06']
+assert days['2026-09-06']['notes'].startswith('[timesheet ✓ 16h measured, capped at 14h · 06:00–22:00 · 1 meeting]')
+assert days['2026-09-02']['notes'].startswith('[timesheet ✓ 2.5h measured · 10:00–13:30 · 4 prompts]')
+assert r['total'] == 17.5, r['total']
 PY
 echo "timesheet: ok"

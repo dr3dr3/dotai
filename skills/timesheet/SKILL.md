@@ -19,6 +19,13 @@ skill's directory.
 - A gap of **≤ 30 minutes** between two billed slots is billed too. Nothing is added before
   a session's first event.
 - Days and weeks are in `Australia/Brisbane` (`--tz` / `TIMESHEET_TZ` to change).
+- **Day limits (André, 2026-10-04):** a day measuring **under 1 hour is not logged** (exactly
+  1h is), and **no day logs more than 14 hours** (`--min-day`, `--max-day`). The draft shows
+  the measured hours next to the logged hours for any day a limit changed.
+- **Evidence marker:** every note the tool writes starts with
+  `[timesheet ✓ <measured>h measured[, capped at 14h] · <span> · <counts>]`. A Harvest entry
+  without that prefix was typed by hand and has no evidence behind it from this tool. Tool
+  entries also carry `external_reference.id = timesheet:YYYY-MM-DD`.
 
 André aims for 50–60 hours a week, weekends included. Treat that as a **calibration check,
 never a setting**. If a week comes out far outside it, find the cause (missing evidence, an
@@ -64,6 +71,7 @@ Known limits. Say these when you present a month:
    - A day that already has an entry the tool did not make is **skipped**. Tell him; never
      overwrite it.
    - Locked (invoiced or approved) entries are skipped.
+   - A tool entry whose day now falls under the 1h minimum is **deleted**.
 
 5. **Apply only after an explicit yes** to that exact dry-run:
    `python3 scripts/timesheet.py push 2026-09 --apply`.
