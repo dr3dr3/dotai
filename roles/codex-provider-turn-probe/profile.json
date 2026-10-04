@@ -1,0 +1,35 @@
+{
+  "meta": { "name": "roe-pilot-codex-provider-turn", "version": "1.0.0" },
+  "workdir": { "access": "read" },
+  "security": {
+    "signal_mode": "isolated",
+    "process_info_mode": "isolated",
+    "ipc_mode": "shared_memory_only",
+    "capability_elevation": false
+  },
+  "linux": { "af_unix_mediation": "pathname" },
+  "filesystem": {
+    "read": ["/state/pilot/probe"],
+    "allow": [
+      "/state/pilot/home/.codex",
+      "/state/pilot/home/.config/roe-advisor",
+      "/state/pilot/home/.cache/roe-advisor",
+      "/state/pilot/home/.local/state/roe-advisor",
+      "/state/pilot/continuity",
+      "/state/pilot/output",
+      "/state/pilot/tmp"
+    ],
+    "unix_socket_subtree_bind": ["/state/pilot/home/.codex"]
+  },
+  "network": { "allow_domain": ["api.openai.com"] },
+  "environment": {
+    "allow_vars": [
+      "PATH", "HOME", "LANG", "TMPDIR", "CODEX_HOME", "XDG_CONFIG_HOME",
+      "XDG_CACHE_HOME", "XDG_STATE_HOME", "ROE_PILOT_PROVIDER_TOKEN"
+    ],
+    "deny_vars": [
+      "HERDR_*", "FM_*", "SSH_*", "AWS_*", "GH_*", "GITHUB_*",
+      "OP_*", "NODE_OPTIONS", "PYTHONPATH"
+    ]
+  }
+}

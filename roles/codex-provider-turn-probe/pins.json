@@ -1,0 +1,16 @@
+{
+  "files": {
+    "/workspace/.ai/dotai-codex-provider-turn/roles/codex-provider-turn-probe/run.ts": "c87183a41aeb25dbc7fdef8632b5345839b50e5a2ef8d262f8bbe61a49135d42",
+    "/workspace/.ai/dotai-codex-provider-turn/roles/codex-provider-turn-probe/client.ts": "bd62ae5669f558b61cc3fcafa8a824ff41cd8684c83301dc8959a2fbbbaeb693",
+    "/workspace/.ai/dotai-codex-provider-turn/roles/codex-provider-turn-probe/entry.sh": "54fd06f2ace60d08e441188872e83e56d11cc28b0eee612635dd6162f1d2392f",
+    "/workspace/.ai/dotai-codex-provider-turn/roles/codex-provider-turn-probe/profile.json": "5a2472e5093db4f87eb891e497432f5386c9f43502d7b12288a3f86f93dc74d0",
+    "/workspace/.ai/dotai-codex-provider-turn/scripts/roe-role.ts": "f6e2c47b6ad0870399bfee1dc24e091645ccb6434ff974789ecc9fd3f6a78710",
+    "/workspace/.ai/dotai-codex-provider-turn/scripts/roe-role-state.ts": "2d7deeb2fa82408d1874596e6470e1a734f5977ad199ae0e6fb49ec3a98e650d",
+    "/workspace/.ai/dotai-codex-provider-turn/roles/catalogue.json": "a2ee6fe05113147028da6d67e9c5b0df4534b1b67f7082dba354d5ff9d2fbd54",
+    "/workspace/.ai/dotai-codex-provider-turn/roles/codex-runtime.json": "f8050709119d8fdd5ec3625dc948a13edb07e015d2e6f471556db1513e2c65e5",
+    "/home/vscode/.local/lib/roe-firstmate/nono": "520433bc42ee9938a154867b965a243e9cfa348a3a1987fb7422c1bff653b4e9",
+    "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+  },
+  "profile_sha256": "5a2472e5093db4f87eb891e497432f5386c9f43502d7b12288a3f86f93dc74d0",
+  "bundle_sha256": "1ae85af65b6daf040a2411e84a53807a68f66a86434255319a40e79cb51a1a44"
+}
