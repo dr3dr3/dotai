@@ -175,10 +175,20 @@ export function attribute(built: Built, items: Map<number, Item>, tz: string): M
 }
 
 export type AreaRow = { area: string; hours: number; pct: number };
+
+/** The roadmap's own grouping, read from the Linear project prefix: P product, T platform, S supply. */
+export function themeOf(area: string): string {
+  if (/^P\d/.test(area)) return 'Product';
+  if (/^T\d/.test(area)) return 'Platform & engineering';
+  if (/^S\d/.test(area)) return 'Supply chain';
+  if (/^Onboard\b|^Customer Onboarding$/.test(area)) return 'Tenant onboarding';
+  return area;
+}
 export type Areas = {
   total: number;
   rows: AreaRow[];
   all: AreaRow[];
+  themes: AreaRow[];
   unassigned: { key: string; label: string; hours: number; repo?: string }[];
   allowed: string[];
 };
@@ -221,10 +231,16 @@ export function summarise(
     const hours = rest.reduce((n, r) => n + r.hours, 0);
     rows = [...all.slice(0, TOP - 1), { area: `Other (${rest.length} areas)`, hours, pct: (hours / total) * 100 }];
   }
+  const byTheme: Weights = new Map();
+  for (const r of all) add(byTheme, themeOf(r.area), r.hours);
+  const themes = [...byTheme]
+    .map(([area, hours]) => ({ area, hours, pct: total ? (hours / total) * 100 : 0 }))
+    .sort((a, b) => b.hours - a.hours);
   return {
     total,
     rows,
     all,
+    themes,
     unassigned: [...unassigned]
       .map(([key, hours]) => ({ ...described.get(key)!, hours }))
       .sort((a, b) => b.hours - a.hours),
@@ -369,8 +385,11 @@ export function prsByDeveloper(month: string, tz: string, org: string, refresh =
 
 export function printAreas(r: Awaited<ReturnType<typeof areas>>): void {
   console.log(`\nHours by area — ${r.built.draft.month}, ${r.total.toFixed(2)}h billed (from ${r.source})`);
-  for (const row of r.rows)
+  const line = (row: { pct: number; hours: number; area: string }) =>
     console.log(`  ${row.pct.toFixed(1).padStart(5)}%  ${row.hours.toFixed(1).padStart(6)}h  ${row.area}`);
+  r.themes.forEach(line);
+  console.log('  top areas:');
+  r.rows.forEach(line);
   if (r.unassigned.length)
     console.log(
       `\n${r.unassigned.length} item(s) carry no ticket with a Linear project (${r.unassigned

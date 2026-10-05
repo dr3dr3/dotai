@@ -100,7 +100,11 @@ export async function main(argv: string[]): Promise<void> {
     if (v.json)
       writeFileSync(
         v.json,
-        JSON.stringify({ month, source: a.source, total: a.total, areas: a.rows, all_areas: a.all, prs }, null, 1),
+        JSON.stringify(
+          { month, source: a.source, total: a.total, themes: a.themes, areas: a.rows, all_areas: a.all, prs },
+          null,
+          1,
+        ),
       );
   }
 }

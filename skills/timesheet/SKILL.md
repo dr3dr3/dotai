@@ -117,6 +117,10 @@ Never invent an area; the script refuses values outside the list. A big classifi
 is a good fit for a subagent. Re-run `report` until "Unassigned" is gone or André accepts
 what remains. Show him the ten least certain calls.
 
+The report also rolls the areas up by **theme**, read from the Linear prefix: P → Product,
+T → Platform & engineering, S → Supply chain, Onboard → Tenant onboarding. Lead with this for
+Mark, because the top ten projects leave a large "Other".
+
 **PRs by developer.** Every PR opened in the org that month, per author: opened, merged,
 closed without merging, still open, repos touched. Bots are listed apart. Two cautions,
 which must travel with the number:

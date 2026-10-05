@@ -8,7 +8,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { archive, billSlots, SLOT_MS } from '../scripts/evidence.ts';
 import { build, evidenceLine, type Built, type Options } from '../scripts/draft.ts';
-import { attribute, decisionKey, itemOf, MANUAL, prsByDeveloper, summarise, UNASSIGNED } from '../scripts/report.ts';
+import {
+  attribute,
+  decisionKey,
+  itemOf,
+  MANUAL,
+  prsByDeveloper,
+  summarise,
+  themeOf,
+  UNASSIGNED,
+} from '../scripts/report.ts';
 
 const TMP = mkdtempSync(join(tmpdir(), 'timesheet-'));
 process.env.TIMESHEET_HOME = join(TMP, 'home');
@@ -184,6 +193,10 @@ test('areas scale to the billed day, mark manual days, and roll the tail into Ot
   assert.equal(by[UNASSIGNED], 0.75);
   assert.equal(by[MANUAL], 2, 'a billed day with no evidence is reported as manual, not spread');
   assert.equal(r.unassigned.length, 1);
+  assert.equal(themeOf('P12 Production Portal'), 'Product');
+  assert.equal(themeOf('T13 AI operating model & agent ecosystem'), 'Platform & engineering');
+  assert.equal(themeOf('Onboard - Raja'), 'Tenant onboarding');
+  assert.equal(themeOf('Meetings'), 'Meetings');
 
   const many = new Map([
     ['2026-09-07', new Map(Array.from({ length: 12 }, (_, i) => [`k${i}`, i + 1] as [string, number]))],
