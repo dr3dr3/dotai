@@ -20,7 +20,7 @@ These skills help you write, refactor, and fix code.
 
 ## Tooling & Setup
 
-- **[timesheet](timesheet/SKILL.md)** — Fill the month's Datafaced Harvest timesheet from Claude Code prompts, GitHub activity in the rock-of-eye org and calendar meetings, in 30-minute slots. Draft → review → dry-run → `--apply`. Its evidence ledger is fed by the `timesheet-archive.sh` SessionStart hook.
+- **[timesheet](timesheet/SKILL.md)** — Fill the month's Datafaced Harvest timesheet from Claude Code prompts, GitHub activity in the rock-of-eye org and calendar meetings, in 30-minute slots. Draft → review → dry-run → `--apply`; `report` adds hours by Linear project and PRs by developer for a monthly note to Mark. TypeScript on Node ≥ 22.18. Its evidence ledger is fed by the `timesheet-archive.sh` SessionStart hook.
 - **[preview-markdown](preview-markdown/SKILL.md)** — Open a local Markdown file in Glow in a sibling Herdr pane, preserving the current focus. Requires Herdr and Glow on `PATH` and a session running inside Herdr. Ask “Write the plan to Markdown, then show it in Glow in a new pane” or invoke `$preview-markdown` with a file path. Select the preview pane to scroll and press `q` to exit; previews do not automatically refresh.
 - **setup-pre-commit** — Set up Husky pre-commit hooks with lint-staged, Prettier, type checking, and tests.
 - **git-guardrails-claude-code** — Set up Claude Code hooks to block dangerous git commands (push, reset --hard, clean, etc.) before they execute.
