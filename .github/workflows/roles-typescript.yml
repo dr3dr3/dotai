@@ -1,10 +1,12 @@
 name: Roles TypeScript
 
-# Offline checks for the TypeScript under roles/ and the role launcher.
-# Node 24 is the primary LTS lane; Node 22.23.3 matches the current
-# devcontainer. Every file is named explicitly: no globs, no discovery.
-# Nothing here queries or runs Docker, uses credentials, contacts a
-# provider, or touches a role, Firstmate or Concierge store.
+# Offline checks for the TypeScript under roles/, the role launcher, and the
+# Firstmate captain-home resolver and harness sandbox. Node 24 is the primary
+# LTS lane; Node 22.23.3 matches the current devcontainer. Every file is named
+# explicitly: no globs, no discovery. Nothing here queries or runs Docker,
+# uses credentials, contacts a provider, or touches a role, Firstmate or
+# Concierge store. The two shell suites run hermetically under a temporary
+# root with fake nono, harness, grant and credential tools.
 
 on:
   pull_request:
@@ -13,6 +15,16 @@ on:
       - roles/**
       - scripts/roe-role*.ts
       - tests/roe_role*.ts
+      - scripts/firstmate-captain-home.ts
+      - scripts/firstmate-harness-sandbox.sh
+      - scripts/firstmate-sandbox-mode.sh
+      - scripts/firstmate-grant.sh
+      - scripts/firstmate-lease.sh
+      - firstmate/pins.env
+      - firstmate/nono/roe-firstmate-claude-captain.json
+      - tests/firstmate_captain_home.test.ts
+      - tests/firstmate-harness-sandbox.test.sh
+      - tests/firstmate-leases.test.sh
   push:
     branches: [main]
     paths:
@@ -20,6 +32,16 @@ on:
       - roles/**
       - scripts/roe-role*.ts
       - tests/roe_role*.ts
+      - scripts/firstmate-captain-home.ts
+      - scripts/firstmate-harness-sandbox.sh
+      - scripts/firstmate-sandbox-mode.sh
+      - scripts/firstmate-grant.sh
+      - scripts/firstmate-lease.sh
+      - firstmate/pins.env
+      - firstmate/nono/roe-firstmate-claude-captain.json
+      - tests/firstmate_captain_home.test.ts
+      - tests/firstmate-harness-sandbox.test.sh
+      - tests/firstmate-leases.test.sh
 
 permissions:
   contents: read
@@ -47,12 +69,16 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Synthetic preflight tests
         run: node --test roles/nono-one-turn-probe/test_volume_preflight.ts
+      - name: Captain-home resolver tests
+        run: node --test tests/firstmate_captain_home.test.ts
       - name: Prettier
         run: >-
           "$TOOLS/prettier" --check
           roles/nono-one-turn-probe/volume_preflight.ts
           roles/nono-one-turn-probe/run_volume_preflight.ts
           roles/nono-one-turn-probe/test_volume_preflight.ts
+          scripts/firstmate-captain-home.ts
+          tests/firstmate_captain_home.test.ts
       - name: TypeScript (strict)
         # Flags mirror skills/wip-tracker/tsconfig.json. Module and resolution
         # are ESNext/Bundler because roles/ has no package.json declaring
@@ -66,6 +92,21 @@ jobs:
           roles/nono-one-turn-probe/volume_preflight.ts
           roles/nono-one-turn-probe/run_volume_preflight.ts
           roles/nono-one-turn-probe/test_volume_preflight.ts
+          scripts/firstmate-captain-home.ts
+          tests/firstmate_captain_home.test.ts
+      - name: Captain profile JSON
+        run: >-
+          node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))'
+          firstmate/nono/roe-firstmate-claude-captain.json
+      - name: Shell syntax (bash -n)
+        run: |
+          bash -n scripts/firstmate-harness-sandbox.sh
+          bash -n tests/firstmate-harness-sandbox.test.sh
+          bash -n tests/firstmate-leases.test.sh
+      - name: Harness sandbox suite (hermetic)
+        run: bash tests/firstmate-harness-sandbox.test.sh
+      - name: Capability lease suite (hermetic)
+        run: bash tests/firstmate-leases.test.sh
       - name: Whitespace (git diff --check)
         # Compares the named paths against the empty tree, so every line of
         # every checked file is covered regardless of event or history depth.
@@ -76,3 +117,9 @@ jobs:
           roles/nono-one-turn-probe/run_volume_preflight.ts
           roles/nono-one-turn-probe/test_volume_preflight.ts
           roles/nono-one-turn-probe/PREFLIGHT-TASK-TS.md
+          scripts/firstmate-captain-home.ts
+          scripts/firstmate-harness-sandbox.sh
+          tests/firstmate_captain_home.test.ts
+          tests/firstmate-harness-sandbox.test.sh
+          tests/firstmate-leases.test.sh
+          firstmate/nono/roe-firstmate-claude-captain.json
