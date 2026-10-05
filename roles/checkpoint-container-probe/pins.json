@@ -1,0 +1,8 @@
+{
+  "/workspace/.ai/dotai/roles/checkpoint-container-probe/run.ts": "dc20b2503b7a0e4122fbaab878771ac9fb3a76f5660e958bd915accd95458816",
+  "/workspace/.ai/dotai/roles/checkpoint-container-probe/writer.sh": "cd759227fcb9cc29123255ed47f6d4ad476f408163060fae2d981e8bb10aacbf",
+  "/workspace/.ai/dotai/roles/checkpoint-container-probe/reader.sh": "ba19684ecdb1435367d56cc9d70412cb5ebd55ede86fd2ee6c3bbbe98f8f1911",
+  "/workspace/.ai/dotai/skills/wip-tracker/scripts/continuity.py": "87997fbb8767c817b6fe6241a52eee4d95b6c8f39ff14ea51875cb3158309e51",
+  "/workspace/.ai/dotai/skills/wip-tracker/scripts/continuity_feedback.py": "88674a2a67100a726318572427a5b376dacdb97e527cf66943535da6b492f084",
+  "/workspace/tmp/ai-pilot-session-python.tar": "e4ec2e646e2bd7ccea9234ac37d9d769987de437dd32c18e2ef935412b861454"
+}
