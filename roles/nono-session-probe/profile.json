@@ -1,0 +1,76 @@
+{
+  "meta": {
+    "name": "roe-advisor",
+    "version": "1.0.0"
+  },
+  "workdir": {
+    "access": "read"
+  },
+  "security": {
+    "signal_mode": "isolated",
+    "process_info_mode": "isolated",
+    "ipc_mode": "shared_memory_only",
+    "capability_elevation": false
+  },
+  "linux": {
+    "af_unix_mediation": "pathname"
+  },
+  "filesystem": {
+    "read": [
+      "/tmp/context/reference",
+      "/tmp/context/explanation",
+      "/tmp/context/plans",
+      "/tmp/probe/tools"
+    ],
+    "read_file": [
+      "/tmp/role/instructions.md"
+    ],
+    "allow": [
+      "/tmp/role/output",
+      "/tmp/role/home/.codex",
+      "/tmp/role/home/.config/roe-advisor",
+      "/tmp/role/home/.cache/roe-advisor",
+      "/tmp/role/home/.local/state/roe-advisor",
+      "/tmp/role/tmp"
+    ],
+    "unix_socket_subtree_bind": [
+      "/tmp/role/home/.codex"
+    ]
+  },
+  "network": {
+    "allow_domain": [
+      "chatgpt.com",
+      "auth.openai.com",
+      "api.openai.com"
+    ]
+  },
+  "environment": {
+    "allow_vars": [
+      "PATH",
+      "HOME",
+      "USER",
+      "LOGNAME",
+      "TERM",
+      "COLORTERM",
+      "LANG",
+      "TZ",
+      "TMPDIR",
+      "XDG_*",
+      "CODEX_HOME"
+    ],
+    "deny_vars": [
+      "*_TOKEN",
+      "*_SECRET",
+      "*_API_KEY",
+      "HERDR_*",
+      "FM_*",
+      "SSH_*",
+      "AWS_*",
+      "GH_*",
+      "GITHUB_*",
+      "OP_*",
+      "NODE_OPTIONS",
+      "PYTHONPATH"
+    ]
+  }
+}

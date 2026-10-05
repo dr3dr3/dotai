@@ -1,0 +1,11 @@
+{
+  "codex_version": "0.157.1",
+  "schemas": {
+    "ClientRequest.json": "2ababf80956ae311d1dcee4b595dcd3ef86b29a764d31529d7bbf5c4b2f0f2b8",
+    "ClientNotification.json": "706cf248d75027c84a3c63348d0ed507182e8eba40069dd17541793de029145a",
+    "v2/ThreadStartParams.json": "e9c6d3cc18d049bfbc0249add3808fb8e5a27e1a0b5a423767aafbc3859a9428",
+    "v2/ThreadReadParams.json": "dfe040c6ac71d30795b8be3f3ff232e66f362a37f883b491e5d1ea367f470db4",
+    "v2/ThreadResumeParams.json": "c818e26d830ac4430791eab7d4a872d2384fa6006b14c505d8caf46e7e093527",
+    "v2/ThreadSetNameParams.json": "8e334c816bbaeb80f807aca61bf659246f3f60c245c21b5cb7e3ca4ee3ce4820"
+  }
+}

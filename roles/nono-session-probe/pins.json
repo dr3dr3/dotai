@@ -1,0 +1,16 @@
+{
+  "/workspace/.ai/dotai/roles/nono-session-probe/run.py": "52d8aeea2b1fdeb16ef034176ff1d57e15f739b3418a40ab1e66a990208c6694",
+  "/workspace/.ai/dotai/roles/nono-session-probe/prepare.py": "581e9db4df119396aa3f056a11e79509c722c5a22acc533a12d7be067b461488",
+  "/workspace/.ai/dotai/roles/nono-session-probe/client.py": "8bfe40ec9d7d1f5d5f08483c10f62abba1f3a0d7236dd090fc502522234d0791",
+  "/workspace/.ai/dotai/roles/nono-session-probe/entry.sh": "615d803d1efdaa67a8fee88d2837ba0dcbe4a960e29ac498836c8d20d493b443",
+  "/workspace/.ai/dotai/roles/nono-session-probe/check.sh": "c1885d8e7ef4db0747202202658a590260983634cd6af8b67296bb3eb5ae0e3b",
+  "/workspace/.ai/dotai/roles/nono-session-probe/profile.json": "35812821eed3873371e88b8e6e54ae1737eaa4376b1c77c36984d81216cf9a17",
+  "/workspace/.ai/dotai/roles/nono-session-probe/protocol-evidence.json": "a9e495e71ed4aead4962097fd420a7b40467c672909d6d816f02bba24470c227",
+  "/workspace/.ai/dotai/scripts/roe-role": "57432761c174ba25b763095e907a6e80a8f9b3a88c8a07766bb6cc42f8a22af2",
+  "/workspace/.ai/dotai/scripts/roe_role_harnesses.py": "8ee9d92493068188913c26e64517e5ab2f07b5ad19ba10c868e7cb30f6ce1330",
+  "/workspace/.ai/dotai/roles/codex-runtime.json": "f8050709119d8fdd5ec3625dc948a13edb07e015d2e6f471556db1513e2c65e5",
+  "/workspace/.ai/dotai/roles/nono-probe/run.py": "0dd2e884293cd777bd46da7f38504d49f1425d903c9379fb29b57bb127cd401a",
+  "/workspace/tmp/ai-pilot-session-python.tar": "e4ec2e646e2bd7ccea9234ac37d9d769987de437dd32c18e2ef935412b861454",
+  "/home/vscode/.local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex": "9cbc3cdcc18ca336523ffa7d64207a1ae1f5991f823081d0a37bcb3a748de093",
+  "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+}
