@@ -1,0 +1,9 @@
+{
+  "/workspace/.ai/dotai/roles/nono-socket-probe/socket-probe.c": "1878d6c9df05df20a1e75d85ad13b7b17dcb2eb0941e08a1ebd093e00c598a86",
+  "/workspace/.ai/dotai/roles/nono-socket-probe/profile.json": "90db9b6d14c1847c6f468b0bee5835d186813b664c34e9ada42c83319fcaa8dc",
+  "/workspace/.ai/dotai/roles/nono-socket-probe/entry.sh": "13894a201e2de754dae7639808862c8600de305fac9edf08dbd916edd86e409a",
+  "/workspace/.ai/dotai/roles/nono-socket-probe/run.py": "543964b05bb17ebc1ad622c110ae9409feb6eb27103a01a409ffe1567c700178",
+  "/workspace/.ai/dotai/roles/nono-probe/run.py": "0dd2e884293cd777bd46da7f38504d49f1425d903c9379fb29b57bb127cd401a",
+  "/workspace/tmp/ai-pilot-socket-probe": "4a43fdd1d89526aed95efea1db4b98032bd4e055eedf28cdc8f5f6a95a6e2ddd",
+  "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+}

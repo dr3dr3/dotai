@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "name": "roe-inert-socket-probe",
+    "version": "1.0.0"
+  },
+  "workdir": {
+    "access": "read"
+  },
+  "security": {
+    "signal_mode": "isolated",
+    "process_info_mode": "isolated",
+    "ipc_mode": "shared_memory_only",
+    "capability_elevation": false
+  },
+  "linux": {
+    "af_unix_mediation": "pathname"
+  },
+  "filesystem": {
+    "read_file": [
+      "/tmp/probe/socket-probe"
+    ],
+    "allow": [
+      "/tmp/probe-output"
+    ],
+    "read": [
+      "/tmp/probe-sockets"
+    ],
+    "unix_socket": [
+      "/tmp/probe-sockets/allowed.sock"
+    ],
+    "unix_socket_subtree_bind": [
+      "/tmp/probe-output/own"
+    ]
+  },
+  "network": {
+    "allow_domain": [
+      "example.invalid"
+    ]
+  },
+  "environment": {
+    "allow_vars": [
+      "PATH",
+      "HOME",
+      "LANG"
+    ],
+    "deny_vars": [
+      "ROE_PROBE_TOKEN"
+    ]
+  }
+}
