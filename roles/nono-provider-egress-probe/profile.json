@@ -1,0 +1,20 @@
+{
+  "meta": { "name": "roe-provider-egress-probe", "version": "1.0.0" },
+  "workdir": { "access": "read" },
+  "security": {
+    "signal_mode": "isolated",
+    "process_info_mode": "isolated",
+    "ipc_mode": "shared_memory_only",
+    "capability_elevation": false
+  },
+  "linux": { "af_unix_mediation": "pathname" },
+  "filesystem": {
+    "allow": ["/tmp/probe-output"],
+    "read": ["/tmp/probe"]
+  },
+  "network": { "allow_domain": ["api.openai.com"] },
+  "environment": {
+    "allow_vars": ["PATH", "HOME", "LANG"],
+    "deny_vars": ["ROE_PROBE_TOKEN"]
+  }
+}
