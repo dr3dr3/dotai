@@ -27,6 +27,12 @@ export type FixtureCommands = {
 };
 export type CommandCall = (argv: string[], timeoutMs?: number) => string;
 export type Log = (message: string) => void;
+export type SignalTarget = {
+  on(signal: NodeJS.Signals, listener: () => void): unknown;
+  off(signal: NodeJS.Signals, listener: () => void): unknown;
+  exitCode?: string | number | null;
+};
+export type Schedule = (callback: () => void) => void;
 
 export function isCompatibleNode(version: string): boolean {
   return /^22\.23\.\d+$/.test(version);
@@ -34,6 +40,33 @@ export function isCompatibleNode(version: string): boolean {
 
 export function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
+}
+
+export function deferTerminationSignals(
+  target: SignalTarget = process,
+  schedule: Schedule = (callback) => setTimeout(callback, 50),
+  log: Log = console.error,
+): () => void {
+  let received: NodeJS.Signals | undefined;
+  const handlers = new Map<NodeJS.Signals, () => void>();
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    const handler = () => {
+      received ??= signal;
+    };
+    handlers.set(signal, handler);
+    target.on(signal, handler);
+  }
+  return () => {
+    schedule(() => {
+      for (const [signal, handler] of handlers) target.off(signal, handler);
+      if (received) {
+        log(
+          `STOP: received ${received}; termination waited for synchronous cleanup`,
+        );
+        target.exitCode = 1;
+      }
+    });
+  };
 }
 
 export function verifyFixtureMarker(
@@ -108,7 +141,7 @@ export function commands(suffix: string): FixtureCommands {
     "30s",
     "/bin/sh",
     "-c",
-    `set -eu; test -f /tmp/auth.json && test -r /tmp/auth.json && test "$(cat /tmp/auth.json)" = '${MARKER}' && if chmod 0600 /tmp/auth.json 2>/dev/null; then printf '%s\\n' 'STOP: chmod unexpectedly succeeded on read-only mount' >&2; exit 42; fi && test "$(stat -c %a /tmp/auth.json)" = 400 && test ! -e /tmp/other.txt && mount_count=0 && while IFS=' ' read -r _ _ _ _ mountpoint mountopts _; do if test "$mountpoint" = /tmp/auth.json; then case ",$mountopts," in *,ro,*) ;; *) printf '%s\\n' 'STOP: exact-file mount is not read-only' >&2; exit 43;; esac; mount_count=$((mount_count + 1)); fi; done < /proc/self/mountinfo && test "$mount_count" -eq 1 && printf '%s\\n' 'PASS: one synthetic exact-file mount is readable and read-only; sibling absent'`,
+    `set -eu; test -f /tmp/auth.json && test -r /tmp/auth.json && test "$(cat /tmp/auth.json)" = '${MARKER}' && if chmod 0600 /tmp/auth.json 2>/dev/null; then printf '%s\\n' 'STOP: chmod unexpectedly succeeded on read-only mount' >&2; exit 42; fi && test "$(stat -c %a /tmp/auth.json)" = 400 && test ! -e /tmp/other.txt && mount_count=0 && while IFS=' ' read -r _ _ _ mountroot mountpoint mountopts _; do if test "$mountpoint" = /tmp/auth.json; then case "$mountroot" in */auth.json) ;; *) printf '%s\\n' 'STOP: mount source is not the auth.json subpath' >&2; exit 43;; esac; case ",$mountopts," in *,ro,*) ;; *) printf '%s\\n' 'STOP: exact-file mount is not read-only' >&2; exit 44;; esac; mount_count=$((mount_count + 1)); fi; done < /proc/self/mountinfo && test "$mount_count" -eq 1 && printf '%s\\n' 'PASS: one synthetic exact-file mount is readable and read-only; source subpath confirmed; sibling path absent'`,
   ];
   return { volume, writerName, readerName, writer, reader };
 }
@@ -123,13 +156,33 @@ export function commandCall(argv: string[], timeoutMs = 30_000): string {
   return output;
 }
 
-function failureText(error: unknown): string {
+export function failureText(error: unknown): string {
+  const details: string[] = [];
   if (error && typeof error === "object" && "stderr" in error) {
     const stderr = (error as { stderr?: unknown }).stderr;
-    if (typeof stderr === "string") return stderr;
-    if (Buffer.isBuffer(stderr)) return stderr.toString("utf8");
+    const text =
+      typeof stderr === "string"
+        ? stderr.trim()
+        : Buffer.isBuffer(stderr)
+          ? stderr.toString("utf8").trim()
+          : "";
+    if (text) details.push(text);
   }
-  return error instanceof Error ? error.message : String(error);
+  if (error instanceof Error && error.message) details.push(error.message);
+  if (error && typeof error === "object") {
+    const fields = error as {
+      code?: unknown;
+      status?: unknown;
+      signal?: unknown;
+    };
+    for (const name of ["code", "status", "signal"] as const) {
+      const value = fields[name];
+      if (value !== undefined && value !== null && value !== "") {
+        details.push(`${name}=${String(value)}`);
+      }
+    }
+  }
+  return [...new Set(details)].join("; ") || String(error);
 }
 
 function confirmsAbsent(error: unknown): boolean {
@@ -252,10 +305,13 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  const finishSignals = deferTerminationSignals();
   try {
     process.exitCode = main();
   } catch (error) {
     console.log(`STOP: ${failureText(error)}`);
     process.exitCode = 1;
+  } finally {
+    finishSignals();
   }
 }

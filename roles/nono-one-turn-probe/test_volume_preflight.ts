@@ -7,8 +7,10 @@ import { fileURLToPath } from "node:url";
 import {
   cleanup,
   commands,
+  deferTerminationSignals,
   DOCKER,
   ENGINE,
+  failureText,
   FIXTURE_HASH_ENV,
   IMAGE,
   isCompatibleNode,
@@ -17,6 +19,7 @@ import {
 } from "./volume_preflight.ts";
 import {
   cleanEnvironment,
+  deferWrapperTerminationSignals,
   isCompatibleOperatorNode,
   main as wrapperMain,
   verifyApprovedSources,
@@ -70,9 +73,11 @@ function successfulDocker(calls: string[][]): CommandCall {
 test("writer prepares mode before chown with CHOWN as its only added capability", () => {
   const { writer, reader } = commands("abcdef123456");
   const writerShell = writer.at(-1) ?? "";
-  assert.ok(
-    writerShell.indexOf("chmod 0400") < writerShell.indexOf("chown 1000:1000"),
-  );
+  const chmodIndex = writerShell.indexOf("chmod 0400");
+  const chownIndex = writerShell.indexOf("chown 1000:1000");
+  assert.ok(chmodIndex >= 0);
+  assert.ok(chownIndex >= 0);
+  assert.ok(chmodIndex < chownIndex);
   assert.equal(writer.filter((value) => value === "--cap-drop=ALL").length, 1);
   assert.deepEqual(
     writer.filter((value) => value.startsWith("--cap-add=")),
@@ -134,9 +139,57 @@ test("reader acceptance requires one read-only exact-file mount and denies sibli
   assert.match(shell, /stat -c %a \/tmp\/auth\.json/);
   assert.match(shell, /test ! -e \/tmp\/other\.txt/);
   assert.match(shell, /proc\/self\/mountinfo/);
+  assert.match(shell, /mountroot/);
+  assert.match(shell, /\*\/auth\.json/);
   assert.match(shell, /mount_count.*-eq 1/);
   assert.match(shell, /\*,ro,\*/);
-  assert.match(shell, /sibling absent/);
+  assert.match(shell, /sibling path absent/);
+});
+
+test("blank subprocess stderr retains timeout and signal diagnostics", () => {
+  const error = Object.assign(new Error("spawnSync timed out"), {
+    stderr: "",
+    code: "ETIMEDOUT",
+    signal: "SIGTERM",
+  });
+  assert.match(failureText(error), /spawnSync timed out/);
+  assert.match(failureText(error), /code=ETIMEDOUT/);
+  assert.match(failureText(error), /signal=SIGTERM/);
+});
+
+test("fixture and wrapper defer termination until synchronous cleanup returns", () => {
+  for (const install of [
+    deferTerminationSignals,
+    deferWrapperTerminationSignals,
+  ]) {
+    const handlers = new Map<NodeJS.Signals, () => void>();
+    let scheduled: (() => void) | undefined;
+    const messages: string[] = [];
+    const target = {
+      exitCode: 0,
+      on(signal: NodeJS.Signals, listener: () => void) {
+        handlers.set(signal, listener);
+      },
+      off(signal: NodeJS.Signals, listener: () => void) {
+        if (handlers.get(signal) === listener) handlers.delete(signal);
+      },
+    };
+    const finish = install(
+      target,
+      (callback) => {
+        scheduled = callback;
+      },
+      (message) => messages.push(message),
+    );
+    handlers.get("SIGINT")?.();
+    finish();
+    assert.equal(target.exitCode, 0);
+    assert.ok(scheduled);
+    scheduled();
+    assert.equal(target.exitCode, 1);
+    assert.equal(handlers.size, 0);
+    assert.match(messages.join("\n"), /SIGINT/);
+  }
 });
 
 test("successful acceptance removes and verifies exact synthetic objects", () => {
@@ -381,6 +434,9 @@ test("brief has only the replacement identity and authoritative home", () => {
   assert.equal((brief.match(/\/workspace\/\.firstmate-home/g) ?? []).length, 1);
   assert.match(brief, /1 October request is historical evidence only/);
   assert.match(brief, /must never be\s+rerun, restored/);
+  assert.match(brief, /historical task registration is retired/);
+  assert.match(brief, /<APPROVED_WRAPPER_SHA256>/);
+  assert.match(brief, /sha256sum --check --status/);
 });
 
 test("wrapper snapshots the fixture and inherits output with a clean environment", () => {

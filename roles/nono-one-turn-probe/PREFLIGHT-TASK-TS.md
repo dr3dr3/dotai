@@ -41,12 +41,25 @@ architecture `arm64`. The image pin is exactly
 `sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54`.
 Both pins fail closed; they must not be refreshed or inferred during this task.
 
-## Exact operation and acceptance
+## Deployment gate and exact operation
+
+Do not update the shared dirty checkout in place. Before registration, preserve
+the untracked historical files as non-executable evidence outside this route,
+then deploy a clean checkout at the merged replacement commit. Do not use
+`git clean`, forced checkout, or deletion as a shortcut. Confirm that the
+historical task registration is retired so it cannot select its former command.
+
+Registration must pin the final wrapper digest and supply the literal reviewed
+value where `<APPROVED_WRAPPER_SHA256>` appears below. The placeholder is
+intentional: the brief is itself hash-pinned by the wrapper, so embedding the
+wrapper digest here would create an unsafe circular digest dependency.
 
 After separate registration and human review, the operator route is:
 
 ```text
-env -u NODE_OPTIONS -u NODE_PATH node /workspace/.ai/dotai/roles/nono-one-turn-probe/run_volume_preflight.ts --execute
+WRAPPER=/workspace/.ai/dotai/roles/nono-one-turn-probe/run_volume_preflight.ts
+printf '%s  %s\n' '<APPROVED_WRAPPER_SHA256>' "$WRAPPER" | sha256sum --check --status &&
+  env -u NODE_OPTIONS -u NODE_PATH node "$WRAPPER" --execute
 ```
 
 The wrapper enters the registered task through the authoritative coordination
@@ -65,13 +78,14 @@ memory, CPU, process count, and time.
 The reader asks Docker to mount only `auth.json` with
 `volume-subpath=auth.json`, read-only. Acceptance requires the exact file to be
 readable with the synthetic marker, a write-affecting chmod attempt to fail, mode
-`0400` to remain unchanged, the sibling to be absent, and exactly one read-only
-mount at the requested file path in mountinfo. Cleanup always attempts forced
-removal of the two exact synthetic container names followed by the exact volume,
-including after a volume-create timeout. Separate inspect calls must confirm all
-three objects are absent. A cleanup or absence-verification failure retains the
-reservation for human reconciliation. There is no directory or whole-volume
-fallback and no automatic retry.
+`0400` to remain unchanged, the sibling path to be absent, and exactly one
+read-only mount at the requested file path whose mountinfo root identifies the
+`auth.json` source subpath rather than the volume root. Cleanup always attempts
+forced removal of the two exact synthetic container names followed by the exact
+volume, including after a volume-create timeout. Separate inspect calls must
+confirm all three objects are absent. A cleanup or absence-verification failure
+retains the reservation for human reconciliation. There is no directory or
+whole-volume fallback and no automatic retry.
 
 This task names and uses no real credential volume or credential path. It does
 not read credentials, open network egress, start an AI client, contact a provider,

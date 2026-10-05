@@ -24,17 +24,24 @@ const HASH_MARKER = "ROE_SYNTHETIC_FIXTURE_SHA256";
 const APPROVED = new Map<string, string>([
   [
     FIXTURE_NAME,
-    "37ae9e01a31f4b7f4a752e38eb2fcec90970cf72bc1479f3174a34d47ea9a741",
+    "a5abb5859b38f8ef489d3c29378149bb65560210b556ec2966b37d4789877d6d",
   ],
   [
     "test_volume_preflight.ts",
-    "1a2c83e8ef80519b8ef918814f0cdd6992d94712110570058034a7964e3e6c1d",
+    "5fe8cd8a90f71cb98fd1109f58b8c143c56c7dd9fd7c4887bdda872fa4edd332",
   ],
   [
     "PREFLIGHT-TASK-TS.md",
-    "22cbe1a1b6c94661e08ce1d89ebd41c7de2b6003a83093f296fcb8290cd2a009",
+    "5534037438a6daa250893865fd4485b34f998b552e9894a593dc409836b9d424",
   ],
 ]);
+
+type SignalTarget = {
+  on(signal: NodeJS.Signals, listener: () => void): unknown;
+  off(signal: NodeJS.Signals, listener: () => void): unknown;
+  exitCode?: string | number | null;
+};
+type Schedule = (callback: () => void) => void;
 
 export type SpawnOptions = {
   stdio: "inherit";
@@ -48,6 +55,33 @@ export type SpawnCall = (
 
 export function isCompatibleOperatorNode(version: string): boolean {
   return /^22\.23\.\d+$/.test(version);
+}
+
+export function deferWrapperTerminationSignals(
+  target: SignalTarget = process,
+  schedule: Schedule = (callback) => setTimeout(callback, 50),
+  log: (message: string) => void = console.error,
+): () => void {
+  let received: NodeJS.Signals | undefined;
+  const handlers = new Map<NodeJS.Signals, () => void>();
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+    const handler = () => {
+      received ??= signal;
+    };
+    handlers.set(signal, handler);
+    target.on(signal, handler);
+  }
+  return () => {
+    schedule(() => {
+      for (const [signal, handler] of handlers) target.off(signal, handler);
+      if (received) {
+        log(
+          `STOP: received ${received}; termination waited for wrapper cleanup`,
+        );
+        target.exitCode = 1;
+      }
+    });
+  };
 }
 
 export function verifyBootstrap(
@@ -178,6 +212,7 @@ if (
   process.argv[1] &&
   resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
+  const finishSignals = deferWrapperTerminationSignals();
   try {
     process.exitCode = main();
   } catch (error) {
@@ -185,5 +220,7 @@ if (
       `STOP: ${error instanceof Error ? error.message : String(error)}`,
     );
     process.exitCode = 1;
+  } finally {
+    finishSignals();
   }
 }
