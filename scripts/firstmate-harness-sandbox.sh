@@ -46,6 +46,11 @@ if [[ "${ROE_FIRSTMATE_CAPTAIN:-0}" == 1 || "$(pwd -P)/" == /workspace/firstmate
   [[ "$(pwd -P)/" == /workspace/firstmate/ ]] \
     || die "captain sandbox must start from /workspace/firstmate"
   ROLE=captain
+  # Bare Herdr restores bypass fm; recover the configured home before nono.
+  # This validates identity only. Normal Firstmate startup still owns its lock.
+  FM_HOME="$(python3 "$SCRIPT_DIR/firstmate-captain-home.py")" \
+    || die "cannot establish the registered captain home"
+  export FM_HOME
 elif [[ "$(pwd -P)/" == /workspace/*/.treehouse/*/ || "$(pwd -P)/" == /workspace/.treehouse/*/ ]]; then
   REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" \
     || die "worker sandbox must start inside a Treehouse Git checkout"
@@ -74,6 +79,9 @@ fi
 # the profile's default (read-only) capabilities if the captain-side tooling
 # can, and expose exactly this slot's lease directory to the sandbox.
 NONO_LEASE_ARGS=()
+# The selected executable lives in this installed directory. Both captain and
+# worker need read access to resolve it inside nono; this grants no write path.
+NONO_HARNESS_ARGS=(--read "$REAL_DIR")
 if [[ "$ROLE" == worker ]]; then
   # Same derivation as fm-grant / roe-lease — the three must agree byte for byte.
   slot="$(pwd -P)"; slot="${slot#/workspace/}"; slot="${slot%/workspace}"
@@ -156,5 +164,5 @@ PROFILE="roe-firstmate-${HARNESS}-${ROLE}"
 unset ROE_FIRSTMATE_CAPTAIN ROE_FIRSTMATE_SANDBOX_REQUIRED
 export NONO_NO_MIGRATE=1
 
-exec "$NONO" run --profile "$PROFILE" --allow-cwd "${NONO_LEASE_ARGS[@]}" -- \
+exec "$NONO" run --profile "$PROFILE" --allow-cwd "${NONO_HARNESS_ARGS[@]}" "${NONO_LEASE_ARGS[@]}" -- \
   "$REAL_HARNESS" "${HARNESS_ARGS[@]}" "$@"

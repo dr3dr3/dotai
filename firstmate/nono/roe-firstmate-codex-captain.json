@@ -27,7 +27,12 @@
     ],
     "read": [
       "$HOME/.config/herdr",
-      "$HOME/.local/lib/node_modules/@openai/codex"
+      "$HOME/.local/lib/node_modules/@openai/codex",
+      "$HOME/.config/gh",
+      "$HOME/.local/lib/node_modules/gh-axi",
+      "$HOME/.local/lib/node_modules/lavish-axi",
+      "$HOME/.local/lib/node_modules/quota-axi",
+      "$HOME/.local/lib/node_modules/tasks-axi"
     ]
   }
 }

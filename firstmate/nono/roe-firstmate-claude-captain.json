@@ -21,7 +21,6 @@
   "filesystem": {
     "allow": [
       "$HOME/.ai/claude",
-      "/workspace/.ai/dotai",
       "/workspace/.firstmate-home",
       "/workspace/.firstmate-secondmates",
       "/workspace/repos/ai-context",
@@ -34,7 +33,8 @@
       "/workspace/repos/rock-of-eye-client-portal/.treehouse/firstmate-backing/rock-of-eye-client-portal",
       "/workspace/repos/rock-of-eye-partner-portal/.treehouse/firstmate-backing/rock-of-eye-partner-portal",
       "/workspace/repos/rock-of-eye-production-core/.treehouse/firstmate-backing/rock-of-eye-production-core",
-      "/workspace/repos/rock-of-eye-production-portal/.treehouse/firstmate-backing/rock-of-eye-production-portal"
+      "/workspace/repos/rock-of-eye-production-portal/.treehouse/firstmate-backing/rock-of-eye-production-portal",
+      "/workspace/.git/roe-runtime-state"
     ],
     "read": [
       "$HOME/.config/herdr",
@@ -43,6 +43,16 @@
     ],
     "allow_file": [
       "$HOME/.claude.json"
+    ],
+    "read_file": [
+      "$HOME/.local/lib/roe-coordination/roe-coordination",
+      "$HOME/.config/roe-coordination/config.json",
+      "/workspace/.git/roe-runtime.json",
+      "/workspace/.ai/dotai/roles/nono-probe/run.py",
+      "/workspace/.ai/dotai/roles/nono-probe/entry.sh",
+      "/workspace/.ai/dotai/roles/nono-probe/check.sh",
+      "/workspace/.ai/dotai/roles/nono-probe/profile.json",
+      "/workspace/.ai/dotai/roles/nono-probe/README.md"
     ]
   }
 }
