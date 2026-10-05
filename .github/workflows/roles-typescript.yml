@@ -1,0 +1,78 @@
+name: Roles TypeScript
+
+# Offline checks for the TypeScript under roles/ and the role launcher.
+# Node 24 is the primary LTS lane; Node 22.23.3 matches the current
+# devcontainer. Every file is named explicitly: no globs, no discovery.
+# Nothing here queries or runs Docker, uses credentials, contacts a
+# provider, or touches a role, Firstmate or Concierge store.
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/roles-typescript.yml
+      - roles/**
+      - scripts/roe-role*.ts
+      - tests/roe_role*.ts
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/roles-typescript.yml
+      - roles/**
+      - scripts/roe-role*.ts
+      - tests/roe_role*.ts
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Roles TypeScript (Node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["24.21.0", "22.23.3"]
+    env:
+      TOOLS: skills/wip-tracker/node_modules/.bin
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: skills/wip-tracker/package-lock.json
+      - name: Install dev toolchain
+        working-directory: skills/wip-tracker
+        run: npm ci --ignore-scripts
+      - name: Synthetic preflight tests
+        run: node --test roles/nono-one-turn-probe/test_volume_preflight.ts
+      - name: Prettier
+        run: >-
+          "$TOOLS/prettier" --check
+          roles/nono-one-turn-probe/volume_preflight.ts
+          roles/nono-one-turn-probe/run_volume_preflight.ts
+          roles/nono-one-turn-probe/test_volume_preflight.ts
+      - name: TypeScript (strict)
+        # Flags mirror skills/wip-tracker/tsconfig.json. Module and resolution
+        # are ESNext/Bundler because roles/ has no package.json declaring
+        # "type": "module"; NodeNext would misread these ESM files as CommonJS.
+        run: >-
+          "$TOOLS/tsc" --noEmit --strict --target ES2022 --module ESNext
+          --moduleResolution Bundler --types node
+          --typeRoots skills/wip-tracker/node_modules/@types
+          --allowImportingTsExtensions --erasableSyntaxOnly
+          --verbatimModuleSyntax --skipLibCheck
+          roles/nono-one-turn-probe/volume_preflight.ts
+          roles/nono-one-turn-probe/run_volume_preflight.ts
+          roles/nono-one-turn-probe/test_volume_preflight.ts
+      - name: Whitespace (git diff --check)
+        # Compares the named paths against the empty tree, so every line of
+        # every checked file is covered regardless of event or history depth.
+        run: >-
+          git diff --check 4b825dc642cb6eb9a060e54bf8d69288fbee4904 HEAD --
+          .github/workflows/roles-typescript.yml
+          roles/nono-one-turn-probe/volume_preflight.ts
+          roles/nono-one-turn-probe/run_volume_preflight.ts
+          roles/nono-one-turn-probe/test_volume_preflight.ts
+          roles/nono-one-turn-probe/PREFLIGHT-TASK-TS.md
