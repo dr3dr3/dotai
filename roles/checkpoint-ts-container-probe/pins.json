@@ -1,0 +1,19 @@
+{
+  "/lib/aarch64-linux-gnu/libc.so.6": "0f1905dc27dbc6715875c70527bc8da846a10084c9c483e9d8ff76dce8d69d0e",
+  "/lib/aarch64-linux-gnu/libdl.so.2": "1c16b2692a155191c97d7fdc5ce937d37c242435f05745046a794a9832b16af4",
+  "/lib/aarch64-linux-gnu/libgcc_s.so.1": "f2d3ad2bf0b61f6bc944cc37d7b6ab7f88d2582b41ff989ca164803f56cc5f20",
+  "/lib/aarch64-linux-gnu/libm.so.6": "5e0391562de36de323fb9cb0f2c1b6bd6d034c840b1dac018499f5fe4ded1b4a",
+  "/lib/aarch64-linux-gnu/libpthread.so.0": "6f1ab9e7d7de142dc5e2feaf6d19faceff0a0f40d5e225c922899f5362b8c353",
+  "/lib/aarch64-linux-gnu/libstdc++.so.6": "6e3112d35cfc86db7ee85b27e1746f67408e2837ff8628b46386c3eabd5682a4",
+  "/lib/ld-linux-aarch64.so.1": "390027e5f45f236bd1838bc54bf464c5ff01d260ab9f8b415ea8276641bce505",
+  "/usr/local/share/nvm/versions/node/v22.23.2/bin/node": "1a638b0fe2b68da0489276aca95526c5122fc61ba54d6a2d0d00c1c92ab7b876",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/bundle.json": "d5faba0ffa61a6ce4731b79a53b56eb1431cd2a008a14a773ab3ec89f5f3d142",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/reader.sh": "a4c25626a3bd79ff7e6f02c5f26bcf112d85ce6f2c79831d9049e0c61cef2615",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/run.ts": "6decfd8e2542bce03ef118963ed418f4f63d6df08c6bc9aff9428fbbb62a07b2",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/writer.sh": "37d5211fc0a99eaf05dc29ba0ac414459b0fadd64cbc12b12863e7674740ff18",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/package.json": "0f50d569f8d8e8d1e6c379c41f2bdfbb3f4c433a3ef113f6b936901a090eb68e",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity.ts": "73c221161782336dcf5eb5696daac6c2fc23f976950e007eb953f0e7c0353678",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_cli.ts": "abd106817ae06196741f09b241a67aefa10e1928f73d5f02dee10e09bf9ba453",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_collector.ts": "4a332f0676c0a4ac88e094d0d352a7c750117fcf3ecec9eda118233825d6370f",
+  "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_feedback.ts": "7286c0178d83c86ffa93d6028137f1048c7f947138cc5dfe31f6b8661707d8f1"
+}

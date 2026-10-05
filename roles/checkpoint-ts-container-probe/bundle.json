@@ -1,0 +1,17 @@
+{
+  "node": "/usr/local/share/nvm/versions/node/v22.23.2/bin/node",
+  "lib/ld-linux-aarch64.so.1": "/lib/ld-linux-aarch64.so.1",
+  "lib/libdl.so.2": "/lib/aarch64-linux-gnu/libdl.so.2",
+  "lib/libstdc++.so.6": "/lib/aarch64-linux-gnu/libstdc++.so.6",
+  "lib/libm.so.6": "/lib/aarch64-linux-gnu/libm.so.6",
+  "lib/libgcc_s.so.1": "/lib/aarch64-linux-gnu/libgcc_s.so.1",
+  "lib/libpthread.so.0": "/lib/aarch64-linux-gnu/libpthread.so.0",
+  "lib/libc.so.6": "/lib/aarch64-linux-gnu/libc.so.6",
+  "package.json": "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/package.json",
+  "continuity.ts": "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity.ts",
+  "continuity_cli.ts": "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_cli.ts",
+  "continuity_collector.ts": "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_collector.ts",
+  "continuity_feedback.ts": "/workspace/.ai/dotai-checkpoint-ts-acceptance/skills/wip-tracker/scripts/continuity_feedback.ts",
+  "writer.sh": "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/writer.sh",
+  "reader.sh": "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/reader.sh"
+}

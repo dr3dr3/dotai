@@ -1,0 +1,15 @@
+{
+  "files": {
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/role-inert-launch-probe/run.ts": "19771973ff7ccc3fe0790b6e9e29ddddb93475e1f040dba7722babf54472edd8",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/scripts/roe-role.ts": "a31e843668f0f23a14c1bcdac66f06a8d8c7e6bb62aa3454ef3a5c899d06cb92",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/checkpoint-ts-container-probe/run.ts": "6decfd8e2542bce03ef118963ed418f4f63d6df08c6bc9aff9428fbbb62a07b2",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/catalogue.json": "a2ee6fe05113147028da6d67e9c5b0df4534b1b67f7082dba354d5ff9d2fbd54",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/codex-runtime.json": "f8050709119d8fdd5ec3625dc948a13edb07e015d2e6f471556db1513e2c65e5",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/role-inert-launch-probe/entry.sh": "75a2ef2a44e739f15894c273b485f1065bfd14028a95e649c00f5e526295d8ed",
+    "/workspace/.ai/dotai-checkpoint-ts-acceptance/roles/role-inert-launch-probe/check.sh": "0b2feb48a697d415bf079889261123021b4fde691de42792a195bfc020ddf872",
+    "/home/vscode/.local/lib/roe-firstmate/nono": "520433bc42ee9938a154867b965a243e9cfa348a3a1987fb7422c1bff653b4e9",
+    "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6"
+  },
+  "profile_sha256": "f72771dc1fad3131882e5ec7714d597b8e31e3a9c937c59ef82e2ba7cbeb24eb",
+  "bundle_sha256": "92664cf0f319308d4b5a1d6dc292827ec95b1b234f667ae3060b1353aea7be3f"
+}
