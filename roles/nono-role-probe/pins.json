@@ -1,0 +1,10 @@
+{
+  "/workspace/.ai/dotai/roles/nono-role-probe/run.py": "d6742c9326a46957bd965cd47bf9ce34070d8e0d525ae0b5cdaaf107e2d3f344",
+  "/workspace/.ai/dotai/roles/nono-role-probe/profile.json": "ca5fc91ca4142a1fd425f59cb5bde641ce8d0980c55530308b3432e327ba8baf",
+  "/workspace/.ai/dotai/roles/nono-role-probe/entry.sh": "74ec8ebcf98c25bcc9431d624dc3d2756910f28c35e6a3e5d0115498e139f158",
+  "/workspace/.ai/dotai/roles/nono-role-probe/check.sh": "e274c2c5320f1bd6836b6444c452152616fe7f93fe984ac9732123c4430ed28d",
+  "/workspace/.ai/dotai/scripts/roe-role": "dc572711cb751bb9beb10292cfb616cc327a615be4b0ab82d964d9d451293b43",
+  "/workspace/.ai/dotai/roles/nono-probe/run.py": "0dd2e884293cd777bd46da7f38504d49f1425d903c9379fb29b57bb127cd401a",
+  "/workspace/tmp/ai-pilot-nono-seccomp/pidfd-only.json": "189935cc4abea601443cca1d6dde03f9de2e5c01f789778edbd78445d1e466a6",
+  "/home/vscode/.local/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-arm64/vendor/aarch64-unknown-linux-musl/bin/codex": "2e43362b5064a4d40e6a8f9fe00d6438c5447c20f41ed1659cc2e71258efd21f"
+}
