@@ -71,6 +71,15 @@ for role in captain worker; do
   jq -e '.environment.allow_vars | index("CLAUDE_CONFIG_DIR") != null' \
     "$ROOT/firstmate/nono/roe-firstmate-claude-$role.json" >/dev/null
 done
+# Codex is npm-installed into the persistent user-local prefix. Both roles must
+# be able to execute that package without gaining read access to unrelated npm
+# globals or adjacent credentials.
+for role in captain worker; do
+  jq -e '.filesystem.read | index("$HOME/.local/lib/node_modules/@openai/codex") != null' \
+    "$ROOT/firstmate/nono/roe-firstmate-codex-$role.json" >/dev/null
+  jq -e '(.filesystem.read | index("$HOME/.local/lib/node_modules")) == null' \
+    "$ROOT/firstmate/nono/roe-firstmate-codex-$role.json" >/dev/null
+done
 # The Claude captain (and only the captain) may work in the dotai checkout.
 jq -e '.filesystem.allow | index("/workspace/.ai/dotai") != null' \
   "$ROOT/firstmate/nono/roe-firstmate-claude-captain.json" >/dev/null
