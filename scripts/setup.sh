@@ -590,6 +590,40 @@ mkdir -p "$CODEX_HOME" "$CODEX_USER_SKILLS"
 echo ""
 echo "→ Wiring Codex user config into $CODEX_HOME"
 
+ensure_codex_project_doc_settings() {
+  local config="$1" tmp
+  tmp="$(mktemp)"
+  awk '
+    BEGIN { in_root=1; have_fallback=0; have_max=0 }
+    /^[[:space:]]*\[/ { in_root=0 }
+    in_root && /^[[:space:]]*project_doc_fallback_filenames[[:space:]]*=/ {
+      if (have_fallback) next
+      have_fallback=1
+    }
+    in_root && /^[[:space:]]*project_doc_max_bytes[[:space:]]*=/ {
+      if (have_max) next
+      have_max=1
+    }
+    !inserted && /^[[:space:]]*\[/ {
+      if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
+      if (!have_max) print "project_doc_max_bytes = 262144"
+      inserted=1
+    }
+    { print }
+    END {
+      if (!inserted) {
+        if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
+        if (!have_max) print "project_doc_max_bytes = 262144"
+      }
+    }
+  ' "$config" > "$tmp"
+  if cmp -s "$config" "$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv "$tmp" "$config"
+}
+
 if [ ! -f "$CODEX_CONFIG" ]; then
   if [ -f "$CODEX_CONFIG_TEMPLATE" ]; then
     cp "$CODEX_CONFIG_TEMPLATE" "$CODEX_CONFIG"
@@ -600,30 +634,8 @@ else
   # headers change the meaning of following keys, so appending to an existing
   # config can accidentally put these settings under (for example) [features].
   if [ -f "$CODEX_CONFIG_TEMPLATE" ]; then
-    CODEX_CONFIG_TMP="$(mktemp)"
-    awk '
-      BEGIN { in_root=1; have_fallback=0; have_max=0 }
-      /^\s*\[/ { in_root=0 }
-      in_root && /^\s*project_doc_fallback_filenames\s*=/ { have_fallback=1 }
-      in_root && /^\s*project_doc_max_bytes\s*=/ { have_max=1 }
-      !inserted && /^\s*\[/ {
-        if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
-        if (!have_max) print "project_doc_max_bytes = 262144"
-        inserted=1
-      }
-      { print }
-      END {
-        if (!inserted) {
-          if (!have_fallback) print "project_doc_fallback_filenames = [\"CLAUDE.md\"]"
-          if (!have_max) print "project_doc_max_bytes = 262144"
-        }
-      }
-    ' "$CODEX_CONFIG" > "$CODEX_CONFIG_TMP"
-    if ! cmp -s "$CODEX_CONFIG" "$CODEX_CONFIG_TMP"; then
-      mv "$CODEX_CONFIG_TMP" "$CODEX_CONFIG"
+    if ensure_codex_project_doc_settings "$CODEX_CONFIG"; then
       echo "  ✓ ensured Codex project-doc settings at TOML root"
-    else
-      rm -f "$CODEX_CONFIG_TMP"
     fi
   fi
   echo "  → $CODEX_CONFIG already present — left existing keys as-is"

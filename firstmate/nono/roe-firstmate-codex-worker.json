@@ -11,6 +11,9 @@
   "filesystem": {
     "allow": [
       "$HOME/.ai/codex"
+    ],
+    "read": [
+      "$HOME/.local/lib/node_modules/@openai/codex"
     ]
   }
 }
