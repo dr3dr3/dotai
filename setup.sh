@@ -65,11 +65,12 @@ else
 fi
 
 # -----------------------------------------------------------------------------
-# 1b. Secondary agents + secrets tooling (Codex, varlock; Pi Harness optional)
+# 1b. Secondary agents + secrets tooling (Codex opt-in, varlock, Pi Harness)
 #     These run *inside* the container so the host stays agent-free. Installed
 #     via npm — the devcontainer ships Node 22; for other containers we guard.
 #
-#     Codex and Pi are opt-in (DOTAI_INSTALL_CODEX=1 / DOTAI_INSTALL_PI=1):
+#     Codex is opt-in (DOTAI_INSTALL_CODEX=1); Pi is installed by default
+#     (DOTAI_INSTALL_PI=0 to skip; see scripts/install-pi.sh). Codex:
 #     the Firstmate pilot is pinned to Claude, and every extra agent in the
 #     image's global npm tree is one more thing a rebuild silently removes.
 # -----------------------------------------------------------------------------
@@ -104,20 +105,16 @@ else
         npm install -g --prefix "$NPM_HOME_PREFIX" varlock && echo "✓ varlock installed"
     fi
 
-    # Pi Harness — self-extensible coding agent (earendil-works/pi), opt-in.
-    # Installed with --ignore-scripts per the vendor docs (https://pi.dev/docs).
-    # Pi has NO built-in permission system, so running it inside the container
-    # is the intended sandbox. Model wiring (Vercel AI Gateway + host Ollama)
-    # is done by scripts/setup-pi.py below.
-    if [[ "${DOTAI_INSTALL_PI:-0}" != 1 ]]; then
-        echo "  (Pi not requested — set DOTAI_INSTALL_PI=1 to install)"
-    elif agent_installed pi; then
-        echo "✓ Pi $(pi --version 2>/dev/null | head -1) already installed — skipping."
-    else
-        echo "→ Installing Pi Harness (@earendil-works/pi-coding-agent)..."
-        npm install -g --prefix "$NPM_HOME_PREFIX" --ignore-scripts @earendil-works/pi-coding-agent \
-            && echo "✓ Pi installed"
-    fi
+    # Pi Harness — self-extensible coding agent (earendil-works/pi). Installed
+    # by default now (DOTAI_INSTALL_PI=0 to skip): make second-review and the
+    # Firstmate crew depend on it. scripts/install-pi.sh puts it in ~/.local,
+    # pinned (DOTAI_PI_VERSION, default 1.0.2), and does not accept a pi that
+    # lives elsewhere on PATH: the image's global npm tree, where pi used to
+    # come from, is wiped by a rebuild (2026-10-07). Pi has NO built-in
+    # permission system, so running it inside the container is the intended
+    # sandbox. Model wiring (Vercel AI Gateway + host Ollama) is done by
+    # scripts/setup-pi.py below.
+    NPM_HOME_PREFIX="$NPM_HOME_PREFIX" bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/install-pi.sh"
 
     # Persist ~/.pi/agent on the ~/.ai volume, merge the committed providers
     # (Vercel AI Gateway + the Ollama stub) into the live models.json, and store
