@@ -12,21 +12,34 @@
 #
 #   firstmate-hooks-patch.sh set-aside DIR  # if our patch is the ONLY change, undo it (exit 0);
 #                                           # any other local change → exit 1, nothing touched
+#   firstmate-hooks-patch.sh check DIR      # read-only: clean, or ONLY our exact patch (exit 0); else exit 1
 #   firstmate-hooks-patch.sh apply DIR      # apply the patch to the checked-out hooks.json
 set -euo pipefail
 HOOKS=.codex/hooks.json
 patched() { sed "s/bash -lc '/bash -c '/g"; }
 
 cmd="${1:-}"; dir="${2:-}"
-[[ -n "$cmd" && -d "$dir/.git" ]] || { echo "usage: $0 set-aside|apply <firstmate-dir>" >&2; exit 2; }
+[[ -n "$cmd" && -d "$dir/.git" ]] || { echo "usage: $0 check|set-aside|apply <firstmate-dir>" >&2; exit 2; }
+
+# 0 = clean, 10 = only our exact patch, 1 = anything else. Read-only.
+state() {
+  local status; status="$(git -C "$dir" status --porcelain)"
+  [[ -z "$status" ]] && return 0
+  [[ "$status" == " M $HOOKS" ]] || return 1
+  # Only our exact substitution of the committed file counts as ours.
+  git -C "$dir" show "HEAD:$HOOKS" | patched | cmp -s - "$dir/$HOOKS" && return 10
+  return 1
+}
 
 case "$cmd" in
+  check)
+    rc=0; state || rc=$?
+    [[ "$rc" == 0 || "$rc" == 10 ]] && exit 0 || exit 1
+    ;;
   set-aside)
-    status="$(git -C "$dir" status --porcelain)"
-    [[ -z "$status" ]] && exit 0
-    [[ "$status" == " M $HOOKS" ]] || exit 1
-    # Only our exact substitution of the committed file counts as ours.
-    git -C "$dir" show "HEAD:$HOOKS" | patched | cmp -s - "$dir/$HOOKS" || exit 1
+    rc=0; state || rc=$?
+    [[ "$rc" == 0 ]] && exit 0
+    [[ "$rc" == 10 ]] || exit 1
     git -C "$dir" checkout --quiet -- "$HOOKS"
     ;;
   apply)
@@ -34,5 +47,5 @@ case "$cmd" in
     tmp="$(mktemp)"; patched < "$dir/$HOOKS" > "$tmp"
     if cmp -s "$tmp" "$dir/$HOOKS"; then rm -f "$tmp"; else mv "$tmp" "$dir/$HOOKS"; fi
     ;;
-  *) echo "usage: $0 set-aside|apply <firstmate-dir>" >&2; exit 2 ;;
+  *) echo "usage: $0 check|set-aside|apply <firstmate-dir>" >&2; exit 2 ;;
 esac

@@ -90,7 +90,8 @@ fm_personal_git_excludes_check "$LOCAL_DEV_ENV_DIR" \
 [[ -d "$FIRSTMATE_DIR/.git" ]] || die "Firstmate clone missing; run setup-firstmate.sh"
 [[ -d "$FM_HOME/config" && -d "$FM_HOME/data" && -d "$FM_HOME/state" ]] \
   || die "FM_HOME is not initialized; run setup-firstmate.sh"
-[[ -z "$(git -C "$FIRSTMATE_DIR" status --porcelain)" ]] \
+# Clean, or carrying only our managed Codex-hooks patch (firstmate-hooks-patch.sh).
+"$SCRIPT_DIR/firstmate-hooks-patch.sh" check "$FIRSTMATE_DIR" \
   || die "upstream Firstmate clone is dirty"
 [[ "$(git -C "$FIRSTMATE_DIR" rev-parse HEAD)" == "$FIRSTMATE_COMMIT" ]] \
   || die "Firstmate is not at the reviewed pin $FIRSTMATE_COMMIT"
