@@ -9,6 +9,10 @@
  *
  * Sources are read with `git show <ref>:<path>` from an ai-context clone, so
  * the shared checkout's working tree and branch never matter.
+ *
+ * CI cannot run `check`: ai-context is private, so CI only tests the generator
+ * against a synthetic charter. Run `check` locally whenever the charters
+ * change, and commit what `generate` writes.
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
