@@ -17,7 +17,18 @@ If the check fails, say that you are not running inside Herdr and stop. Do not i
 
 When the check passes, the `herdr` binary in `PATH` talks to the current session. Use it to inspect neighboring work, create terminal layout, start agents and commands, read output, and wait for state changes.
 
-## Learn the current CLI
+## Follow the layout conventions
+
+André's Herdr layout follows fixed conventions (full reference: dotfiles `docs/herdr-conventions.md`). Every pane, tab, and send you make must keep to them:
+
+- **Split `right`, never `down`.** Panes sit side by side.
+- **Label every pane you create** as `<role>·<harness>`, for example `review·codex` or `tests·shell`: `herdr pane rename <pane_id> <role>·<harness>`.
+- **Never create a third pane in a tab.** A tab holds one pane by default and a second only for a defined pair: an agent and its shell, an agent and its reviewer, or an agent and André's operator pane. If the tab already has two panes, use a new tab instead (see below).
+- **Name tabs in at most 8 characters** (a topic or a ticket, such as `tls` or `e3790`) and keep a workspace to at most 9 tabs. Workspace labels are 2–6 lowercase characters. The long description belongs on the pane label.
+- **Stage into `term`, never run.** Each workspace has one `term` tab whose `you·shell` pane belongs to André. Put a command there with `herdr pane send-text` and never send Enter; he runs it.
+- **Never type into another agent's input box blindly.** Before `pane send-text` or `agent prompt` into a pane you do not own, read it (`herdr pane read <pane_id> --source visible --format ansi`) and send only if the input line is empty; dim (SGR 2) text is a suggestion and counts as empty. Otherwise write the message to a file under `/workspace/tmp/` and send a one-line pointer once the input is clear.
+- **Close what you open, and nothing else.** When the work is finished, close the panes and tabs you created. Never close one you did not create without André's approval.
+
 
 The installed binary is the authority for command syntax. Start with:
 
@@ -91,19 +102,29 @@ Creation responses expose the IDs to use next. `workspace create` returns `.resu
 
 Default to a sibling pane in the current tab and the current working directory. Do not create a workspace, tab, worktree, or different cwd unless the user explicitly requests that topology or location.
 
-Honor a direction requested by the user. Otherwise inspect the caller pane:
+First count the panes already in the caller's tab:
 
 ```bash
-herdr pane layout --pane "$HERDR_PANE_ID"
+herdr pane list --workspace "$HERDR_WORKSPACE_ID" | jq --arg tab "$HERDR_TAB_ID" '[.result.panes[] | select(.tab_id == $tab)] | length'
 ```
 
-Split a wide pane to the right and a narrow or tall pane down. Avoid repeated same-direction splits that create unusably narrow columns or short rows. Keep the user's focus in the calling pane and explicitly preserve the caller's working directory:
+If the tab has one pane, split it to the right. Keep the user's focus in the calling pane and explicitly preserve the caller's working directory:
 
 ```bash
 herdr pane split --current --direction right --cwd "$PWD" --no-focus
 ```
 
-Replace `right` with `down` when appropriate. Read the new pane ID from `.result.pane.pane_id`.
+If the tab already has two panes, do not split. Create a tab with a label of at most 8 characters instead, provided the workspace has fewer than 9 tabs; otherwise ask the user where the work should go:
+
+```bash
+herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$PWD" --label <label> --no-focus
+```
+
+Read the new pane ID from `.result.pane.pane_id` (split) or `.result.root_pane.pane_id` (tab), then label it straight away:
+
+```bash
+herdr pane rename <returned-pane-id> <role>·<harness>
+```
 
 An available shell pane must be at its interactive prompt, with the shell itself in the foreground and no foreground command, editor, or agent running. Start a supported agent in that pane with a useful unique name:
 
@@ -155,13 +176,13 @@ If a wait fails or returns `blocked`, inspect `agent get` and `agent read` befor
 
 ## Run an ordinary command in another pane
 
-Create a sibling pane with the same geometry rule, preserve the caller's working directory, and keep user focus unchanged:
+Create a sibling pane with the same rule (split right if the tab has one pane, otherwise a new tab), preserve the caller's working directory, and keep user focus unchanged:
 
 ```bash
 herdr pane split --current --direction right --cwd "$PWD" --no-focus
 ```
 
-Read the new pane ID from `.result.pane.pane_id`, then run and inspect the command:
+Read the new pane ID from `.result.pane.pane_id`, label it (`herdr pane rename <returned-pane-id> <role>·shell`), then run and inspect the command:
 
 ```bash
 herdr pane run <returned-pane-id> "just test"
@@ -189,7 +210,8 @@ After that failed read, ask the agent to write its complete response as Markdown
 - Use `--no-focus` for background work unless the user asked to switch context.
 - Use `--current`, an explicit pane ID, or a unique agent name. Do not rely on another client's focused pane.
 - Parse IDs from JSON responses. Do not derive them from sidebar order or examples.
-- Do not close workspaces, tabs, panes, or sessions you did not create unless the user explicitly asked.
+- Close the panes and tabs you created when the work is finished. Do not close workspaces, tabs, panes, or sessions you did not create unless the user explicitly asked.
+- Never send Enter into André's `term` pane, and never send text into another agent's non-empty input.
 - Never run `herdr server stop` from an active session unless the user explicitly intends to stop the server and its pane processes.
 - Never kill the main Herdr process. Use named test sessions for experiments that need an isolated server.
 - CLI server errors are JSON on stderr with exit status 1. CLI syntax errors exit with status 2.
