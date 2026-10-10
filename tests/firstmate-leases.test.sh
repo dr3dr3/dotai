@@ -212,16 +212,16 @@ mkdir -p "$(dirname "$WSLOT")"; git -C "$WREPO" worktree add -q --detach "$WSLOT
 trap 'git -C "$WREPO" worktree remove --force "$WSLOT" 2>/dev/null; rm -rf "$(dirname "$(dirname "$WSLOT")")" "$TMP"' EXIT
 WSLOT_ID="$(slot_id "$WSLOT")"
 
-# no lease dir yet → no --read, but the auto-grant was attempted with the slot path
+# no lease dir yet → harness directory is still readable, but the auto-grant was attempted with the slot path
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" brief )
 grep -qF "grant:--slot $WSLOT --task unassigned --defaults" "$FAKE_GRANT_CALL" || fail "auto-grant not invoked correctly: $(cat "$FAKE_GRANT_CALL")"
-grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "claude worker launch: $(cat "$FAKE_NONO_CALL")"
-echo "  ok  claude worker: auto-grant attempted, --strict-mcp-config, no --read without leases"
+grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $L/real -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "claude worker launch: $(cat "$FAKE_NONO_CALL")"
+echo "  ok  claude worker: harness read grant, auto-grant attempted, --strict-mcp-config"
 
 # with a lease dir → --read exactly that dir
 mkdir -p "$ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID"
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 FM_TASK_ID=eng-9 "$L/bin/claude" brief )
-grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "lease --read missing: $(cat "$FAKE_NONO_CALL")"
+grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $L/real --read $ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "lease --read missing: $(cat "$FAKE_NONO_CALL")"
 grep -qF "grant:--slot $WSLOT --task eng-9 --defaults" "$FAKE_GRANT_CALL" || fail "FM_TASK_ID not passed to auto-grant"
 echo "  ok  worker sandbox gets --read for exactly its slot's lease dir; task id flows into the grant"
 
@@ -236,10 +236,12 @@ grep -q "default capability leases were not all granted" "$L/warn" || fail "fail
 grep -qF "brief" "$FAKE_NONO_CALL" || fail "worker did not launch after a failed auto-grant"
 echo "  ok  auto-grant is skippable and non-fatal"
 
-# captain: never --strict-mcp-config, never --read, never a grant
+# captain: never --strict-mcp-config, never a lease --read, never a grant.
+# Its only --read is the installed harness directory, read-only, which every
+# launch needs to resolve the executable inside nono.
 rm -f "$FAKE_GRANT_CALL"
 ( cd /workspace/firstmate && ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" cap )
-grep -qF "nono:run --profile roe-firstmate-claude-captain --allow-cwd -- $L/real/claude cap" "$FAKE_NONO_CALL" || fail "captain launch changed: $(cat "$FAKE_NONO_CALL")"
+grep -qF "nono:run --profile roe-firstmate-claude-captain --allow-cwd --read $L/real -- $L/real/claude cap" "$FAKE_NONO_CALL" || fail "captain launch changed: $(cat "$FAKE_NONO_CALL")"
 [[ ! -e "$FAKE_GRANT_CALL" ]] || fail "captain must not auto-grant"
 # codex worker keeps its own args, no strict-mcp flag
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 ROE_FIRSTMATE_AUTO_LEASES=0 "$L/bin/codex" brief )
