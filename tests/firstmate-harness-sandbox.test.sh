@@ -127,7 +127,7 @@ touch "$SLOT/.env.example"
   cd "$SLOT"
   ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/codex" worker-brief
 )
-grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access worker-brief" \
+grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd --read $TMP/real -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=worker" "$FAKE_NONO_CALL" >/dev/null
 grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
@@ -137,7 +137,7 @@ grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
   ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 \
     "$TMP/bin/codex" captain-brief
 )
-grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
+grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd --read $TMP/real -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=captain" "$FAKE_NONO_CALL" >/dev/null
 
@@ -154,14 +154,14 @@ grep -F "config_dir=unset" "$FAKE_NONO_CALL" >/dev/null
   CLAUDE_CONFIG_DIR=/home/vscode/.claude ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 \
     "$TMP/bin/claude" captain-brief
 )
-grep -F "nono:run --profile roe-firstmate-claude-captain --allow-cwd -- $TMP/real/claude captain-brief" \
+grep -F "nono:run --profile roe-firstmate-claude-captain --allow-cwd --read $TMP/real -- $TMP/real/claude captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "config_dir=$HOME/.ai/claude" "$FAKE_NONO_CALL" >/dev/null
 (
   cd "$SLOT"
   env -u CLAUDE_CONFIG_DIR ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/claude" worker-brief
 )
-grep -F "nono:run --profile roe-firstmate-claude-worker --allow-cwd -- $TMP/real/claude --strict-mcp-config worker-brief" \
+grep -F "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $TMP/real -- $TMP/real/claude --strict-mcp-config worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "config_dir=$HOME/.ai/claude" "$FAKE_NONO_CALL" >/dev/null
 
@@ -171,7 +171,7 @@ grep -F "config_dir=$HOME/.ai/claude" "$FAKE_NONO_CALL" >/dev/null
   cd "$SLOT"
   ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/pi" --model ollama/qwen --thinking low worker-brief
 )
-grep -F "nono:run --profile roe-firstmate-pi-worker --allow-cwd -- $TMP/real/pi --model ollama/qwen --thinking low worker-brief" \
+grep -F "nono:run --profile roe-firstmate-pi-worker --allow-cwd --read $TMP/real -- $TMP/real/pi --model ollama/qwen --thinking low worker-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 grep -F "captain=unset required=unset role=worker" "$FAKE_NONO_CALL" >/dev/null
 grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
@@ -180,7 +180,7 @@ grep -F "path=$TMP/worker-guard-bin:" "$FAKE_NONO_CALL" >/dev/null
   cd /workspace/firstmate
   ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$TMP/bin/pi" captain-brief
 )
-grep -F "nono:run --profile roe-firstmate-pi-captain --allow-cwd -- $TMP/real/pi captain-brief" \
+grep -F "nono:run --profile roe-firstmate-pi-captain --allow-cwd --read $TMP/real -- $TMP/real/pi captain-brief" \
   "$FAKE_NONO_CALL" >/dev/null
 
 printf 'off\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
@@ -198,7 +198,7 @@ printf 'on\n' >"$ROE_FIRSTMATE_SANDBOX_MODE_FILE"
   cd /workspace/firstmate
   "$TMP/bin/codex" resumed-captain
 )
-grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access resumed-captain" \
+grep -F "nono:run --profile roe-firstmate-codex-captain --allow-cwd --read $TMP/real -- $TMP/real/codex --profile fm-captain --sandbox danger-full-access resumed-captain" \
   "$FAKE_NONO_CALL" >/dev/null || { echo "bare launch in /workspace/firstmate must be sandboxed as captain"; exit 1; }
 
 # A Treehouse slot OUTSIDE /workspace/repos (local-dev-env's own, or a
@@ -211,7 +211,7 @@ trap 'git -C /workspace worktree remove --force "$LDE_SLOT" 2>/dev/null; rm -rf 
   cd "$LDE_SLOT"
   "$TMP/bin/codex" resumed-worker
 )
-grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access resumed-worker" \
+grep -F "nono:run --profile roe-firstmate-codex-worker --allow-cwd --read $TMP/real -- $TMP/real/codex --profile fm-worker --sandbox danger-full-access resumed-worker" \
   "$FAKE_NONO_CALL" >/dev/null || { echo "bare launch in a /workspace/.treehouse slot must be sandboxed as worker"; exit 1; }
 
 printf 'ok - Firstmate harness launches fail closed through nono\n'
