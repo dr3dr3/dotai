@@ -266,6 +266,10 @@ fi
 # -----------------------------------------------------------------------------
 # Done
 # -----------------------------------------------------------------------------
+# roe-advisory: advisory role sessions in Herdr (see scripts/roe-advisory.ts).
+mkdir -p "$HOME/.local/bin"
+ln -sfn "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/scripts/roe-advisory" "$HOME/.local/bin/roe-advisory"
+
 bash "$(dirname "${BASH_SOURCE[0]}")/scripts/setup-atuin-hooks.sh" || echo "  ⚠ Atuin agent hooks not installed (see output above); setup continues"
 
 echo ""

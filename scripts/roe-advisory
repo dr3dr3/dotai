@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# roe-advisory: advisory role sessions as ordinary Herdr panes (option B).
+# A thin wrapper so the TypeScript runs with node's type stripping.
+set -euo pipefail
+exec node "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/roe-advisory.ts" "$@"
