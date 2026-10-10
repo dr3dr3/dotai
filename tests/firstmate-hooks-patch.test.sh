@@ -14,6 +14,7 @@ J
 echo readme > "$R/README.md"
 git -C "$R" init -q && git -C "$R" add -A && git -C "$R" -c user.email=t@t -c user.name=t commit -qm init
 
+"$P" check "$R" || fail "check must accept a clean checkout"
 "$P" set-aside "$R" || fail "a clean checkout must pass set-aside"
 "$P" apply "$R"
 grep -q "bash -lc" "$R/.codex/hooks.json" && fail "apply left a login shell"
@@ -21,17 +22,23 @@ grep -q "bash -lc" "$R/.codex/hooks.json" && fail "apply left a login shell"
 cp "$R/.codex/hooks.json" "$TMP/once"; "$P" apply "$R"; cmp -s "$TMP/once" "$R/.codex/hooks.json" || fail "apply is not idempotent"
 echo "  ok  apply converts every hook to bash -c, idempotently"
 
+cp "$R/.codex/hooks.json" "$TMP/patched"
+"$P" check "$R" || fail "check must accept our exact patch"
+cmp -s "$TMP/patched" "$R/.codex/hooks.json" || fail "check must be read-only"
+echo "  ok  check accepts clean or our patch, and changes nothing"
 "$P" set-aside "$R" || fail "our exact patch must be set aside"
 [ -z "$(git -C "$R" status --porcelain)" ] || fail "set-aside did not restore the committed file"
 echo "  ok  set-aside undoes exactly our patch"
 
 "$P" apply "$R"; sed -i 's/echo stop/echo other/' "$R/.codex/hooks.json"
 cp "$R/.codex/hooks.json" "$TMP/other"
+if "$P" check "$R"; then fail "check must refuse a different hooks.json edit"; fi
 if "$P" set-aside "$R"; then fail "a different hooks.json edit must refuse"; fi
 cmp -s "$TMP/other" "$R/.codex/hooks.json" || fail "a refused set-aside must not touch the file"
 echo "  ok  any other hooks.json edit refuses and is left alone"
 
 git -C "$R" checkout -q -- .codex/hooks.json; "$P" apply "$R"; echo more >> "$R/README.md"
+if "$P" check "$R"; then fail "check must refuse our patch plus another change"; fi
 if "$P" set-aside "$R"; then fail "our patch plus another changed file must refuse"; fi
 echo "  ok  our patch plus any other change refuses"
 
