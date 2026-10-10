@@ -92,7 +92,10 @@ The pane lists pending requests. Press Enter to refresh, select a number to
 inspect the exact command and frozen script, then type `run` to execute. A
 non-executed request remains pending. Read-only scripts and workflow
 dispatches use quiet `capture.sh` and expose a log path rather than streaming a
-wrapped terminal into Herdr. Interactive logins
+wrapped terminal into Herdr. `local-runtime` requests use the interactive
+`capture.sh` path so their reviewed script can ask for confirmation on a terminal;
+the output is scrubbed and recorded. Keep secret input hidden from terminal echo.
+Interactive logins
 run directly and record their exit status, not credential-bearing output.
 Terraform Make targets already own a pseudo-terminal and transcript, so the
 operator runs those directly to avoid a nested TTY. Their private transcript
