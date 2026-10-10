@@ -18,6 +18,8 @@ on:
       - scripts/roe-advisory
       - scripts/roe-advisory.ts
       - tests/roe_advisory.test.ts
+      - scripts/roe-advisory-prompts.ts
+      - tests/roe_advisory_prompts.test.ts
       - setup.sh
       - scripts/firstmate-captain-home.ts
       - scripts/firstmate-harness-sandbox.sh
@@ -39,6 +41,8 @@ on:
       - scripts/roe-advisory
       - scripts/roe-advisory.ts
       - tests/roe_advisory.test.ts
+      - scripts/roe-advisory-prompts.ts
+      - tests/roe_advisory_prompts.test.ts
       - setup.sh
       - scripts/firstmate-captain-home.ts
       - scripts/firstmate-harness-sandbox.sh
@@ -80,7 +84,7 @@ jobs:
       - name: Captain-home resolver tests
         run: node --test tests/firstmate_captain_home.test.ts
       - name: Advisory role launcher tests
-        run: node --test tests/roe_advisory.test.ts
+        run: node --test tests/roe_advisory.test.ts tests/roe_advisory_prompts.test.ts
       - name: Prettier
         run: >-
           "$TOOLS/prettier" --check
@@ -92,6 +96,8 @@ jobs:
           roles/advisory.json
           scripts/roe-advisory.ts
           tests/roe_advisory.test.ts
+          scripts/roe-advisory-prompts.ts
+          tests/roe_advisory_prompts.test.ts
       - name: TypeScript (strict)
         # Flags mirror skills/wip-tracker/tsconfig.json. Module and resolution
         # are ESNext/Bundler because roles/ has no package.json declaring
@@ -109,6 +115,8 @@ jobs:
           tests/firstmate_captain_home.test.ts
           scripts/roe-advisory.ts
           tests/roe_advisory.test.ts
+          scripts/roe-advisory-prompts.ts
+          tests/roe_advisory_prompts.test.ts
       - name: Captain profile JSON
         run: >-
           node -e 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))'
@@ -139,3 +147,16 @@ jobs:
           tests/firstmate-harness-sandbox.test.sh
           tests/firstmate-leases.test.sh
           firstmate/nono/roe-firstmate-claude-captain.json
+          roles/advisory.json
+          scripts/roe-advisory
+          scripts/roe-advisory.ts
+          tests/roe_advisory.test.ts
+          scripts/roe-advisory-prompts.ts
+          tests/roe_advisory_prompts.test.ts
+          roles/prompts/checkpoint-template.md
+          roles/prompts/baxter.md
+          roles/prompts/design.md
+          roles/prompts/plan.md
+          roles/prompts/security.md
+          roles/prompts/quality.md
+          roles/prompts/standards.md
