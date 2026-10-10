@@ -10,10 +10,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GRANT="$ROOT/scripts/firstmate-grant.sh"
 LEASE="$ROOT/scripts/firstmate-lease.sh"
-WRAPPER="$ROOT/scripts/firstmate-harness-sandbox.sh"
 
-TMP="$(mktemp -d /workspace/.treehouse/.firstmate-lease-test.XXXXXX)"
+# Hermetic: everything lives under a fresh temporary root outside /workspace.
+# fm-grant and roe-lease recognise slots by shape (…/.treehouse/<ws>/<n>/workspace),
+# so they need no rewriting; the launcher section below uses a rewritten copy.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE FM_HOME NODE_OPTIONS
+TMP="$(cd "$(mktemp -d "${TMPDIR:-/tmp}/fm-lease-test.XXXXXX")" && pwd -P)"
 trap 'rm -rf "$TMP"' EXIT
+[[ "$TMP/" != /workspace/* ]] || { echo "refusing: temporary root $TMP is under /workspace" >&2; exit 1; }
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 assert_fails_with() {
@@ -120,7 +124,7 @@ grep -q "granted write_linear_comment" <<<"$out" || fail "lease_only cap should 
 echo "  ok  lease_only capability grantable explicitly"
 
 out="$(bash "$GRANT" --slot "$SLOT" --status)"; grep -q "read_sentry" <<<"$out" && grep -q "uses=0" <<<"$out" || fail "status: $out"
-out="$(bash "$GRANT" --list)"; grep -q "$SLOT_ID" <<<"$out" || fail "list: $out"
+out="$(bash "$GRANT" --list)"; grep -qF -- "$SLOT_ID" <<<"$out" || fail "list: $out"
 echo "  ok  status and list"
 
 echo "roe-lease"
@@ -183,6 +187,25 @@ bash "$GRANT" --slot "$SLOT" --revoke >/dev/null
 echo "  ok  revoke one, revoke all — immediate"
 
 echo "launcher"
+# ── hermetic launcher copy ──
+# The harness decides roles from literal /workspace paths and the captain-home
+# resolver has fixed /workspace roots; neither may gain an environment override.
+# Run a TEST-LOCAL COPY with every root-anchored "/workspace/" rewritten to a
+# temporary root, and refuse it if any root-anchored /workspace path survives
+# outside comments — so this section cannot touch live repos, worktrees or the
+# live Firstmate home.
+FAKEROOT="$TMP/root"; COPY="$TMP/dotai"
+COPIED=(scripts/firstmate-harness-sandbox.sh scripts/firstmate-sandbox-mode.sh scripts/firstmate-captain-home.ts firstmate/pins.env)
+mkdir -p "$COPY/scripts" "$COPY/firstmate"
+for file in "${COPIED[@]}"; do
+  sed "s#/workspace/#$FAKEROOT/#g" "$ROOT/$file" >"$COPY/$file"; chmod --reference="$ROOT/$file" "$COPY/$file"
+done
+leaks="$(for file in "${COPIED[@]}"; do grep -vE '^[[:space:]]*(#|//|\*)' "$COPY/$file"; done | grep -F /workspace | grep -vF '%/workspace}' || true)"
+[[ -z "$leaks" ]] || fail "a /workspace path survived the test rewrite: $leaks"
+WRAPPER="$COPY/scripts/firstmate-harness-sandbox.sh"
+FM_HOME_DIR="$FAKEROOT/.firstmate-home"
+mkdir -p "$FAKEROOT/firstmate" "$FAKEROOT/.git" "$FM_HOME_DIR/config" "$FM_HOME_DIR/data" "$FM_HOME_DIR/state"
+printf '{"version":1,"homes":["%s"]}\n' "$FM_HOME_DIR" >"$FAKEROOT/.git/roe-runtime.json"
 # ── harness launcher: --read for the slot's lease dir, --strict-mcp-config for claude workers ──
 L="$TMP/launcher"; mkdir -p "$L/bin" "$L/real" "$L/profiles" "$L/guard"
 touch "$L/profiles/roe-firstmate-claude-worker.json" "$L/profiles/roe-firstmate-claude-captain.json" "$L/profiles/roe-firstmate-codex-worker.json"
@@ -206,13 +229,17 @@ export ROE_FIRSTMATE_LEASE_ROOT="$HOME/.cache/roe-firstmate/leases"
 export FAKE_NONO_CALL="$L/nono-call" FAKE_REAL_CALL="$L/real-call" FAKE_GRANT_CALL="$L/grant-call"
 printf 'on\n' >"$L/mode"
 
-# a worker slot the launcher recognises: /workspace/repos/<repo>/.treehouse/<ws>/<n>/workspace — use a git worktree there
-WREPO="/workspace/repos/rock-of-eye-api"; WSLOT="$WREPO/.treehouse/lease-test-$$/1/workspace"
-mkdir -p "$(dirname "$WSLOT")"; git -C "$WREPO" worktree add -q --detach "$WSLOT" HEAD 2>/dev/null || fail "could not create a test worktree under $WREPO"
-trap 'git -C "$WREPO" worktree remove --force "$WSLOT" 2>/dev/null; rm -rf "$(dirname "$(dirname "$WSLOT")")" "$TMP"' EXIT
-WSLOT_ID="$(slot_id "$WSLOT")"
+# a worker slot the launcher recognises: <root>/repos/<repo>/.treehouse/<ws>/<n>/workspace,
+# a linked worktree of a temporary backing repository
+WREPO="$FAKEROOT/repos/test-repo/.treehouse/firstmate-backing/test-repo"; mkdir -p "$WREPO"
+git -C "$WREPO" init -q; git -C "$WREPO" config user.email test@example.invalid; git -C "$WREPO" config user.name "lease test"
+touch "$WREPO/README.md"; git -C "$WREPO" add README.md; git -C "$WREPO" commit -qm init
+WSLOT="$FAKEROOT/repos/test-repo/.treehouse/lease-test/1/workspace"
+mkdir -p "$(dirname "$WSLOT")"; git -C "$WREPO" worktree add -q --detach "$WSLOT" HEAD || fail "could not create a test worktree under $WREPO"
+# The launcher derives the id relative to its root, exactly as production does relative to /workspace.
+WSLOT_ID="$(slot_id "/workspace/${WSLOT#"$FAKEROOT"/}")"
 
-# no lease dir yet → harness directory is still readable, but the auto-grant was attempted with the slot path
+# no lease dir yet → no --read, but the auto-grant was attempted with the slot path
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" brief )
 grep -qF "grant:--slot $WSLOT --task unassigned --defaults" "$FAKE_GRANT_CALL" || fail "auto-grant not invoked correctly: $(cat "$FAKE_GRANT_CALL")"
 grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $L/real -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "claude worker launch: $(cat "$FAKE_NONO_CALL")"
@@ -236,11 +263,9 @@ grep -q "default capability leases were not all granted" "$L/warn" || fail "fail
 grep -qF "brief" "$FAKE_NONO_CALL" || fail "worker did not launch after a failed auto-grant"
 echo "  ok  auto-grant is skippable and non-fatal"
 
-# captain: never --strict-mcp-config, never a lease --read, never a grant.
-# Its only --read is the installed harness directory, read-only, which every
-# launch needs to resolve the executable inside nono.
+# captain: never --strict-mcp-config, never --read, never a grant
 rm -f "$FAKE_GRANT_CALL"
-( cd /workspace/firstmate && ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" cap )
+( cd "$FAKEROOT/firstmate" && ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" cap )
 grep -qF "nono:run --profile roe-firstmate-claude-captain --allow-cwd --read $L/real -- $L/real/claude cap" "$FAKE_NONO_CALL" || fail "captain launch changed: $(cat "$FAKE_NONO_CALL")"
 [[ ! -e "$FAKE_GRANT_CALL" ]] || fail "captain must not auto-grant"
 # codex worker keeps its own args, no strict-mcp flag

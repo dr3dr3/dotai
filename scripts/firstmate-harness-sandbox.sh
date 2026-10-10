@@ -48,7 +48,9 @@ if [[ "${ROE_FIRSTMATE_CAPTAIN:-0}" == 1 || "$(pwd -P)/" == /workspace/firstmate
   ROLE=captain
   # Bare Herdr restores bypass fm; recover the configured home before nono.
   # This validates identity only. Normal Firstmate startup still owns its lock.
-  FM_HOME="$(python3 "$SCRIPT_DIR/firstmate-captain-home.py")" \
+  # Node runs without NODE_OPTIONS/NODE_PATH so an inherited preload cannot
+  # rewrite the resolver.
+  FM_HOME="$(env -u NODE_OPTIONS -u NODE_PATH node "$SCRIPT_DIR/firstmate-captain-home.ts")" \
     || die "cannot establish the registered captain home"
   export FM_HOME
 elif [[ "$(pwd -P)/" == /workspace/*/.treehouse/*/ || "$(pwd -P)/" == /workspace/.treehouse/*/ ]]; then
