@@ -46,10 +46,10 @@ if [[ "${ROE_FIRSTMATE_CAPTAIN:-0}" == 1 || "$(pwd -P)/" == /workspace/firstmate
   [[ "$(pwd -P)/" == /workspace/firstmate/ ]] \
     || die "captain sandbox must start from /workspace/firstmate"
   ROLE=captain
-  # A bare Herdr restore bypasses fm, so recover the registered captain home
-  # here, before nono. This validates identity only: Firstmate startup still
-  # owns the home's lock. Node runs without NODE_OPTIONS/NODE_PATH so an
-  # inherited preload cannot rewrite the resolver.
+  # Bare Herdr restores bypass fm; recover the configured home before nono.
+  # This validates identity only. Normal Firstmate startup still owns its lock.
+  # Node runs without NODE_OPTIONS/NODE_PATH so an inherited preload cannot
+  # rewrite the resolver.
   FM_HOME="$(env -u NODE_OPTIONS -u NODE_PATH node "$SCRIPT_DIR/firstmate-captain-home.ts")" \
     || die "cannot establish the registered captain home"
   export FM_HOME
@@ -81,12 +81,9 @@ fi
 # the profile's default (read-only) capabilities if the captain-side tooling
 # can, and expose exactly this slot's lease directory to the sandbox.
 NONO_LEASE_ARGS=()
-# nono must be able to read the selected executable to run it. Grant exactly
-# that file, not its directory: the installed claude entry is a self-contained
-# resolver script that execs a versioned build the profiles already cover, and
-# codex is a symlink whose package directory the codex profiles already read.
-# This grants no write path.
-NONO_HARNESS_ARGS=(--read-file "$REAL_HARNESS")
+# The selected executable lives in this installed directory. Both captain and
+# worker need read access to resolve it inside nono; this grants no write path.
+NONO_HARNESS_ARGS=(--read "$REAL_DIR")
 if [[ "$ROLE" == worker ]]; then
   # Same derivation as fm-grant / roe-lease — the three must agree byte for byte.
   slot="$(pwd -P)"; slot="${slot#/workspace/}"; slot="${slot%/workspace}"

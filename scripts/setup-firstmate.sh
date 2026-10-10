@@ -344,6 +344,23 @@ if [[ -z "$newest" ]]; then
   printf 'Install one: curl -fsSL https://claude.ai/install.sh | bash\n' >&2
   exit 127
 fi
+
+# Run the build under the name `claude`. Herdr recognises an agent by its
+# process name, which Linux takes from the basename of the exec'd path, so
+# exec'ing versions/<ver> directly hides every Claude session from Herdr.
+# One link per version, created once and never repointed: concurrent launches
+# cannot race. If it cannot be made (the nono sandbox mounts this read-only),
+# run the build directly, as before.
+named="$(dirname "$dir")/dotai-named/$newest"
+if [[ ! -L "$named/claude" ]]; then
+  mkdir -p "$named" 2>/dev/null \
+    && ln -s "$dir/$newest" "$named/claude.$$" 2>/dev/null \
+    && mv -T "$named/claude.$$" "$named/claude" 2>/dev/null
+  rm -f "$named/claude.$$" 2>/dev/null
+fi
+if [[ "$(readlink "$named/claude" 2>/dev/null)" == "$dir/$newest" ]]; then
+  exec "$named/claude" "$@"
+fi
 exec "$dir/$newest" "$@"
 RESOLVER
   chmod 0755 "$dest"
@@ -439,7 +456,9 @@ configure_firstmate_clone() {
   origin="$(git -C "$FIRSTMATE_DIR" remote get-url origin)"
   [[ "$origin" == "$FIRSTMATE_REPOSITORY" || "$origin" == "https://github.com/kunchenguid/firstmate" ]] \
     || die "$FIRSTMATE_DIR has unexpected origin: $origin"
-  [[ -z "$(git -C "$FIRSTMATE_DIR" status --porcelain)" ]] \
+  # Our one known local patch (Codex hooks off a login shell) is set aside here
+  # and re-applied below; any other local change still refuses.
+  "$SCRIPT_DIR/firstmate-hooks-patch.sh" set-aside "$FIRSTMATE_DIR" \
     || die "$FIRSTMATE_DIR is dirty; refusing to replace upstream source"
 
   git -C "$FIRSTMATE_DIR" fetch --quiet origin "$FIRSTMATE_COMMIT"
@@ -447,6 +466,7 @@ configure_firstmate_clone() {
   if [[ "$head" != "$FIRSTMATE_COMMIT" ]]; then
     git -C "$FIRSTMATE_DIR" checkout --quiet --detach "$FIRSTMATE_COMMIT"
   fi
+  "$SCRIPT_DIR/firstmate-hooks-patch.sh" apply "$FIRSTMATE_DIR"
 }
 
 install_firstmate_tools() {

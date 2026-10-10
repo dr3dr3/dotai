@@ -242,13 +242,13 @@ WSLOT_ID="$(slot_id "/workspace/${WSLOT#"$FAKEROOT"/}")"
 # no lease dir yet → no --read, but the auto-grant was attempted with the slot path
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" brief )
 grep -qF "grant:--slot $WSLOT --task unassigned --defaults" "$FAKE_GRANT_CALL" || fail "auto-grant not invoked correctly: $(cat "$FAKE_GRANT_CALL")"
-grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read-file $L/real/claude -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "claude worker launch: $(cat "$FAKE_NONO_CALL")"
-echo "  ok  claude worker: auto-grant attempted, --strict-mcp-config, exact harness read, no lease --read without leases"
+grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $L/real -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "claude worker launch: $(cat "$FAKE_NONO_CALL")"
+echo "  ok  claude worker: harness read grant, auto-grant attempted, --strict-mcp-config"
 
 # with a lease dir → --read exactly that dir
 mkdir -p "$ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID"
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 FM_TASK_ID=eng-9 "$L/bin/claude" brief )
-grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read-file $L/real/claude --read $ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "lease --read missing: $(cat "$FAKE_NONO_CALL")"
+grep -qF "nono:run --profile roe-firstmate-claude-worker --allow-cwd --read $L/real --read $ROE_FIRSTMATE_LEASE_ROOT/$WSLOT_ID -- $L/real/claude --strict-mcp-config brief" "$FAKE_NONO_CALL" || fail "lease --read missing: $(cat "$FAKE_NONO_CALL")"
 grep -qF "grant:--slot $WSLOT --task eng-9 --defaults" "$FAKE_GRANT_CALL" || fail "FM_TASK_ID not passed to auto-grant"
 echo "  ok  worker sandbox gets --read for exactly its slot's lease dir; task id flows into the grant"
 
@@ -266,7 +266,7 @@ echo "  ok  auto-grant is skippable and non-fatal"
 # captain: never --strict-mcp-config, never --read, never a grant
 rm -f "$FAKE_GRANT_CALL"
 ( cd "$FAKEROOT/firstmate" && ROE_FIRSTMATE_CAPTAIN=1 ROE_FIRSTMATE_SANDBOX_REQUIRED=1 "$L/bin/claude" cap )
-grep -qF "nono:run --profile roe-firstmate-claude-captain --allow-cwd --read-file $L/real/claude -- $L/real/claude cap" "$FAKE_NONO_CALL" || fail "captain launch changed: $(cat "$FAKE_NONO_CALL")"
+grep -qF "nono:run --profile roe-firstmate-claude-captain --allow-cwd --read $L/real -- $L/real/claude cap" "$FAKE_NONO_CALL" || fail "captain launch changed: $(cat "$FAKE_NONO_CALL")"
 [[ ! -e "$FAKE_GRANT_CALL" ]] || fail "captain must not auto-grant"
 # codex worker keeps its own args, no strict-mcp flag
 ( cd "$WSLOT" && ROE_FIRSTMATE_SANDBOX_REQUIRED=1 ROE_FIRSTMATE_AUTO_LEASES=0 "$L/bin/codex" brief )

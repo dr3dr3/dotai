@@ -116,6 +116,7 @@ GLOBAL_CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
 # belong in every Claude Code session.
 GLOBAL_CONTEXT_FILES=(
   team
+  herdr
 )
 
 DOTAI_BLOCK_START="<!-- DOTAI-GENERATED -->"
