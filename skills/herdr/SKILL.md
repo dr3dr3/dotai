@@ -25,8 +25,15 @@ André's Herdr layout follows fixed conventions (full reference: dotfiles `docs/
 - **Label every pane you create** as `<role>·<harness>`, for example `review·codex` or `tests·shell`: `herdr pane rename <pane_id> <role>·<harness>`.
 - **Never create a third pane in a tab.** A tab holds one pane by default and a second only for a defined pair: an agent and its shell, an agent and its reviewer, or an agent and André's operator pane. If the tab already has two panes, use a new tab instead (see below).
 - **Name tabs in at most 8 characters** (a topic or a ticket, such as `tls` or `e3790`) and keep a workspace to at most 9 tabs. Workspace labels are 2–6 lowercase characters. The long description belongs on the pane label.
-- **Stage into `term`, never run.** Each workspace has one `term` tab whose `you·shell` pane belongs to André. Put a command there with `herdr pane send-text` and never send Enter; he runs it.
-- **Never type into another agent's input box blindly.** Before `pane send-text` or `agent prompt` into a pane you do not own, read it (`herdr pane read <pane_id> --source visible --format ansi`) and send only if the input line is empty; dim (SGR 2) text is a suggestion and counts as empty. Otherwise write the message to a file under `/workspace/tmp/` and send a one-line pointer once the input is clear.
+- **Stage into `term`, never run.** Each workspace has one `term` tab whose `you·shell` pane belongs to André. Put a command there with `herdr pane send-text` and never send Enter; he runs it. (`herdr-send` does not recognise a shell prompt yet, so it refuses `term`.)
+- **Never type into another agent's input box blindly.** To message a pane you do not own, use `herdr-send` instead of `pane send-text` or `agent prompt`:
+
+  ```bash
+  herdr-send <pane_id> "<one-line message>"
+  herdr-send --file <pane_id> "<longer message>"   # writes /workspace/tmp/msg-*.md, sends a pointer
+  ```
+
+  It reads the pane and sends only if the input box is empty (dim SGR 2 text counts as empty). It refuses with exit 2, having typed nothing, on typed text, a draft, an approval dialog or a screen it does not recognise. Treat a refusal as "not now": wait and retry, or tell the user. Never fall back to a raw send. It recognises Claude Code's input box only, so a Codex or Pi target is refused; ask the user rather than sending blind. If `herdr-send` is missing, it comes from dotfiles `scripts/setup-herdr.sh`.
 - **Close what you open, and nothing else.** When the work is finished, close the panes and tabs you created. Never close one you did not create without André's approval.
 
 
@@ -211,7 +218,7 @@ After that failed read, ask the agent to write its complete response as Markdown
 - Use `--current`, an explicit pane ID, or a unique agent name. Do not rely on another client's focused pane.
 - Parse IDs from JSON responses. Do not derive them from sidebar order or examples.
 - Close the panes and tabs you created when the work is finished. Do not close workspaces, tabs, panes, or sessions you did not create unless the user explicitly asked.
-- Never send Enter into André's `term` pane, and never send text into another agent's non-empty input.
+- Never send Enter into André's `term` pane. Message other agents only through `herdr-send`.
 - Never run `herdr server stop` from an active session unless the user explicitly intends to stop the server and its pane processes.
 - Never kill the main Herdr process. Use named test sessions for experiments that need an isolated server.
 - CLI server errors are JSON on stderr with exit status 1. CLI syntax errors exit with status 2.
