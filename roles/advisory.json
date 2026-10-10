@@ -4,36 +4,42 @@
   "authority": "advisory",
   "roles": {
     "baxter": {
+      "charter_id": "ph-idea",
       "kind": "phase",
       "section": "Phase leads",
       "workspace": "phase",
       "tab": "idea"
     },
     "design": {
+      "charter_id": "ph-design",
       "kind": "phase",
       "section": "Phase leads",
       "workspace": "phase",
       "tab": "design"
     },
     "plan": {
+      "charter_id": "ph-plan",
       "kind": "phase",
       "section": "Phase leads",
       "workspace": "phase",
       "tab": "plan"
     },
     "security": {
+      "charter_id": "dom-security",
       "kind": "domain",
       "section": "Domain leads",
       "workspace": "dom",
       "tab": "sec"
     },
     "quality": {
+      "charter_id": "dom-quality",
       "kind": "domain",
       "section": "Domain leads",
       "workspace": "dom",
       "tab": "qa"
     },
     "standards": {
+      "charter_id": "dom-standards",
       "kind": "domain",
       "section": "Domain leads",
       "workspace": "dom",

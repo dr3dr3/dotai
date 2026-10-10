@@ -28,6 +28,7 @@ const IDLE = new Set(["idle", "done"]);
 
 export type Role = {
   title: string;
+  charter_id: string;
   kind: "phase" | "domain";
   section: string;
   workspace: string;
@@ -93,6 +94,8 @@ export function loadRoster(source: string): Roster {
   for (const [id, role] of Object.entries(advisory.roles)) {
     if (!/^[a-z][a-z0-9-]{0,31}$/.test(id)) fail(`invalid role ID ${id}`);
     const entry = catalogue.roles[id] ?? fail(`${id} is not in the catalogue`);
+    if (!/^(ph|dom)-[a-z]+$/.test(role.charter_id ?? ""))
+      fail(`${id}: charter_id must name a charter row`);
     if (role.kind !== "phase" && role.kind !== "domain")
       fail(`${id}: kind must be phase or domain`);
     if (!/^[a-z]{2,6}$/.test(role.workspace))
@@ -116,6 +119,7 @@ export function paths(env: Env, id: string) {
     prompt: join(env.source, "roles/prompts", `${id}.md`),
     template: join(env.source, "roles/prompts/checkpoint-template.md"),
     checkpoint: join(env.home, ".ai/roles", id, "checkpoint.md"),
+    results: join(env.home, ".ai/roles", id, "results"),
   };
 }
 
@@ -209,6 +213,8 @@ export function start(env: Env, id: string, options: Options): number {
       `create workspace ${role.workspace} with a ${TERM_TAB} tab (${TERM_PANE})`,
     );
   steps.push(`create tab ${where} with pane ${paneLabel(id)}`);
+  if (!existsSync(p.results))
+    steps.push(`create private results directory ${p.results}`);
   if (!existsSync(p.checkpoint))
     steps.push(`create checkpoint ${p.checkpoint} from the template`);
   steps.push(
@@ -251,8 +257,8 @@ export function start(env: Env, id: string, options: Options): number {
   ]) as { tab: Tab; root_pane: Pane };
   const pane = made.root_pane.pane_id;
   env.herdr(["pane", "rename", pane, paneLabel(id)]);
+  mkdirSync(p.results, { recursive: true, mode: 0o700 });
   if (!existsSync(p.checkpoint)) {
-    mkdirSync(dirname(p.checkpoint), { recursive: true, mode: 0o700 });
     writeFileSync(p.checkpoint, readFileSync(p.template), {
       mode: 0o600,
       flag: "wx",
