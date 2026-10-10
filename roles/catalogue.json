@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "charter": "reference/taxonomy-topology/ai-pilot-role-charters.md",
+  "roles": {
+    "pilot": {
+      "title": "AI SDLC pilot",
+      "workspace": "Plan",
+      "tab": "Initiative \u2014 AI pilot",
+      "purpose": "Coordinate this implementation, integrate consultations and maintain its decisions."
+    },
+    "baxter": {
+      "title": "Baxter \u2014 Idea Lead",
+      "workspace": "Idea",
+      "tab": "Baxter",
+      "purpose": "Clarify problems, outcomes and experiments; propose pursue, pivot or retire decisions."
+    },
+    "quality": {
+      "title": "Quality Lead",
+      "workspace": "Domains",
+      "tab": "Quality",
+      "purpose": "Define acceptance evidence and assess gaps against the agreed outcome."
+    },
+    "design": {
+      "title": "Design Lead",
+      "workspace": "Design",
+      "tab": "Design Lead",
+      "purpose": "Develop alternatives, impacts and acceptance examples."
+    },
+    "plan": {
+      "title": "Planning Lead",
+      "workspace": "Plan",
+      "tab": "Planning Lead",
+      "purpose": "Prepare bounded increments, ownership, dependencies and validation intent."
+    },
+    "hannibal": {
+      "title": "Hannibal \u2014 Strategy",
+      "workspace": "Management",
+      "tab": "Hannibal",
+      "purpose": "Review strategy alignment and unresolved tradeoffs."
+    },
+    "danny": {
+      "title": "Danny \u2014 Portfolio",
+      "workspace": "Management",
+      "tab": "Danny",
+      "purpose": "Review existing commitments, capacity and dependencies; propose changes."
+    },
+    "jules": {
+      "title": "Jules \u2014 IT Operations",
+      "workspace": "Management",
+      "tab": "Jules",
+      "purpose": "Review estate health, maintenance, continuity and operational unknowns."
+    },
+    "validate": {
+      "title": "Validation Lead",
+      "workspace": "Validate",
+      "tab": "Validation Lead",
+      "purpose": "Assess evidence against exact candidate revisions; request runtime work through Firstmate."
+    },
+    "release": {
+      "title": "Release Lead",
+      "workspace": "Release",
+      "tab": "Release Lead",
+      "purpose": "Prepare release evidence for the authorised human; do not deploy."
+    },
+    "operate": {
+      "title": "Operate Lead",
+      "workspace": "Operate",
+      "tab": "Operate Lead",
+      "purpose": "Review service usefulness, health and improvement or retirement proposals."
+    },
+    "business": {
+      "title": "Business Lead",
+      "workspace": "Domains",
+      "tab": "Business",
+      "purpose": "Review outcomes, economics and strategy alignment."
+    },
+    "team": {
+      "title": "Team Lead",
+      "workspace": "Domains",
+      "tab": "Team",
+      "purpose": "Review capacity, learning and responsibility gaps; personnel decisions stay human."
+    },
+    "standards": {
+      "title": "Standards Lead",
+      "workspace": "Domains",
+      "tab": "Standards",
+      "purpose": "Review architecture, engineering standards and justified exception proposals."
+    },
+    "security": {
+      "title": "Security Lead",
+      "workspace": "Domains",
+      "tab": "Security",
+      "purpose": "Review threats, privacy, access and required controls."
+    },
+    "observability": {
+      "title": "Observability Lead",
+      "workspace": "Domains",
+      "tab": "Observability",
+      "purpose": "Review signals, service objectives and diagnostic evidence."
+    },
+    "configuration": {
+      "title": "Configuration Lead",
+      "workspace": "Domains",
+      "tab": "Configuration",
+      "purpose": "Review version, environment, flag and dependency integrity."
+    }
+  }
+}
