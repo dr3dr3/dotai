@@ -25,7 +25,7 @@ André's Herdr layout follows fixed conventions (full reference: dotfiles `docs/
 - **Label every pane you create** as `<role>·<harness>`, for example `review·codex` or `tests·shell`: `herdr pane rename <pane_id> <role>·<harness>`.
 - **Never create a third pane in a tab.** A tab holds one pane by default and a second only for a defined pair: an agent and its shell, an agent and its reviewer, or an agent and André's operator pane. If the tab already has two panes, use a new tab instead (see below).
 - **Name tabs in at most 8 characters** (a topic or a ticket, such as `tls` or `e3790`) and keep a workspace to at most 9 tabs. Workspace labels are 2–6 lowercase characters. The long description belongs on the pane label.
-- **Stage into `term`, never run.** Each workspace has one `term` tab whose `you·shell` pane belongs to André. Put a command there with `herdr pane send-text` and never send Enter; he runs it. (`herdr-send` does not recognise a shell prompt yet, so it refuses `term`.)
+- **Stage into `term`, never run.** Each workspace has one `term` tab whose `you·shell` pane belongs to André. Put a command there with `herdr-send <term-pane-id> "<command>"`: it refuses if he has something half-typed and never presses Enter in a `you·` pane. He runs it.
 - **Never type into another agent's input box blindly.** To message a pane you do not own, use `herdr-send` instead of `pane send-text` or `agent prompt`:
 
   ```bash
