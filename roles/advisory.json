@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "catalogue": "roles/catalogue.json",
+  "authority": "advisory",
+  "roles": {
+    "baxter": {
+      "kind": "phase",
+      "section": "Phase leads",
+      "workspace": "phase",
+      "tab": "idea"
+    },
+    "design": {
+      "kind": "phase",
+      "section": "Phase leads",
+      "workspace": "phase",
+      "tab": "design"
+    },
+    "plan": {
+      "kind": "phase",
+      "section": "Phase leads",
+      "workspace": "phase",
+      "tab": "plan"
+    },
+    "security": {
+      "kind": "domain",
+      "section": "Domain leads",
+      "workspace": "dom",
+      "tab": "sec"
+    },
+    "quality": {
+      "kind": "domain",
+      "section": "Domain leads",
+      "workspace": "dom",
+      "tab": "qa"
+    },
+    "standards": {
+      "kind": "domain",
+      "section": "Domain leads",
+      "workspace": "dom",
+      "tab": "std"
+    }
+  }
+}
