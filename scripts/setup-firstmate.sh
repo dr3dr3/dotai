@@ -366,6 +366,29 @@ RESOLVER
   chmod 0755 "$dest"
 }
 
+# Make the resolver's `dotai-named/<ver>/claude` link for EVERY installed build
+# now, outside the sandbox. Inside nono the share dir is read-only, so the
+# resolver cannot make a link there itself: a sandboxed Firstmate captain or
+# worker would fall back to the direct exec and stay invisible to Herdr. Same
+# rules as the resolver: one link per version, made atomically, never
+# repointed. A build installed by a later self-update gets its link at the next
+# unsandboxed launch or the next setup run; until then a sandboxed launch of it
+# runs directly, which only costs Herdr visibility.
+ensure_claude_named_links() {
+  local dir named version
+  dir="$(claude_native_versions_dir)"
+  [[ -d "$dir" ]] || return 0
+  while IFS= read -r version; do
+    named="$(dirname "$dir")/dotai-named/$version"
+    [[ -L "$named/claude" ]] && continue
+    mkdir -p "$named" \
+      && ln -s "$dir/$version" "$named/claude.$$" \
+      && mv -T "$named/claude.$$" "$named/claude"
+    rm -f "$named/claude.$$"
+  done < <(find "$dir" -maxdepth 1 -type f -perm -u+x -printf '%f\n' 2>/dev/null \
+             | grep -xE '[0-9]+(\.[0-9]+)*')
+}
+
 resolve_real_tool() {
   local tool="$1" candidate
   while IFS= read -r candidate; do
@@ -422,6 +445,7 @@ configure_harness_sandbox() {
     # other way still works and an absent one is still cleaned up below.
     if [[ "$harness" == claude ]] && [[ -n "$(newest_claude_native_build)" ]]; then
       write_claude_native_resolver "$real"
+      ensure_claude_named_links
     else
       # A resolver must not outlive the builds it resolves. setup.sh's
       # agent_installed only checks that the target is executable, so a

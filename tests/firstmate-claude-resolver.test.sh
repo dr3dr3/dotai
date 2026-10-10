@@ -122,4 +122,19 @@ chmod 0555 "$NAMED"
 [[ "$("$REAL_HARNESS_DIR/claude")" == "2.1.301" ]]
 chmod 0755 "$NAMED"
 
+# 12. Setup pre-creates the name link for EVERY installed build. Inside nono the
+#     share dir is read-only, so the resolver cannot make the link itself; a
+#     sandboxed Firstmate captain or worker would fall back to 11 and stay
+#     invisible to Herdr. With the links made at setup, it still runs as
+#     `claude`.
+rm -rf "$NAMED"
+make_named_build 2.1.302
+configure_harness_sandbox
+for version in 2.1.300 2.1.301 2.1.302; do
+  [[ "$(readlink "$NAMED/$version/claude")" == "$VERSIONS/$version" ]]
+done
+chmod -R a-w "$NAMED"
+[[ "$("$REAL_HARNESS_DIR/claude")" == "claude" ]]
+chmod -R u+w "$NAMED"
+
 printf 'ok - claude resolves the newest native build at exec time\n'
