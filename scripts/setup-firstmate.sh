@@ -456,7 +456,9 @@ configure_firstmate_clone() {
   origin="$(git -C "$FIRSTMATE_DIR" remote get-url origin)"
   [[ "$origin" == "$FIRSTMATE_REPOSITORY" || "$origin" == "https://github.com/kunchenguid/firstmate" ]] \
     || die "$FIRSTMATE_DIR has unexpected origin: $origin"
-  [[ -z "$(git -C "$FIRSTMATE_DIR" status --porcelain)" ]] \
+  # Our one known local patch (Codex hooks off a login shell) is set aside here
+  # and re-applied below; any other local change still refuses.
+  "$SCRIPT_DIR/firstmate-hooks-patch.sh" set-aside "$FIRSTMATE_DIR" \
     || die "$FIRSTMATE_DIR is dirty; refusing to replace upstream source"
 
   git -C "$FIRSTMATE_DIR" fetch --quiet origin "$FIRSTMATE_COMMIT"
@@ -464,6 +466,7 @@ configure_firstmate_clone() {
   if [[ "$head" != "$FIRSTMATE_COMMIT" ]]; then
     git -C "$FIRSTMATE_DIR" checkout --quiet --detach "$FIRSTMATE_COMMIT"
   fi
+  "$SCRIPT_DIR/firstmate-hooks-patch.sh" apply "$FIRSTMATE_DIR"
 }
 
 install_firstmate_tools() {
