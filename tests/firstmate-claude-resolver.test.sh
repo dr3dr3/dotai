@@ -94,4 +94,32 @@ out="$("$REAL_HARNESS_DIR/claude" 2>&1 || true)"
 grep -q 'no native build' <<<"$out"
 grep -q 'claude.ai/install.sh' <<<"$out"
 
+# 9. The build runs under the name `claude`. Herdr recognises an agent by its
+#    process name (comm), which Linux takes from the basename of the path
+#    passed to exec. Exec'ing versions/<ver> directly names the process
+#    "2.1.296", so Herdr listed no agents and every pane read `unknown`.
+#    A build that reports the basename it was invoked by stands in for comm.
+make_named_build() {
+  printf '#!/usr/bin/env bash\nbasename "$0"\n' >"$VERSIONS/$1"
+  chmod 0755 "$VERSIONS/$1"
+}
+make_named_build 2.1.300
+[[ "$("$REAL_HARNESS_DIR/claude")" == "claude" ]]
+
+# 10. The name link is per version and never repointed, so two launches
+#     cannot race, and a newer build gets a new link on its first launch.
+NAMED="$HOME/.local/share/claude/dotai-named"
+[[ "$(readlink "$NAMED/2.1.300/claude")" == "$VERSIONS/2.1.300" ]]
+make_named_build 2.1.301
+[[ "$("$REAL_HARNESS_DIR/claude")" == "claude" ]]
+[[ "$(readlink "$NAMED/2.1.301/claude")" == "$VERSIONS/2.1.301" ]]
+
+# 11. When the link cannot be made (inside the nono sandbox the share dir is
+#     read-only) the build still runs, directly, exactly as before this fix.
+rm -rf "$NAMED"
+mkdir -p "$NAMED"
+chmod 0555 "$NAMED"
+[[ "$("$REAL_HARNESS_DIR/claude")" == "2.1.301" ]]
+chmod 0755 "$NAMED"
+
 printf 'ok - claude resolves the newest native build at exec time\n'

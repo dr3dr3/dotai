@@ -344,6 +344,23 @@ if [[ -z "$newest" ]]; then
   printf 'Install one: curl -fsSL https://claude.ai/install.sh | bash\n' >&2
   exit 127
 fi
+
+# Run the build under the name `claude`. Herdr recognises an agent by its
+# process name, which Linux takes from the basename of the exec'd path, so
+# exec'ing versions/<ver> directly hides every Claude session from Herdr.
+# One link per version, created once and never repointed: concurrent launches
+# cannot race. If it cannot be made (the nono sandbox mounts this read-only),
+# run the build directly, as before.
+named="$(dirname "$dir")/dotai-named/$newest"
+if [[ ! -L "$named/claude" ]]; then
+  mkdir -p "$named" 2>/dev/null \
+    && ln -s "$dir/$newest" "$named/claude.$$" 2>/dev/null \
+    && mv -T "$named/claude.$$" "$named/claude" 2>/dev/null
+  rm -f "$named/claude.$$" 2>/dev/null
+fi
+if [[ "$(readlink "$named/claude" 2>/dev/null)" == "$dir/$newest" ]]; then
+  exec "$named/claude" "$@"
+fi
 exec "$dir/$newest" "$@"
 RESOLVER
   chmod 0755 "$dest"
